@@ -1,0 +1,4 @@
+Build.PL				Installation script
+lib/RawData/File.pm		Base class for processing data files
+lib/RawData/Record.pm	A single record loaded into memory
+MANIFEST				This list of files
