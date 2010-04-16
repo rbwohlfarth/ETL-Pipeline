@@ -28,18 +28,39 @@ to L<Moose::Manual::Attributes/Triggers> for more information.
 Your code returns a boolean value. B<True> means the open succeeded - go ahead
 and read records. B<False> means that you could not open the file.
 
+Child classes (what you're writing) 
+L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+
 =cut
 
-sub open($$$) { return 0; }
+sub open($$$) { 
+	my ($self, $new_path, $old_path) = @_;
+
+	$self->log->debug( __PACKAGE__ . '->open called' );
+	$self->log->debug( "New file name: $new_path" );
+
+	# Reset the position to a default. The "open" method may change this
+	# to something more suitable for the file type.
+	$self->position( 0 );
+
+	# If "open" fails, we act like the end of the file.
+	if (inner()) {
+		$self->_set_end_of_file( 0 );
+	} else {
+		$self->_set_end_of_file( 1 );
+	}
+}
 
 
 =item read_one_record
 
-This method returns the next record from the file. It also sets the 
-I<position> attribute to match the returned record.
+This method reads the next record from the file and breaks it apart into
+fields. It returns a reference to a L<RawData::Record> object. An C<undef>
+means that we reached the end of the file.
 
-Your code returns a reference to a L<RawData::Record> object. Fill in the
-following attributes of L<RawData::Record>...
+Child classes (what you're writing) 
+L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method. Your 
+code fills in the following attributes of L<RawData::Record>...
 
 =over
 
@@ -49,11 +70,43 @@ following attributes of L<RawData::Record>...
 
 =back
 
-An C<undef> value means that we reached the end of the file.
-
 =cut
 
-sub read_one_record($) { return undef; }
+sub read_one_record($) { 
+	my ($self) = @_;
+	$self->log->debug( __PACKAGE__ . '->get_record called' );
+
+	# Don't bother reading past the end of the file. Change the file name
+	# to read more data.
+	if ($self->end_of_file) {
+		$self->log->debug( 'At the end of the file' );
+		return undef;
+	}
+
+	# Always read the first line, if we're not at the end of the file. This
+	# lets me put a debug message in the loop, and doesn't hurt performance
+	# all that much.
+	my $record = inner();
+
+	# This loop accomplishes three things...
+	#   1. It stops reading once we reach the end of the file.
+	#   2. It skips completely blank records.
+	#   3. Calls the format specific parsing code.
+	while (ref( $record ) and $record->is_blank) {
+		$self->log->debug( 'Blank record skipped' );
+		$record = inner();
+	}
+
+	# Set the location information in the record. Error messages can then
+	# reference the original file and line number.
+	if (ref( $record )) {
+		$record->came_from( 'record ' . $self->position . ' in ' . $self->path );
+		return $record;
+	} else {
+		$self->_set_end_of_file( 1 );
+		return undef;
+	}
+}
 
 
 =back
@@ -87,84 +140,8 @@ reading the current file and starts the new one.
 has 'file' => (
 	is      => 'rw',
 	isa     => 'Str',
-	trigger => \&_file_set,
+	trigger => \&open,
 );
-
-
-=item _file_set (private)
-
-Setting the file name automatically triggers this method. This code resets
-the object and calls the L</open> method to actually open the new file. Child
-classes should override L</open>.
-
-=cut
-
-sub _file_set($$$) { 
-	my ($self, $new_path, $old_path) = @_;
-
-	$self->log->debug( __PACKAGE__ . '->_file_set called' );
-	$self->log->debug( "New file name: $new_path" );
-
-	# Reset the position to a default. The "open" method may change this
-	# to something more suitable for the file type.
-	$self->position( 0 );
-
-	# If "open" fails, we act like the end of the file.
-	if ($self->open( $new_path, $old_path )) {
-		$self->_set_end_of_file( 0 );
-	} else {
-		$self->_set_end_of_file( 1 );
-	}
-}
-
-
-=item get_record
-
-This method reads the next record from the file and breaks it apart into
-fields. It returns a reference to a L<RawData::Record> object. An C<undef>
-means that we reached the end of the file.
-
-You will normally override the L</read_one_record> method instead of this one.
-This method calls L</read_one_record>. It lets me do cool things around it
-without you having to declare the method properly.
-
-=cut
-
-sub get_record($) { 
-	my ($self) = @_;
-	$self->log->debug( __PACKAGE__ . '->get_record called' );
-
-	# Don't bother reading past the end of the file. Change the file name
-	# to read more data.
-	if ($self->end_of_file) {
-		$self->log->debug( 'At the end of the file' );
-		return undef;
-	}
-
-	# Always read the first line, if we're not at the end of the file. This
-	# lets me put a debug message in the loop, and doesn't hurt performance
-	# all that much.
-	my $record = $self->read_one_record;
-
-	# This loop accomplishes three things...
-	#   1. It stops reading once we reach the end of the file.
-	#   2. It skips completely blank records.
-	#   3. Calls the format specific parsing code.
-	while (defined( $record ) and $record->is_blank) {
-		$self->log->debug( 'Blank record skipped' );
-		$record = $self->read_one_record;
-	}
-
-	# Set the location information in the record. Error messages can then
-	# reference the original file and line number.
-	if (defined( $record )) {
-		$record->came_from( 'record ' . $self->position . ' in ' . $self->path );
-	} else {
-		$self->_set_end_of_file( 1 );
-	}
-
-	return $record;
-}
 
 
 =item log

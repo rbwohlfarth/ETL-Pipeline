@@ -64,13 +64,8 @@ sub from_array($@) {
 	# same loop, and still accept multiple types if input. If the only
 	# parameter is a list reference, then we assume you want the referenced
 	# list - not the pointer. Otherwise we copy the list you sent.
-	my $list;
-	if (@fields == 1) {
-		$list = $fields[0];
-		$list = \@fields unless (ref( $list ) eq 'ARRAY');
-	} else {
-		$list = \@fields;
-	}
+	my $list = \@fields;
+	   $list = $fields[0] if ((@fields == 1) and (ref( $fields[0] ) eq 'ARRAY'));
 
 	# Yes - "foreach" is nicer. I need the index to create the key for the
 	# hash. "foreach" doesn't offer any advantage in this case. Besides, I
