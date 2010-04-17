@@ -39,7 +39,7 @@ sub column_name_in_file($$) {
 	return $on_screen if ($on_screen =~ m/^\d*$/);
 
 	# Strip off the row number, if there is one...
-	$on_screen =~ s/^(\[[:alpha:]]+)\d*$/$1/;
+	$on_screen =~ s/^([[:alpha:]]+)\d*$/$1/;
 	$on_screen =  uc( $on_screen );
 
 	# Convert letters into ordinal numbers.
@@ -135,7 +135,5 @@ sub array_to_record($@) {
 =back
 
 =cut
-
-no Moose;
-__PACKAGE__->meta->make_immutable;
+1;
 

@@ -11,9 +11,9 @@ package RawData::Excel2003;
 use Moose;
 
 extends 'RawData::File';
-with RawData::Spreadsheet;
+with 'RawData::Spreadsheet';
 
-use Spreadsheet::Excel;
+use Spreadsheet::ParseExcel;
 
 
 =head1 Attributes & Methods
