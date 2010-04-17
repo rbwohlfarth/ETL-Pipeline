@@ -161,6 +161,10 @@ depends on the file type. For example, a text file might have the line
 number. A spreadsheet would keep the row number. We use this information
 to track down errors.
 
+After calling L</read_one_record>, this attribute holds the position of
+that record - not the next one. It's value is undefined before reading the
+first record.
+
 Changing this value may or may not have an effect on the actual file 
 position. It depends entirely on the actual file format. So B<do not> use
 this as a means of skipping records.

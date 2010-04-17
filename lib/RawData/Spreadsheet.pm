@@ -4,6 +4,9 @@
 
 This role provides helper methods for working with spreadsheet data.
 
+It assumes one record per row of the spreadsheet. This is how our clients send
+their data. I don't want to add complexity that isn't necessary.
+
 =cut
 
 package RawData::Spreadsheet;
