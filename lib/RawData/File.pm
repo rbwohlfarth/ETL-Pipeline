@@ -74,7 +74,7 @@ code fills in the following attributes of L<RawData::Record>...
 
 sub read_one_record($) { 
 	my ($self) = @_;
-	$self->log->debug( __PACKAGE__ . '->get_record called' );
+	$self->log->debug( __PACKAGE__ . '->read_one_record called' );
 
 	# Don't bother reading past the end of the file. Change the file name
 	# to read more data.
@@ -140,7 +140,7 @@ reading the current file and starts the new one.
 has 'file' => (
 	is      => 'rw',
 	isa     => 'Str',
-	trigger => \&open,
+	trigger => sub { my $self = shift; $self->open( @_ ); },
 );
 
 

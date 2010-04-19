@@ -35,7 +35,7 @@ has 'excel' => (
 );
 
 
-=item _file_set (private)
+=item open (private)
 
 Perl automatically triggers this code when the C<file> attribute changes.
 This method...
@@ -55,16 +55,16 @@ Sets the record at the first populated row.
 =cut
 
 augment 'open' => sub {
-	my ($self, $newPath, $oldPath) = @_;
+	my ($self, $new_path, $old_path) = @_;
 	$self->log->debug( __PACKAGE__ . '->open called' );
 
 	# Create the Excel parser.
-	$self->_set_workbook( $self->excel->parse( $newPath ) );
+	$self->_set_workbook( $self->excel->parse( $new_path ) );
 
 	# Crash if there's an error.
 	$self->log->logdie( 
 		'Unable to read any data from the Excel spreadsheet '
-		. $self->file
+		. $new_path
 		. ': '
 		. $self->excel->error()
 	) unless (defined $self->workbook);
@@ -97,10 +97,6 @@ augment 'read_one_record' => sub {
 		return undef;
 	}
 
-	# Parse the next row in the spreadsheet. Since we have not reached the
-	# last row, there is one more left.
-	$self->position( $self->position + 1 );
-
 	# Copy the entire row into a list...
 	my @spreadsheet;
 
@@ -120,6 +116,11 @@ augment 'read_one_record' => sub {
 		);
 		push @spreadsheet, (defined( $cell ) ? $cell->value : '');
 	}
+
+	# I count from 1, the Excel class counts from zero. So I read the data
+	# before incrementing the position. That way "position" always returns
+	# the Excel row number of the current data.
+	$self->position( $self->position + 1 );
 
 	# Build a record from the list.
 	return $self->array_to_record( @spreadsheet );
@@ -168,12 +169,13 @@ sub worksheet($;$) {
 		);
 
 		if (defined $self->_get_worksheet) {
-			# Find the actual starting row. "position" refers to the last row
-			# read. So we start one before the first row.
+			# Find the actual starting row. The Excel parser begins with row 
+			# zero. I use row 1 - to match the Excel screen. So the number
+			# returned by Excel is the row before my first row of data.
 			my ($first_row, $last_row) = $self->_get_worksheet->row_range();
 			$self->log->debug( "First row: $first_row" );
 
-			$self->position( $first_row - 1 );
+			$self->position( $first_row );
 		} else {
 			$self->log->error( "Worksheet '$name' does not exist" );
 			$self->position( 0 );
