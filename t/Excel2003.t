@@ -23,12 +23,16 @@ ok( defined $record                  , 'read_one_record => object'          );
 ok( $record->isa( 'RawData::Record' ), 'read_one_record => RawData::Record' );
 
 my @keys = sort keys( %{$record->data} );
-is( scalar( @keys )     , 3       , 'Three columns of data'        );
+is( scalar( @keys )     , 5       , 'Three columns of data'        );
 is( $keys[0]            , 'A'     , '$record->data->{A}'           );
 is( $keys[1]            , 'B'     , '$record->data->{B}'           );
 is( $keys[2]            , 'C'     , '$record->data->{C}'           );
+is( $keys[3]            , 'D'     , '$record->data->{D}'           );
+is( $keys[4]            , 'E'     , '$record->data->{E}'           );
 is( $file->position     , 1       , 'position == row number'       );
 is( $record->data->{'A'}, 'Field1', '$record->data->{A} == Field1' );
 is( $record->data->{'B'}, 'Field2', '$record->data->{B} == Field2' );
 is( $record->data->{'C'}, 'Field3', '$record->data->{C} == Field3' );
+is( $record->data->{'D'}, 'Field4', '$record->data->{D} == Field4' );
+is( $record->data->{'E'}, 'Field5', '$record->data->{E} == Field5' );
 

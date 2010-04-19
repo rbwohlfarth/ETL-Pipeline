@@ -110,25 +110,42 @@ populated L<RawData::Record> object.
 
 sub array_to_record($@) {
 	my ($self, @data) = @_;
+	$self->log->debug( __PACKAGE__ . '->array_to_record called' );
 
 	# Accept either an array or an array reference. If I always use a 
 	# reference, then I don't cut and paste code.
-	my $array = \@data;
-	   $array = $data[0] if ((@data == 1) and (ref( $data[0] ) eq 'ARRAY'));
-	
+	my $array;
+	if ((@data == 1) and (ref( $data[0] ) eq 'ARRAY')) {
+		$array = $data[0];
+		$self->log->debug( 'Received an array reference' );
+	} else {
+		$array = \@data;
+		$self->log->debug( 'Received a list' );
+	}
+
 	# Create a new record object. I assume the record is blank until we find
 	# a non-blank field.
 	my $record = RawData::Record->new();
 	   $record->is_blank( 1 );
-	   
+	$self->log->debug( "Create a new record: $record" );
+
 	# Populate the fields using the column name - not its index.
+	$self->log->debug( scalar( @$array ) . ' columns of data' );
 	for (my $index = 0; $index < @$array; $index++) {
 		my $column = $self->column_name_on_screen( $index );
 		my $value  = $array->[$index];
 
 		$record->data->{$column} = $value;
-		$record->is_blank( 0 ) unless ($value =~ m/^\s*$/);
+		$self->log->debug( "Column $column = '$value'" );
+
+		unless ($value =~ m/^\s*$/) {
+			$record->is_blank( 0 );
+			$self->log->debug( 'Row is not blank' );
+		}
 	}
+
+	# Send the newly created record back to the caller!
+	return $record;
 }
 
 

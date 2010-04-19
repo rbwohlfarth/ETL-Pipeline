@@ -100,7 +100,7 @@ sub read_one_record($) {
 	# Set the location information in the record. Error messages can then
 	# reference the original file and line number.
 	if (ref( $record )) {
-		$record->came_from( 'record ' . $self->position . ' in ' . $self->path );
+		$record->came_from( 'record ' . $self->position . ' in ' . $self->file );
 		return $record;
 	} else {
 		$self->_set_end_of_file( 1 );

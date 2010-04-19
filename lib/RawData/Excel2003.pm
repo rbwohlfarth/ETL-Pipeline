@@ -85,13 +85,15 @@ spreadsheet. It uses L</fields> to map columns to field names.
 augment 'read_one_record' => sub {
 	my ($self, $record) = @_;
 
-	# Stop processing once we reach the last record.
+	# Stop processing once we reach the last record. The class counts rows
+	# from zero. "position" counts rows from 1. "position" should move one
+	# row past what the class says. That's why I used ">" instead of ">=".
 	my ($first_row, $last_row) = $self->worksheet->row_range();
 	$self->log->debug( "Rows $first_row to $last_row" );
 
-	if ($self->position >= $last_row) {
+	if ($self->position > $last_row) {
 		$self->log->debug( 
-			"No data past the last row: $last_row <= " 
+			"No data past the last row: $last_row < " 
 			. $self->position 
 		);
 		return undef;
@@ -107,7 +109,7 @@ augment 'read_one_record' => sub {
 		$self->log->debug( 
 			'Cell ' 
 			. $self->column_name_on_screen( $column )
-			. $self->position
+			. ($self->position + 1)
 		);
 
 		my $cell = $self->worksheet->get_cell( 
