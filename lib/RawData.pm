@@ -4,14 +4,17 @@
 
  use RawData;
 
- # Pick a file type based on the file's extension.
+ # Try to guess the file type from the extension, and prompt if that fails.
+ # This is what you would use in the majority of cases.
+ $parser = RawData->get_file_type( $path );
+
+ # Pick a file type based on the file's extension. This is useful for 
+ # non-interactive processes.
  $parser = RawData->guess_file_type( $path );
 
- # Pick a file type from a list of available options.
+ # Pick a file type from a list of available options. This is for when you
+ # don't want to trust the built in guessing.
  $parser = RawData->choose_file_type( $path );
-
- # Try to guess the file type from the extension, and prompt if that fails.
- $parser = RawData->get_file_type( $path );
 
 =head1 Description
 
