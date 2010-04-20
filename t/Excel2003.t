@@ -1,21 +1,23 @@
-use Test::More 'no_plan';
-
 use Log::Log4perl qw/:easy/;
-use RawData::Excel2003;
+use Test::More;
+
+BEGIN { use_ok( 'RawData::Excel2003' ); }
+require_ok( 'RawData::Excel2003' );
 
 
 # Prevent bogus warning messages in the tests.
 Log::Log4perl->easy_init( $ERROR );
 
+
 # Test object creation - does it compile?
-my $file = new RawData::Excel2003;
-ok( defined $file                     , 'Object exists'              );
-ok( $file->isa( 'RawData::Excel2003' ), 'Object is the correct type' );
+my $file = new_ok( 'RawData::Excel2003' );
+
 
 # open()
 is( $file->file( 't/Excel2003.xls' ), 't/Excel2003.xls', 'open()'        );
 is( $file->end_of_file              , 0                , 'end_of_file()' );
 is( $file->position                 , 0                , 'position == 0' );
+
 
 # read_one_record()
 my $record = $file->read_one_record;
@@ -35,4 +37,7 @@ is( $record->data->{'B'}, 'Field2', '$record->data->{B} == Field2' );
 is( $record->data->{'C'}, 'Field3', '$record->data->{C} == Field3' );
 is( $record->data->{'D'}, 'Field4', '$record->data->{D} == Field4' );
 is( $record->data->{'E'}, 'Field5', '$record->data->{E} == Field5' );
+
+
+done_testing();
 
