@@ -1,4 +1,11 @@
-Build.PL				Installation script
-lib/RawData/File.pm		Base class for processing data files
-lib/RawData/Record.pm	A single record loaded into memory
-MANIFEST				This list of files
+Build.PL					Installation script
+lib/RawData.pm				Wrapper that dynamically determines the file type
+lib/RawData/File.pm			Base class for processing data files
+lib/RawData/Excel2003.pm	Read MS Excel 2003 spread sheet files
+lib/RawData/Record.pm		A single record loaded into memory
+lib/RawData/Spreadsheet.pm	Generic role for spread sheet files
+MANIFEST					This list of files
+t/Excel2003.t				Test script for RawData::Excel2003
+t/Excel2003.xls				Test data file for RawData::Excel2003
+t/File.t					Test script for RawData::File
+t/Record.t					Test script for RawData::Record
