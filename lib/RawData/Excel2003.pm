@@ -1,6 +1,19 @@
 =pod
 
-=head1 Description
+=head1 SYNOPSIS
+
+ use RawData::Excel2003;
+ my $parser = new RawData::Excel2003;
+ 
+ # Open a spreadsheet for reading.
+ $parser->file( 'C:\InputData.xls' );
+
+ # Read the file, one record at a time.
+ while (my $record = $parser->read_one_record) {
+     # Do stuff here...
+ }
+
+=head1 DESCRIPTION
 
 This class handles MS Excel 2003 files. These files have a different format
 from Excel 2007.
@@ -16,15 +29,13 @@ with 'RawData::Spreadsheet';
 use Spreadsheet::ParseExcel;
 
 
-=head1 Attributes & Methods
+=head2 Attributes & Methods
 
-=over
+=head3 excel
 
-=item excel
-
-Rather than re-invent the wheel, I used the L<Spreadsheet::Excel> module. This
-attribute points to an instance of that class. This is what actually reads the
-file and parses it.
+Rather than re-invent the wheel, I used the L<Spreadsheet::ParseExcel> module.
+This attribute points to an instance of that class. This is what actually 
+reads the file and parses it.
 
 =cut
 
@@ -35,7 +46,7 @@ has 'excel' => (
 );
 
 
-=item open (private)
+=head3 open( $new_path, $old_path )
 
 Perl automatically triggers this code when the C<file> attribute changes.
 This method...
@@ -59,7 +70,7 @@ augment 'open' => sub {
 	$self->log->debug( __PACKAGE__ . '->open called' );
 
 	# Create the Excel parser.
-	$self->_set_workbook( $self->excel->parse( $new_path ) );
+	$self->workbook( $self->excel->parse( $new_path ) );
 
 	# Crash if there's an error.
 	$self->log->logdie( 
@@ -75,7 +86,7 @@ augment 'open' => sub {
 };
 
 
-=item read_one_record
+=head3 read_one_record()
 
 This method populates a L<PARS::Record> with information from the 
 spreadsheet. It uses L</fields> to map columns to field names.
@@ -83,7 +94,7 @@ spreadsheet. It uses L</fields> to map columns to field names.
 =cut
 
 augment 'read_one_record' => sub {
-	my ($self, $record) = @_;
+	my ($self) = @_;
 
 	# Stop processing once we reach the last record. The class counts rows
 	# from zero. "position" counts rows from 1. "position" should move one
@@ -129,20 +140,19 @@ augment 'read_one_record' => sub {
 };
 
 
-=item workbook
+=head3 workbook
 
 The code creates this object to traverse the Excel data.
 
 =cut
 
 has 'workbook' => (
-	is     => 'ro',
-	isa    => 'Object',
-	writer => '_set_workbook',
+	is  => 'rw',
+	isa => 'Object',
 );
 
 
-=item worksheet
+=head3 worksheet
 
 The name of the worksheet with the data that you want. Reading the attribute
 returns an object for accessing cells. When writing, pass it the worksheet
@@ -189,7 +199,13 @@ sub worksheet($;$) {
 }
 
 
-=back
+=head1 SEE ALSO
+
+L<RawData::File>, L<RawData::Spreadsheet>, L<Spreadsheet::ParseExcel>
+
+=head1 LICENSE
+
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 
 =cut
 

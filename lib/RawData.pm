@@ -1,6 +1,6 @@
 =pod
 
-=head1 Synopsis
+=head1 SYNOPSIS
 
  use RawData;
 
@@ -16,7 +16,7 @@
  # don't want to trust the built in guessing.
  $parser = RawData->choose_file_type( $path );
 
-=head1 Description
+=head1 DESCRIPTION
 
 A file parser reads data from an external data file. This class provides
 convenience functions for choosing the correct parser type. This keeps you
@@ -31,11 +31,9 @@ use File::Spec::Functions qw/catdir catpath rel2abs splitpath/;
 use Win32::GUI qw//;
 
 
-=head1 Class Methods
+=head2 Class Methods
 
-=over
-
-=item choose_file_type( $path )
+=head3 choose_file_type( $path )
 
 Manually select a file type for a list of available classes. This is useful
 when the automatic guess fails.
@@ -84,7 +82,7 @@ sub choose_file_type($;$) {
 }
 
 
-=item create_file_object( $type )
+=head3 create_file_object( $type )
 
 Creates a L<RawData::File> object of the given type. The function returns
 C<undef> if there is an error.
@@ -121,7 +119,7 @@ sub create_file_object($$;$) {
 }
 
 
-=item get_file_type( $path )
+=head3 get_file_type( $path )
 
 This function tries L</guess_file_type( $path )>. If that fails, the code 
 automatically calls L</choose_file_type( $path )>. For interactive programs,
@@ -145,7 +143,7 @@ sub get_file_type($$) {
 }
 
 
-=item guess_file_type( $path )
+=head3 guess_file_type( $path )
 
 Determine a file's type based on its extension. I hope to eventually make this
 a bit more generic. For the moment, I have to add each new file type.
@@ -173,7 +171,13 @@ sub guess_file_type($$) {
 }
 
 
-=back
+=head1 SEE ALSO
+
+L<RawData::File>
+
+=head1 LICENSE
+
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 
 =cut
 

@@ -1,6 +1,10 @@
 =pod
 
-=head1 Description
+=head1 SYNOPSIS
+
+ with 'RawData::Spreadsheet';
+
+=head1 DESCRIPTION
 
 This role provides helper methods for working with spreadsheet data.
 
@@ -15,7 +19,7 @@ use Moose::Role;
 use RawData::Record;
 
 
-=head1 Column Names
+=head2 Column Names
 
 Spreadsheet programs reference cells with a column and row. They typically
 show columns as letters across the top of the window. The Perl drivers, 
@@ -23,9 +27,7 @@ though, reference columns using numbers. These functions translate from one
 format to the other. I want my code using the letters - just like it appears
 to the user on the screen.
 
-=over
-
-=item column_name_in_file
+=head3 column_name_in_file
 
 Convert from a cell reference with letters to one with numbers. This function
 only converts the column name. It strips off the row.
@@ -59,7 +61,7 @@ sub column_name_in_file($$) {
 }
 
 
-=item column_name_on_screen
+=head3 column_name_on_screen
 
 Convert from a column number into its alphabetic name.
 
@@ -91,16 +93,12 @@ sub column_name_on_screen($$) {
 }
 
 
-=back
-
-=head1 Accessing the Record Data
+=head2 Accessing the Record Data
 
 Spreadsheets use the column screen name as the field name... the first
 column goes into field B<A>, second into B<B>, third into B<C>, etc. 
 
-=over 
-
-=item array_to_record
+=head3 array_to_record
 
 Convert data from an array of values into a hash, keyed by the column name.
 The method accepts a list of data, or a reference to a list. It returns the 
@@ -149,8 +147,16 @@ sub array_to_record($@) {
 }
 
 
-=back
+=head1 SEE ALSO
+
+L<RawData::File>
+
+=head1 LICENSE
+
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 
 =cut
+
+# Perl requires this to load the module.
 1;
 

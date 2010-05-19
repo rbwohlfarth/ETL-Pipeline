@@ -1,6 +1,11 @@
 =pod
 
-=head1 Description
+=head1 SYNOPSIS
+
+ use Moose;
+ extends 'RawData::File';
+
+=head1 DESCRIPTION
 
 A file parser reads data from an external data file. This base class defines 
 generic attributes and methods not dependent on the actual file type.
@@ -15,11 +20,9 @@ package RawData::File;
 use Moose;
 
 
-=head1 Define these in the child class
+=head2 Define these in the child class
 
-=over
-
-=item open
+=head3 open( $new_path, $old_path )
 
 This method opens a new file. The object automatically calls this method when
 the file name changes. It receives the new and old values as parameters. Refer
@@ -39,24 +42,27 @@ sub open($$$) {
 	$self->log->debug( __PACKAGE__ . '->open called' );
 	$self->log->debug( "New file name: $new_path" );
 
-	# Reset the position to a default. The "open" method may change this
-	# to something more suitable for the file type.
+	# Reset the position to a default. The child method may change this to
+	# something more suitable for the file type.
 	$self->position( 0 );
 
-	# If "open" fails, we act like the end of the file.
+	# If the child fails, we act like the end of the file.
 	if (inner()) {
-		$self->_set_end_of_file( 0 );
+		$self->end_of_file( 0 );
+		return 1;
 	} else {
-		$self->_set_end_of_file( 1 );
+		$self->end_of_file( 1 );
+		return 0;
 	}
 }
 
 
-=item read_one_record
+=head3 read_one_record()
 
 This method reads the next record from the file and breaks it apart into
 fields. It returns a reference to a L<RawData::Record> object. An C<undef>
-means that we reached the end of the file.
+means that we reached the end of the file. The C<undef> causes this code to
+set the L</end_of_file> attribute.
 
 Child classes (what you're writing) 
 L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method. Your 
@@ -69,6 +75,8 @@ code fills in the following attributes of L<RawData::Record>...
 =item L<is_blank|RawData::Record/is_blank>
 
 =back
+
+Your child class should also set the L</position> attribute.
 
 =cut
 
@@ -103,34 +111,33 @@ sub read_one_record($) {
 		$record->came_from( 'record ' . $self->position . ' in ' . $self->file );
 		return $record;
 	} else {
-		$self->_set_end_of_file( 1 );
+		$self->end_of_file( 1 );
 		return undef;
 	}
 }
 
 
-=back
+=head2 Attributes & Methods
 
-=head1 Attributes & Methods
-
-=over
-
-=item end_of_file
+=head3 end_of_file
 
 This attribute indicates when we have reached the end of the input file. The
-code sets this flag when L</open> returns B<false>. You cannot set its value.
+code sets this flag when L</open> returns B<false>. Your child class should
+not change this value without a very good reason.
+
+Setting the attribute to one does not physically change the file pointer. It
+does stop this class from reading any more data, though.
 
 =cut
 
 has 'end_of_file' => (
 	default => 0,
-	is      => 'ro',
+	is      => 'rw',
 	isa     => 'Bool',
-	writer  => '_set_end_of_file',
 );
 
 
-=item file
+=head3 file
 
 This attribute holds the current file path. Setting the file name stops
 reading the current file and starts the new one.
@@ -144,7 +151,7 @@ has 'file' => (
 );
 
 
-=item log
+=head3 log
 
 This attribute prints debugging messages. I used the logger because it is easy
 to later switch from the screen to an actual log file.
@@ -154,7 +161,7 @@ to later switch from the screen to an actual log file.
 with 'MooseX::Log::Log4perl';
 
 
-=item position
+=head3 position
 
 This attribute records the current record from the file. The exact value
 depends on the file type. For example, a text file might have the line
@@ -178,7 +185,13 @@ has 'position' => (
 );
 
 
-=back
+=head1 SEE ALSO
+
+L<RawData::Record>
+
+=head1 LICENSE
+
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 
 =cut
 
