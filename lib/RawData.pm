@@ -164,7 +164,8 @@ sub guess_file_type($$) {
 
 	# Determine the type from the extension...
 	my $type;
-	if ($extension eq 'xls') { $type = 'RawData\Excel2003.pm'; }
+	if    ($extension eq 'xls') { $type = 'RawData\Excel2003.pm'    ; }
+	elsif ($extension eq 'txt') { $type = 'RawData\DelimitedText.pm'; }
 
 	# Return an object of the correct type...
 	return $class->create_file_object( $type, $path );
