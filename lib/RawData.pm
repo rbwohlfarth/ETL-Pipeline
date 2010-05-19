@@ -106,11 +106,10 @@ sub create_file_object($$;$) {
 
 		# Create the object, with a dynamic class name...
 		our $object;
-		if (defined $path) {
-			eval "\$object = new $module_name( file => \$path )";
-		} else {
-			eval "\$object = new $module_name";
-		}
+		eval "\$object = new $module_name";
+
+		# Open the data file for reading...
+		$object->file( $path ) if (defined $path);
 
 		return $object;
 	} else {
