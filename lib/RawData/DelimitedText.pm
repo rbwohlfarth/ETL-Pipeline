@@ -32,7 +32,7 @@ use String::Util qw/hascontent/;
 use Text::CSV;
 
 
-=head2 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
 
 =head3 file_handle
 
@@ -95,9 +95,6 @@ begin at 1 - not 0.
 augment 'read_one_record' => sub {
 	my ($self) = @_;
 
-	# The last read hit the end of the input file.
-	return undef if ($self->parser->eof);
-
 	# Read one line and break it into fields.
 	my $fields = $self->parser->getline( $self->file_handle );
 	$self->position( $self->position + 1 );
@@ -117,7 +114,10 @@ L<RawData::File>, L<Text::CSV>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

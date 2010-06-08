@@ -31,9 +31,9 @@ use File::Spec::Functions qw/catdir catpath rel2abs splitpath/;
 use Win32::GUI qw//;
 
 
-=head2 Class Methods
+=head1 METHODS & ATTRIBUTES
 
-=head3 choose_file_type( $path )
+=head3 RawData->choose_file_type( $path )
 
 Manually select a file type for a list of available classes. This is useful
 when the automatic guess fails.
@@ -82,7 +82,7 @@ sub choose_file_type($;$) {
 }
 
 
-=head3 create_file_object( $type )
+=head3 RawData->create_file_object( $type )
 
 Creates a L<RawData::File> object of the given type. The function returns
 C<undef> if there is an error.
@@ -118,7 +118,7 @@ sub create_file_object($$;$) {
 }
 
 
-=head3 get_file_type( $path )
+=head3 RawData->get_file_type( $path )
 
 This function tries L</guess_file_type( $path )>. If that fails, the code 
 automatically calls L</choose_file_type( $path )>. For interactive programs,
@@ -142,7 +142,7 @@ sub get_file_type($$) {
 }
 
 
-=head3 guess_file_type( $path )
+=head3 RawData->guess_file_type( $path )
 
 Determine a file's type based on its extension. I hope to eventually make this
 a bit more generic. For the moment, I have to add each new file type.
@@ -177,7 +177,10 @@ L<RawData::File>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

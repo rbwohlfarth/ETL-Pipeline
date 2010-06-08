@@ -1,13 +1,22 @@
 =pod
 
-=head1 Description
+=head1 SYNOPSIS
+
+ use Moose;
+ with 'RawData::Converter';
+
+=head1 DESCRIPTION
 
 The C<RawData::Converter> role translates a raw data file into your database
 schema. The role handles common, abstract functions of the translation. It
 provides a robust mapping system that handles most of your needs.
 
-The consuming class defines a L</build_mapping> method, plus any methods
-referenced in the mapping itself.
+The conversion methods work on individual records. Your application should
+provide temporary storage for the data (aka lists). I tried putting that
+inside this role. It made the thing even more complex. For every method, I had
+to decide if it works on single records or the entire list. This meant that
+you could not adapt it for your needs. It hid too much of the application
+design behind the class definition.
 
 =cut
 
@@ -15,27 +24,26 @@ package RawData::Converter;
 use Moose::Role;
 
 
-=head1 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
 
-=over
+=head2 Override These in the Consuming Class
 
-=item build_mapping()
+=head3 build_mapping()
 
-Return a hash of file fields and their conversion specifications. Your hash 
-may look like this...
+Return a hash of conversion specifications. Your hash may look like this...
+
  {
-   A => { data => 'Name' },
-   B => { data => 'Date', pre => 'date_convert' },
-   C => 'Age',
+   Name => 'A',
+   Date => 'B',
+   Age  => 'C',
  }
 
-The I<conversion specification> is itself a hash reference. The keys are
-whatever you want. Your L</convert> method accesses this information.
+The keys are your database fields. The code copies data from the file into 
+these fields. 
 
-I strongly suggest using the key B<data> as the database field name. 
-L<RawData::Converter> automatically sets this key if you use a string
-instead of a hash reference. In the example, do you see the C<< C => 'Age' >>?
-L<RawData::Converter> changes that to C<< C => { data => 'Age' } >>.
+The value is the file field name from the L</parser>. The conversion process 
+pulls data from this file field and places it into the database field (the 
+hash key).
 
 You do not need to map every field from the input file. Map only the fields
 required by your application. Ignore the rest. 
@@ -45,7 +53,7 @@ required by your application. Ignore the rest.
 requires 'build_mapping';
 
 
-=item build_model()
+=head3 build_model()
 
 Return an L<DBIx::Class::ResultSet> object for the database table.
 
@@ -54,7 +62,7 @@ Return an L<DBIx::Class::ResultSet> object for the database table.
 requires 'build_model';
 
 
-=item build_parser()
+=head3 build_parser()
 
 Return a L<RawData> object corresponding to the input file format.
 
@@ -63,22 +71,7 @@ Return a L<RawData> object corresponding to the input file format.
 requires 'build_parser';
 
 
-=item convert()
-
-This abstract method will perform the actual translation. The process seems 
-generic enough - until you think about it. Every conversion process has some
-custom element. For example, we load one table that has fields always set to
-a specific value. Another table needs some special processing before saving.
-
-Rather than try and anticipate all of this, I put the responsibility where it
-belongs - in the custom conversion class.
-
-=cut
-
-requires 'convert';
-
-
-=item header_rows
+=head3 header_rows
 
 The number of header rows before any data. You do not want to load the 
 headers. This tells the file parser how many lines it can skip.
@@ -92,7 +85,57 @@ has 'header_rows' => (
 );
 
 
-=item log
+=head2 Standard Attributes & Methods
+
+=head3 convert( $record )
+
+Map the file fields into the proper database fields. This method applies the
+field mapping to an individual record.
+
+Your conversion process may require more. For example, perhaps you L</trigger> 
+validation code before the conversion. L<RawData::Converter> provides two ways
+to handle this:
+
+=over
+
+=item 1. Put the call in your application.
+
+=item 2. Override this class
+
+You can use the 
+L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND>
+method modifiers.
+
+=back
+
+=cut
+
+sub convert($$) {
+	my ($self, $record) = @_;
+
+	my $mapping = $self->mapping;
+	foreach my $database (keys %$mapping) {
+		my $file = $mapping->{$database}->{'file'};
+		$self->model->set_field( $database, $record->data->{$file} )
+			if (defined $file);
+	}
+}
+
+
+=head3 error( $message, $record )
+
+Log an error message for the given record. Call this from your validation code.
+It ensures a consistent format in error messages.
+
+=cut
+
+sub error($$$) {
+	my ($self, $message, $record) = @_;
+	$self->log->error( "$message at " . $record->came_from );
+}
+
+
+=head3 log
 
 A L<Moose::Log::Log4perl> object for reporting errors.
 
@@ -101,34 +144,25 @@ A L<Moose::Log::Log4perl> object for reporting errors.
 with 'Moose::Log::Log4perl';
 
 
-=item mapping
+=head3 mapping
 
 Stores a hash of conversion specifications. You create this hash through the
 L</build_mapping> method.
 
-Key the hash with the file field name. This is the field name returned by the
-L</parser> object. The data is another hash. See </build_mapping> for more
-information.
+Key the hash with the database field name. The conversion process pulls data
+from the file. This is what you do manually - look at the fields you need, then
+see which file fields correspond.
 
 =cut
 
-subtype 'HashRefOfStr'
-	=> as 'HashRef[Maybe[Str]]';
-
-coerce  'HashRefOfStr'
-	=> from 'Maybe[Str]',
-	=> via { {data => $_} };
-
 has 'mapping' => (
 	builder => 'build_mapping',
-	coerce  => 1,
-	default => sub { {} },
 	is      => 'ro',
-	isa     => 'HashRef[HashRefOfStr]',
+	isa     => 'HashRef[Str]',
 );
 
 
-=item model
+=head3 model
 
 The L<DBIx::Class::ResultSet> for the database table. Your class sets this 
 through the L</build_model> method.
@@ -142,7 +176,7 @@ has 'model' => (
 );
 
 
-=item parser
+=head3 parser
 
 A L<RawData::File> object for parsing the file. Create an object of the
 correct type for this client's data.
@@ -159,71 +193,18 @@ has 'parser' => (
 );
 
 
-=item records
+=head1 SEE ALSO
 
-A list of L<RawData::Record> objects created from the input file.
+L<DBIx::Class::ResultSet>, L<RawData>, L<RawData::File>
 
-=cut
+=head1 LICENSE
 
-has 'records' => (
-	default => sub { [] },
-	is      => 'ro',
-	isa     => 'ArrayRef[RawData::Record]',
-);
+Copyright 2010  The Center for Patient and Professional Advocacy,
+Vanderbilt University Medical Center
 
-
-=item trigger( attribute )
-
-Loop through the field mapping and call the method named in this I<attribute>.
-The method receives two parameters:
-
-=over
-
-=item 1 A L<RawData::Record> object.
-
-=item 2 The file field name.
-
-=back
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
-
-sub trigger($$) {
-	my ($self, $attribute) = @_;
-	$self->log->debug( "Entering trigger..." );
-
-	# Make a list of method names to call. The logic evaluates the same for
-	# every record. So why do it over and over? I do it once, and then only 
-	# fire the methods that pass muster.
-	my %call_method;
-	while (my ($file_field, $conversion) = each %{$self->mapping}) {
-		if (exists $conversion->{$attribute}) {
-			# Get the method name from the conversion specification.
-			my $method_name = $conversion->{$attribute};
-
-			# Get the method object so that we can execute this method.
-			my $method = $self->meta->find_method_by_name( $method_name );
-
-			# Save the method object for use in the next loop.
-			if (defined $method) { $call_method{$file_field} = $method; }
-			else { $self->log->error( "Missing method $method_name for attribute $attribute of field $file_field" ); }
-		}
-	}
-
-	# Loop through every record, executing the methods...
-	foreach my $record (@{$self->records}) {
-		while (my ($file_field, $method) = each %call_method) {
-			$method->execute( $self, $record, $file_field );
-		}		
-	}
-
-	$self->log->debug( "...leaving trigger" );
-}
-
-
-=back
-
-=cut
-
 
 # Perl requires this to load the module.
 1;

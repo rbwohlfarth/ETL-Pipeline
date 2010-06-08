@@ -29,7 +29,7 @@ with 'RawData::Spreadsheet';
 use Spreadsheet::ParseExcel;
 
 
-=head2 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
 
 =head3 excel
 
@@ -53,13 +53,9 @@ This method...
 
 =over
 
-=item *
+=item * Opens the new file using the L</excel> attribute.
 
-Opens the new file using the L</excel> attribute.
-
-=item *
-
-Sets the record at the first populated row.
+=item * Sets the record at the first populated row.
 
 =back
 
@@ -205,7 +201,10 @@ L<RawData::File>, L<RawData::Spreadsheet>, L<Spreadsheet::ParseExcel>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

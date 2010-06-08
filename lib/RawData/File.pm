@@ -20,6 +20,8 @@ package RawData::File;
 use Moose;
 
 
+=head1 METHODS & ATTRIBUTES
+
 =head2 Define these in the child class
 
 =head3 open( $new_path, $old_path )
@@ -117,7 +119,7 @@ sub read_one_record($) {
 }
 
 
-=head2 Attributes & Methods
+=head2 Standard Attributes & Methods
 
 =head3 end_of_file
 
@@ -191,7 +193,10 @@ L<RawData::Record>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

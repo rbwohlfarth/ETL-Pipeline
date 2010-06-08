@@ -1,6 +1,8 @@
 =pod
 
-=head1 Description
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
 
 Files are collections of records. The L<RawData::File> class takes individual
 records out of a file and copies them into memory. This class is that 
@@ -16,11 +18,9 @@ package RawData::Record;
 use Moose;
 
 
-=head1 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
 
-=over
-
-=item came_from
+=head2 came_from
 
 This text goes into error messages so that the user can find and fix any
 problems with the original data. The L<RawData::File/get_record> class 
@@ -34,7 +34,7 @@ has 'came_from' => (
 );
 
 
-=item data
+=head2 data
 
 This hash holds the actual data. It is keyed by the file field name. The
 name depends on the file format. For example, a spreadsheet would use the
@@ -49,7 +49,7 @@ has 'data' => (
 );
 
 
-=item from_array
+=head2 from_array
 
 This class method returns a new L<RawData::Record> object with data from a
 Perl list - or a reference to a list. L</data>'s hash key is the position 
@@ -80,7 +80,7 @@ sub from_array($@) {
 }
 
 
-=item is_blank
+=head2 is_blank
 
 This boolean flag indicates if the record is blank. I<Blank> may mean 
 different things to different file formats. using a flag gives me a standard
@@ -97,11 +97,19 @@ has 'is_blank' => (
 );
 
 
-=back
+=head1 SEE ALSO
+
+L<RawData>
+
+=head1 LICENSE
+
+Copyright 2010  The Center for Patient and Professional Advocacy,
+Vanderbilt University Medical Center
+
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-
 
