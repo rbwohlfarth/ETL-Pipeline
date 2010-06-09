@@ -18,6 +18,36 @@ to decide if it works on single records or the entire list. This meant that
 you could not adapt it for your needs. It hid too much of the application
 design behind the class definition.
 
+=head2 Sample Application
+
+This code shows a very simple example. It takes an Excel spreadsheet and 
+load it into the SQL database. 
+
+ use RawData::Converter::Example;
+ my $cnv = new RawData::Converter::Example;
+
+ # Access the data file.
+ $cnv->parser->file( 'C:\sample_data.xls' );
+ 
+ # Process records one at a time, skipping blank rows.
+ while (my $record = $cnv->parser->read_one_record) {
+     unless ($record->is_blank) {
+         # Convert from the spreadsheet to the database.
+         $cnv->convert( $record );
+ 
+         # Save the new record to the database.
+         $cnv->model->update;
+     }
+ }
+
+Notice that I don't tell the code anywhere about Excel? 
+I<RawData::Converter::Example> creates a L<RawData::File> parser of the 
+correct type. It also defines exactly how the cells map to database fields.
+
+I expect most applications have a repetoire of I<RawData::Converter> classes.
+Those classes handle the customized portions. Leaving the only common code in
+the application itself.
+
 =cut
 
 package RawData::Converter;
@@ -72,18 +102,15 @@ Return a L<RawData::File> object corresponding to the input file format.
 requires 'build_parser';
 
 
-=head3 header_rows
+=head3 number_of_headers
 
 The number of header rows before any data. You do not want to load the 
-headers. This tells the file parser how many lines it can skip.
+headers. This tells the file parser how many lines it can skip by setting
+the L</header_rows> attribute.
 
 =cut
 
-has 'header_rows' => (
-	default => 0,
-	is      => 'ro',
-	isa     => 'Int',
-);
+requires 'number_of_headers';
 
 
 =head2 Standard Attributes & Methods
@@ -130,6 +157,20 @@ sub error($$$) {
 	my ($self, $message, $record) = @_;
 	$self->log->error( "$message at " . $record->came_from );
 }
+
+
+=head3 header_rows
+
+The number of header rows before any data. You do not want to load the 
+headers. This tells the file parser how many lines it can skip.
+
+=cut
+
+has 'header_rows' => (
+	builder => 'number_of_headers',
+	is      => 'rw',
+	isa     => 'Int',
+);
 
 
 =head3 log
