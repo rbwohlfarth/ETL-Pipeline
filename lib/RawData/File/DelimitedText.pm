@@ -3,7 +3,7 @@
 =head1 SYNOPSIS
 
  use RawData::DelimitedText;
- my $parser = new RawData::DelimitedText;
+ my $parser = new RawData::File::DelimitedText;
  
  # Open a pipe delimited file for reading.
  $parser->csv->sep_char( '|' );
@@ -23,7 +23,7 @@ escape characters. This should cover most delimited files.
 
 =cut
 
-package RawData::Type::DelimitedText;
+package RawData::File::DelimitedText;
 use Moose;
 
 extends 'RawData::File';

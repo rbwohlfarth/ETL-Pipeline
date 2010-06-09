@@ -3,7 +3,7 @@
 =head1 SYNOPSIS
 
  use RawData::Excel2003;
- my $parser = new RawData::Excel2003;
+ my $parser = new RawData::File::Excel2003;
  
  # Open a spreadsheet for reading.
  $parser->file( 'C:\InputData.xls' );
@@ -20,7 +20,7 @@ from Excel 2007.
 
 =cut
 
-package RawData::Type::Excel2003;
+package RawData::File::Excel2003;
 use Moose;
 
 extends 'RawData::File';
