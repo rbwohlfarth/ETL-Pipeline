@@ -1,8 +1,8 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'RawData::DelimitedText' ); }
-require_ok( 'RawData::DelimitedText' );
+BEGIN { use_ok( 'RawData::Type::DelimitedText' ); }
+require_ok( 'RawData::Type::DelimitedText' );
 
 
 # Prevent bogus warning messages in the tests.
@@ -10,7 +10,7 @@ Log::Log4perl->easy_init( $ERROR );
 
 
 # Test object creation - does it compile?
-my $file = new_ok( 'RawData::DelimitedText' );
+my $file = new_ok( 'RawData::Type::DelimitedText' );
 
 
 # open()

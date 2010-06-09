@@ -23,7 +23,7 @@ from Excel 2007.
 package RawData::Type::Excel2003;
 use Moose;
 
-with 'RawData::File';
+extends 'RawData::File';
 with 'RawData::Spreadsheet';
 
 use Spreadsheet::ParseExcel;

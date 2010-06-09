@@ -23,10 +23,10 @@ escape characters. This should cover most delimited files.
 
 =cut
 
-package RawData::DelimitedText;
+package RawData::Type::DelimitedText;
 use Moose;
 
-with 'RawData::File';
+extends 'RawData::File';
 
 use RawData::Record;
 use Text::CSV;
