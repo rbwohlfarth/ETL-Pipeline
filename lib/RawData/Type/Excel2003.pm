@@ -20,10 +20,10 @@ from Excel 2007.
 
 =cut
 
-package RawData::Excel2003;
+package RawData::Type::Excel2003;
 use Moose;
 
-extends 'RawData::File';
+with 'RawData::File';
 with 'RawData::Spreadsheet';
 
 use Spreadsheet::ParseExcel;
@@ -84,8 +84,8 @@ augment 'open' => sub {
 
 =head3 read_one_record()
 
-This method populates a L<PARS::Record> with information from the 
-spreadsheet. It uses L</fields> to map columns to field names.
+This method populates a L<RawData::Record> with information from the 
+spreadsheet.
 
 =cut
 
@@ -197,7 +197,8 @@ sub worksheet($;$) {
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<RawData::Spreadsheet>, L<Spreadsheet::ParseExcel>
+L<RawData::File>, L<RawData::Record>, L<RawData::Spreadsheet>, 
+L<Spreadsheet::ParseExcel>
 
 =head1 LICENSE
 

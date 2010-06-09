@@ -3,7 +3,7 @@
 =head1 SYNOPSIS
 
  use Moose;
- extends 'RawData::File';
+ with 'RawData::File';
 
 =head1 DESCRIPTION
 
@@ -12,17 +12,17 @@ generic attributes and methods not dependent on the actual file type.
 
 Unlike data models, the parser does not define fields as attributes. It 
 creates a hash with the field name as the key. This data structure makes it
-very easy to analyze data before mapping it into PARS.
+very easy to analyze data before mapping it into a real data model.
 
 =cut
 
 package RawData::File;
-use Moose;
+use Moose::Role;
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Define these in the child class
+=head2 Override These in the Consuming Class
 
 =head3 open( $new_path, $old_path )
 
@@ -33,7 +33,7 @@ to L<Moose::Manual::Attributes/Triggers> for more information.
 Your code returns a boolean value. B<True> means the open succeeded - go ahead
 and read records. B<False> means that you could not open the file.
 
-Child classes (what you're writing) 
+Consuming classes (what you're writing) 
 L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
 
 =cut
@@ -66,7 +66,7 @@ fields. It returns a reference to a L<RawData::Record> object. An C<undef>
 means that we reached the end of the file. The C<undef> causes this code to
 set the L</end_of_file> attribute.
 
-Child classes (what you're writing) 
+Consuming classes (what you're writing) 
 L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method. Your 
 code fills in the following attributes of L<RawData::Record>...
 
@@ -78,7 +78,7 @@ code fills in the following attributes of L<RawData::Record>...
 
 =back
 
-Your child class should also set the L</position> attribute.
+The consuming class should also set the L</position> attribute of this class.
 
 =cut
 
@@ -110,7 +110,12 @@ sub read_one_record($) {
 	# Set the location information in the record. Error messages can then
 	# reference the original file and line number.
 	if (ref( $record )) {
-		$record->came_from( 'record ' . $self->position . ' in ' . $self->file );
+		$record->came_from( 
+			'record ' 
+			. $self->position 
+			. ' in ' 
+			. $self->file
+		);
 		return $record;
 	} else {
 		$self->end_of_file( 1 );
@@ -127,7 +132,7 @@ This attribute indicates when we have reached the end of the input file. The
 code sets this flag when L</open> returns B<false>. Your child class should
 not change this value without a very good reason.
 
-Setting the attribute to one does not physically change the file pointer. It
+Setting the attribute to 1 does not physically change the file pointer. It
 does stop this class from reading any more data, though.
 
 =cut
@@ -200,6 +205,6 @@ Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
-no Moose;
-__PACKAGE__->meta->make_immutable;
+# Perl requires this to load the module.
+1;
 

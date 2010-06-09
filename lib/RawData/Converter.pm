@@ -30,7 +30,8 @@ use Moose::Role;
 
 =head3 build_mapping()
 
-Return a hash of conversion specifications. Your hash may look like this...
+Return a hash reference. The hash links database field names with to the
+corresponding file field name. This example maps a spreadsheet. Column A goes into the I<Name> field, B into I<Date>, etc.
 
  {
    Name => 'A',
@@ -64,7 +65,7 @@ requires 'build_model';
 
 =head3 build_parser()
 
-Return a L<RawData> object corresponding to the input file format.
+Return a L<RawData::File> object corresponding to the input file format.
 
 =cut
 
@@ -100,11 +101,7 @@ to handle this:
 
 =item 1. Put the call in your application.
 
-=item 2. Override this class
-
-You can use the 
-L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND>
-method modifiers.
+=item 2. Use the L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> method modifiers.
 
 =back
 
@@ -115,7 +112,7 @@ sub convert($$) {
 
 	my $mapping = $self->mapping;
 	foreach my $database (keys %$mapping) {
-		my $file = $mapping->{$database}->{'file'};
+		my $file = $mapping->{$database};
 		$self->model->set_field( $database, $record->data->{$file} )
 			if (defined $file);
 	}
@@ -146,12 +143,14 @@ with 'Moose::Log::Log4perl';
 
 =head3 mapping
 
-Stores a hash of conversion specifications. You create this hash through the
-L</build_mapping> method.
+Stores a hash linking the database fields to the file fields. This is the
+heart of the conversion process.
 
 Key the hash with the database field name. The conversion process pulls data
 from the file. This is what you do manually - look at the fields you need, then
 see which file fields correspond.
+
+The L</build_mapping()> method creates this hash.
 
 =cut
 
@@ -164,8 +163,8 @@ has 'mapping' => (
 
 =head3 model
 
-The L<DBIx::Class::ResultSet> for the database table. Your class sets this 
-through the L</build_model> method.
+A L<DBIx::Class::ResultSet> for the database table. Your class sets this 
+through the L</build_model()> method.
 
 =cut
 
@@ -178,12 +177,9 @@ has 'model' => (
 
 =head3 parser
 
-A L<RawData::File> object for parsing the file. Create an object of the
-correct type for this client's data.
+A L<RawData::File> object for accessing the file. The L</build_parser()> 
+method creates an object of the for this client's specific file format.
 
-Your class creates this object through the 
-L<default|Moose::Manual::Attributes/Default and builder methods> attribute
-modifier.
 =cut
 
 has 'parser' => (
@@ -195,7 +191,7 @@ has 'parser' => (
 
 =head1 SEE ALSO
 
-L<DBIx::Class::ResultSet>, L<RawData>, L<RawData::File>
+L<DBIx::Class::ResultSet>, L<RawData::File>
 
 =head1 LICENSE
 

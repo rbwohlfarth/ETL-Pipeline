@@ -20,10 +20,10 @@ use Moose;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 came_from
+=head3 came_from
 
 This text goes into error messages so that the user can find and fix any
-problems with the original data. The L<RawData::File/get_record> class 
+problems with the original data. The L<RawData::File/read_one_record> class 
 normally sets this value.
 
 =cut
@@ -34,7 +34,7 @@ has 'came_from' => (
 );
 
 
-=head2 data
+=head3 data
 
 This hash holds the actual data. It is keyed by the file field name. The
 name depends on the file format. For example, a spreadsheet would use the
@@ -49,7 +49,7 @@ has 'data' => (
 );
 
 
-=head2 from_array
+=head3 from_array
 
 This class method returns a new L<RawData::Record> object with data from a
 Perl list - or a reference to a list. L</data>'s hash key is the position 
@@ -65,7 +65,10 @@ sub from_array($@) {
 	# parameter is a list reference, then we assume you want the referenced
 	# list - not the pointer. Otherwise we copy the list you sent.
 	my $list = \@fields;
-	   $list = $fields[0] if ((@fields == 1) and (ref( $fields[0] ) eq 'ARRAY'));
+	   $list = $fields[0] if (
+			(@fields == 1) 
+			and (ref( $fields[0] ) eq 'ARRAY')
+		);
 
 	# Yes - "foreach" is nicer. I need the index to create the key for the
 	# hash. "foreach" doesn't offer any advantage in this case. Besides, I
@@ -80,7 +83,7 @@ sub from_array($@) {
 }
 
 
-=head2 is_blank
+=head3 is_blank
 
 This boolean flag indicates if the record is blank. I<Blank> may mean 
 different things to different file formats. using a flag gives me a standard
@@ -99,7 +102,7 @@ has 'is_blank' => (
 
 =head1 SEE ALSO
 
-L<RawData>
+L<RawData::File>
 
 =head1 LICENSE
 
