@@ -21,7 +21,7 @@ design behind the class definition.
 =head2 Sample Application
 
 This code shows a very simple example. It takes an Excel spreadsheet and 
-load it into the SQL database. 
+loads it into the SQL database. 
 
  use RawData::Converter::Example;
  my $cnv = new RawData::Converter::Example;
@@ -30,14 +30,9 @@ load it into the SQL database.
  $cnv->parser->file( 'C:\sample_data.xls' );
  
  # Process records one at a time, skipping blank rows.
- while (my $record = $cnv->parser->read_one_record) {
-     unless ($record->is_blank) {
-         # Convert from the spreadsheet to the database.
-         $cnv->convert( $record );
- 
-         # Save the new record to the database.
-         $cnv->model->update;
-     }
+ my @new_data;
+ while (my $record = $cnv->next_record) {
+     push @new_data, $record;
  }
 
 Notice that I don't tell the code anywhere about Excel? 
@@ -118,7 +113,7 @@ requires 'number_of_headers';
 =head3 convert( $record )
 
 Map the file fields into the proper database fields. This method applies the
-field mapping to an individual record.
+field mapping to an individual record. It returns a schema class for accessing the database record.
 
 Your conversion process may require more. For example, perhaps you L</trigger> 
 validation code before the conversion. L<RawData::Converter> provides two ways
@@ -135,14 +130,18 @@ to handle this:
 =cut
 
 sub convert($$) {
-	my ($self, $record) = @_;
+	my ($self, $from) = @_;
+
+	my $to = $self->model->create();
 
 	my $mapping = $self->mapping;
 	foreach my $database (keys %$mapping) {
 		my $file = $mapping->{$database};
-		$self->model->set_field( $database, $record->data->{$file} )
+		$to->set_field( $database, $from->data->{$file} )
 			if (defined $file);
 	}
+
+	return $to;
 }
 
 
@@ -214,6 +213,38 @@ has 'model' => (
 	is      => 'ro',
 	isa     => 'DBIx::Class::ResultSet',
 );
+
+
+=head3 next_record()
+
+Return the next L<database record|DBIx::Class::ResultSet> populated from the
+L<file|RawData::File>. This function calls the underlying 
+L<RawData::File/read_one_record> and L</convert> methods. It automatically 
+skips blank records.
+
+C<next_record> returns a schema class, like the L</convert> method. An 
+C<undef> value means that the file contains no more data.
+
+=cut
+
+sub next_record($) {
+	my ($self) = @_;
+
+	# Default to C<undef> - meaning that no record was read.
+	my $database = undef;
+
+	# Skip blank records. They don't have any useful data. Notice that the
+	# parser determines I<blank>.
+	while (my $file = $self->parser->read_one_record) {
+		unless ($file->is_blank) {
+			$database = $self->convert( $file );
+			last;
+		}
+	}
+
+	# Return a schema class so the application can affect the database.
+	return $database;
+}
 
 
 =head3 parser
