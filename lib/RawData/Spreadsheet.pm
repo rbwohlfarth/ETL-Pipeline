@@ -23,11 +23,11 @@ use RawData::Record;
 
 Spreadsheet programs reference cells with a column and row. They typically
 show columns as letters across the top of the window. The Perl drivers, 
-though, reference columns using numbers. These functions translate from one
+though, reference columns using numbers. These methodss translate from one
 format to the other. I want my code using the letters - just like it appears
 to the user on the screen.
 
-=head3 column_name_in_file
+=head3 column_name_in_file()
 
 Convert from a cell reference with letters to one with numbers. This function
 only converts the column name. It strips off the row.
@@ -61,7 +61,7 @@ sub column_name_in_file($$) {
 }
 
 
-=head3 column_name_on_screen
+=head3 column_name_on_screen()
 
 Convert from a column number into its alphabetic name.
 
@@ -153,7 +153,10 @@ L<RawData::File>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

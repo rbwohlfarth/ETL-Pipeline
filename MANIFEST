@@ -1,7 +1,7 @@
 Build.PL						Installation script
-lib/RawData.pm					Wrapper that dynamically determines the file type
-lib/RawData/DelimitedText.pm	Read text files with field delimiters (csv, tab, etc)
-lib/RawData/Excel2003.pm		Read MS Excel 2003 spread sheet files
+lib/RawData/File/DelimitedText.pm	Read text files with field delimiters (csv, tab, etc)
+lib/RawData/File/Excel2003.pm		Read MS Excel 2003 spread sheet files
+lib/RawData/Converter.pm		Generic role for data conversions
 lib/RawData/File.pm				Base class for processing data files
 lib/RawData/Record.pm			A single record loaded into memory
 lib/RawData/Spreadsheet.pm		Generic role for spread sheet files

@@ -12,7 +12,21 @@ generic attributes and methods not dependent on the actual file type.
 
 Unlike data models, the parser does not define fields as attributes. It 
 creates a hash with the field name as the key. This data structure makes it
-very easy to analyze data before mapping it into PARS.
+very easy to analyze data before mapping it into a real data model.
+
+=head2 Using RawData::File
+
+I<RawData::File> is an abstract base class. Technically, you can create an
+instance. It can do nothing useful, though. 
+
+Child classes inherit from I<RawData::File>, adding the necessary 
+functionality. The child class actually reads a real file and returns data. 
+Your application instantiates one of those children.
+
+Why not use a L<role|Moose::Manual::Roles>? The 
+L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> relationship
+better describes how I<RawData::File> interacts with the child class. Roles do
+not support L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT>.
 
 =cut
 
@@ -20,7 +34,9 @@ package RawData::File;
 use Moose;
 
 
-=head2 Define these in the child class
+=head1 METHODS & ATTRIBUTES
+
+=head2 Override These in the Child Class
 
 =head3 open( $new_path, $old_path )
 
@@ -76,7 +92,7 @@ code fills in the following attributes of L<RawData::Record>...
 
 =back
 
-Your child class should also set the L</position> attribute.
+The child class should also set the L</position> attribute of this class.
 
 =cut
 
@@ -108,7 +124,12 @@ sub read_one_record($) {
 	# Set the location information in the record. Error messages can then
 	# reference the original file and line number.
 	if (ref( $record )) {
-		$record->came_from( 'record ' . $self->position . ' in ' . $self->file );
+		$record->came_from( 
+			'record ' 
+			. $self->position 
+			. ' in ' 
+			. $self->file
+		);
 		return $record;
 	} else {
 		$self->end_of_file( 1 );
@@ -117,7 +138,7 @@ sub read_one_record($) {
 }
 
 
-=head2 Attributes & Methods
+=head2 Standard Attributes & Methods
 
 =head3 end_of_file
 
@@ -125,7 +146,7 @@ This attribute indicates when we have reached the end of the input file. The
 code sets this flag when L</open> returns B<false>. Your child class should
 not change this value without a very good reason.
 
-Setting the attribute to one does not physically change the file pointer. It
+Setting the attribute to 1 does not physically change the file pointer. It
 does stop this class from reading any more data, though.
 
 =cut
@@ -191,7 +212,10 @@ L<RawData::Record>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

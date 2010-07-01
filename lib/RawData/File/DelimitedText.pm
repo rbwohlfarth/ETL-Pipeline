@@ -3,9 +3,10 @@
 =head1 SYNOPSIS
 
  use RawData::DelimitedText;
- my $parser = new RawData::DelimitedText( separator => '|' );
+ my $parser = new RawData::File::DelimitedText;
  
- # Open a spreadsheet for reading.
+ # Open a pipe delimited file for reading.
+ $parser->csv->sep_char( '|' );
  $parser->file( 'C:\InputData.txt' );
 
  # Read the file, one record at a time.
@@ -22,17 +23,30 @@ escape characters. This should cover most delimited files.
 
 =cut
 
-package RawData::DelimitedText;
+package RawData::File::DelimitedText;
 use Moose;
 
 extends 'RawData::File';
 
 use RawData::Record;
-use String::Util qw/hascontent/;
 use Text::CSV;
 
 
-=head2 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
+
+=head3 csv
+
+The L<Text::CSV> object for doing the actual parsing work. Using the module
+lets me build on the bug fixes and hard learned lessons of others.
+
+=cut
+
+has 'csv' => (
+	default => sub { new Text::CSV; },
+	is      => 'ro',
+	isa     => 'Text::CSV',
+);
+
 
 =head3 file_handle
 
@@ -69,23 +83,9 @@ augment 'open' => sub {
 };
 
 
-=head3 parser
-
-The L<Text::CSV> object for doing the actual parsing work. Using the module
-lets me build on the bug fixes and hard learned lessons of others.
-
-=cut
-
-has 'parser' => (
-	default => sub { new Text::CSV; },
-	is      => 'ro',
-	isa     => 'Text::CSV',
-);
-
-
 =head3 read_one_record()
 
-This method populates a L<PARS::Record> with information from the file.
+This method populates a L<RawData::Record> with information from the file.
 
 This code sets the position to the line number last read. Line numbers
 begin at 1 - not 0.
@@ -95,11 +95,8 @@ begin at 1 - not 0.
 augment 'read_one_record' => sub {
 	my ($self) = @_;
 
-	# The last read hit the end of the input file.
-	return undef if ($self->parser->eof);
-
 	# Read one line and break it into fields.
-	my $fields = $self->parser->getline( $self->file_handle );
+	my $fields = $self->csv->getline( $self->file_handle );
 	$self->position( $self->position + 1 );
 
 	# Generate a record object...
@@ -113,11 +110,14 @@ augment 'read_one_record' => sub {
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<Text::CSV>
+L<RawData::File>, L<RawData::Record>, L<Text::CSV>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 

@@ -3,7 +3,7 @@
 =head1 SYNOPSIS
 
  use RawData::Excel2003;
- my $parser = new RawData::Excel2003;
+ my $parser = new RawData::File::Excel2003;
  
  # Open a spreadsheet for reading.
  $parser->file( 'C:\InputData.xls' );
@@ -20,7 +20,7 @@ from Excel 2007.
 
 =cut
 
-package RawData::Excel2003;
+package RawData::File::Excel2003;
 use Moose;
 
 extends 'RawData::File';
@@ -29,7 +29,7 @@ with 'RawData::Spreadsheet';
 use Spreadsheet::ParseExcel;
 
 
-=head2 Attributes & Methods
+=head1 METHODS & ATTRIBUTES
 
 =head3 excel
 
@@ -53,13 +53,9 @@ This method...
 
 =over
 
-=item *
+=item * Opens the new file using the L</excel> attribute.
 
-Opens the new file using the L</excel> attribute.
-
-=item *
-
-Sets the record at the first populated row.
+=item * Sets the record at the first populated row.
 
 =back
 
@@ -88,8 +84,8 @@ augment 'open' => sub {
 
 =head3 read_one_record()
 
-This method populates a L<PARS::Record> with information from the 
-spreadsheet. It uses L</fields> to map columns to field names.
+This method populates a L<RawData::Record> with information from the 
+spreadsheet.
 
 =cut
 
@@ -201,11 +197,15 @@ sub worksheet($;$) {
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<RawData::Spreadsheet>, L<Spreadsheet::ParseExcel>
+L<RawData::File>, L<RawData::Record>, L<RawData::Spreadsheet>, 
+L<Spreadsheet::ParseExcel>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, 
+Vanderbilt University Medical Center
+
+Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
