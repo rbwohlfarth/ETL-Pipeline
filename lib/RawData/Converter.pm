@@ -117,7 +117,7 @@ Map the file fields into the proper database fields. This method applies the
 field mapping to an individual record. It returns a schema class for accessing
 the database record.
 
-Your conversion process may require more. For example, perhaps you L</trigger> 
+Your conversion process may require more. For example, perhaps you trigger
 validation code before the conversion. L<RawData::Converter> provides two ways
 to handle this:
 
@@ -142,7 +142,7 @@ sub convert($$) {
 	foreach my $database (keys %$mapping) {
 		my $file = $mapping->{$database};
 		$to->set_field( $database, $from->data->{$file} )
-			if (defined $file);
+			if defined $file;
 	}
 
 	return $to;
