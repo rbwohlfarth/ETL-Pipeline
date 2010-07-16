@@ -56,7 +56,8 @@ use Moose::Role;
 =head3 build_mapping()
 
 Return a hash reference. The hash links database field names with to the
-corresponding file field name. This example maps a spreadsheet. Column A goes into the I<Name> field, B into I<Date>, etc.
+corresponding file field name. This example maps a spreadsheet. Column A goes 
+into the I<Name> field, B into I<Date>, etc.
 
  {
    Name => 'A',
@@ -113,9 +114,10 @@ requires 'number_of_headers';
 =head3 convert( $record )
 
 Map the file fields into the proper database fields. This method applies the
-field mapping to an individual record. It returns a schema class for accessing the database record.
+field mapping to an individual record. It returns a schema class for accessing
+the database record.
 
-Your conversion process may require more. For example, perhaps you L</trigger> 
+Your conversion process may require more. For example, perhaps you trigger
 validation code before the conversion. L<RawData::Converter> provides two ways
 to handle this:
 
@@ -123,7 +125,9 @@ to handle this:
 
 =item 1. Put the call in your application.
 
-=item 2. Use the L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> method modifiers.
+=item 2. Use the 
+L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> 
+method modifiers.
 
 =back
 
@@ -138,7 +142,7 @@ sub convert($$) {
 	foreach my $database (keys %$mapping) {
 		my $file = $mapping->{$database};
 		$to->set_field( $database, $from->data->{$file} )
-			if (defined $file);
+			if defined $file;
 	}
 
 	return $to;
@@ -268,8 +272,7 @@ L<DBIx::Class::ResultSet>, L<RawData::File>
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy,
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
