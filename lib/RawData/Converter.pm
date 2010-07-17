@@ -36,7 +36,7 @@ loads it into the SQL database.
  }
 
 Notice that I don't tell the code anywhere about Excel? 
-I<RawData::Converter::Example> creates a L<RawData::File> parser of the 
+I<RawData::Converter::Example> creates a L<RawData::Parser> parser of the 
 correct type. It also defines exactly how the cells map to database fields.
 
 I expect most applications have a repetoire of I<RawData::Converter> classes.
@@ -91,7 +91,7 @@ requires 'build_model';
 
 =head3 build_parser()
 
-Return a L<RawData::File> object corresponding to the input file format.
+Return a L<RawData::Parser> object corresponding to the input file format.
 
 =cut
 
@@ -125,9 +125,7 @@ to handle this:
 
 =item 1. Put the call in your application.
 
-=item 2. Use the 
-L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> 
-method modifiers.
+=item 2. Use the L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> method modifiers.
 
 =back
 
@@ -151,14 +149,29 @@ sub convert($$) {
 
 =head3 error( $message, $record )
 
-Log an error message for the given record. Call this from your validation code.
-It ensures a consistent format in error messages.
+Log an error message for the given record. Call this from your validation 
+code. It ensures a consistent format in error messages.
 
 =cut
 
 sub error($$$) {
 	my ($self, $message, $record) = @_;
 	$self->log->error( "$message at " . $record->came_from );
+}
+
+
+=head3 file( $path )
+
+This convenience method sets the file name for the parser. It returns the
+instance reference, so you can chain it from the constructor.
+
+=cut
+
+sub file($$) {
+	my ($self, $path) = @_;
+
+	$self->parser->file( $path );
+	return $self;
 }
 
 
@@ -191,8 +204,8 @@ Stores a hash linking the database fields to the file fields. This is the
 heart of the conversion process.
 
 Key the hash with the database field name. The conversion process pulls data
-from the file. This is what you do manually - look at the fields you need, then
-see which file fields correspond.
+from the file. This is what you do manually - look at the fields you need, 
+then see which file fields correspond.
 
 The L</build_mapping()> method creates this hash.
 
@@ -222,8 +235,8 @@ has 'model' => (
 =head3 next_record()
 
 Return the next L<database record|DBIx::Class::ResultSet> populated from the
-L<file|RawData::File>. This function calls the underlying 
-L<RawData::File/read_one_record> and L</convert> methods. It automatically 
+L<file|RawData::Parser>. This function calls the underlying 
+L<RawData::Parser/read_one_record> and L</convert> methods. It automatically 
 skips blank records.
 
 C<next_record> returns a schema class, like the L</convert> method. An 
@@ -253,7 +266,7 @@ sub next_record($) {
 
 =head3 parser
 
-A L<RawData::File> object for accessing the file. The L</build_parser()> 
+A L<RawData::Parser> object for accessing the file. The L</build_parser()> 
 method creates an object of the for this client's specific file format.
 
 =cut
@@ -261,13 +274,13 @@ method creates an object of the for this client's specific file format.
 has 'parser' => (
 	builder => 'build_parser',
 	is      => 'ro',
-	isa     => 'RawData::File',
+	isa     => 'RawData::Parser',
 );
 
 
 =head1 SEE ALSO
 
-L<DBIx::Class::ResultSet>, L<RawData::File>
+L<DBIx::Class::ResultSet>, L<RawData::Parser>
 
 =head1 LICENSE
 

@@ -2,8 +2,8 @@
 
 =head1 SYNOPSIS
 
- use RawData::Excel2003;
- my $parser = new RawData::File::Excel2003;
+ use RawData::Parser::Excel2003;
+ my $parser = new RawData::Parser::Excel2003;
  
  # Open a spreadsheet for reading.
  $parser->file( 'C:\InputData.xls' );
@@ -20,10 +20,10 @@ from Excel 2007.
 
 =cut
 
-package RawData::File::Excel2003;
+package RawData::Parser::Excel2003;
 use Moose;
 
-extends 'RawData::File';
+extends 'RawData::Parser';
 with 'RawData::Spreadsheet';
 
 use Spreadsheet::ParseExcel;
@@ -197,7 +197,7 @@ sub worksheet($;$) {
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<RawData::Record>, L<RawData::Spreadsheet>, 
+L<RawData::Parser>, L<RawData::Record>, L<RawData::Spreadsheet>, 
 L<Spreadsheet::ParseExcel>
 
 =head1 LICENSE

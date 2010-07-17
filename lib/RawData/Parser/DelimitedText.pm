@@ -2,8 +2,8 @@
 
 =head1 SYNOPSIS
 
- use RawData::DelimitedText;
- my $parser = new RawData::File::DelimitedText;
+ use RawData::Parser::DelimitedText;
+ my $parser = new RawData::Parser::DelimitedText;
  
  # Open a pipe delimited file for reading.
  $parser->csv->sep_char( '|' );
@@ -23,10 +23,10 @@ escape characters. This should cover most delimited files.
 
 =cut
 
-package RawData::File::DelimitedText;
+package RawData::Parser::DelimitedText;
 use Moose;
 
-extends 'RawData::File';
+extends 'RawData::Parser';
 
 use RawData::Record;
 use Text::CSV;
@@ -110,7 +110,7 @@ augment 'read_one_record' => sub {
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<RawData::Record>, L<Text::CSV>
+L<RawData::Parser>, L<RawData::Record>, L<Text::CSV>
 
 =head1 LICENSE
 

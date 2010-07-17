@@ -3,7 +3,7 @@
 =head1 SYNOPSIS
 
  use Moose;
- extends 'RawData::File';
+ extends 'RawData::Parser';
 
 =head1 DESCRIPTION
 
@@ -14,23 +14,24 @@ Unlike data models, the parser does not define fields as attributes. It
 creates a hash with the field name as the key. This data structure makes it
 very easy to analyze data before mapping it into a real data model.
 
-=head2 Using RawData::File
+=head2 Using RawData::Parser
 
-I<RawData::File> is an abstract base class. Technically, you can create an
+I<RawData::Parser> is an abstract base class. Technically, you can create an
 instance. It can do nothing useful, though. 
 
-Child classes inherit from I<RawData::File>, adding the necessary 
+Child classes inherit from I<RawData::Parser>, adding the necessary 
 functionality. The child class actually reads a real file and returns data. 
 Your application instantiates one of those children.
 
 Why not use a L<role|Moose::Manual::Roles>? The 
 L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> relationship
-better describes how I<RawData::File> interacts with the child class. Roles do
-not support L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT>.
+better describes how I<RawData::Parser> interacts with the child class. Roles
+do not support 
+L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT>.
 
 =cut
 
-package RawData::File;
+package RawData::Parser;
 use Moose;
 
 
