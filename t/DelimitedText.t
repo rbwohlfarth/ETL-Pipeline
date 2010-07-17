@@ -1,8 +1,8 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'RawData::File::DelimitedText' ); }
-require_ok( 'RawData::File::DelimitedText' );
+BEGIN { use_ok( 'RawData::Parser::DelimitedText' ); }
+require_ok( 'RawData::Parser::DelimitedText' );
 
 
 # Prevent bogus warning messages in the tests.
@@ -10,13 +10,17 @@ Log::Log4perl->easy_init( $ERROR );
 
 
 # Test object creation - does it compile?
-my $file = new_ok( 'RawData::File::DelimitedText' );
+my $file = new_ok( 'RawData::Parser::DelimitedText' );
 
 
 # open()
-is( $file->file( 't/DelimitedText.txt' ), 't/DelimitedText.txt', 'open()'        );
-is( $file->end_of_file                  , 0                    , 'end_of_file()' );
-is( $file->position                     , 0                    , 'position == 0' );
+is( 
+	$file->file( 't/DelimitedText.txt' ), 
+	't/DelimitedText.txt', 
+	'open()'
+);
+is( $file->end_of_file, 0, 'end_of_file()' );
+is( $file->position   , 0, 'position == 0' );
 
 
 # read_one_record()

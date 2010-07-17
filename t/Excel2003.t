@@ -1,8 +1,8 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'RawData::File::Excel2003' ); }
-require_ok( 'RawData::File::Excel2003' );
+BEGIN { use_ok( 'RawData::Parser::Excel2003' ); }
+require_ok( 'RawData::Parser::Excel2003' );
 
 
 # Prevent bogus warning messages in the tests.
@@ -10,7 +10,7 @@ Log::Log4perl->easy_init( $ERROR );
 
 
 # Test object creation - does it compile?
-my $file = new_ok( 'RawData::File::Excel2003' );
+my $file = new_ok( 'RawData::Parser::Excel2003' );
 
 
 # open()
