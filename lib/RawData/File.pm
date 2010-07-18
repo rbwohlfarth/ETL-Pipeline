@@ -90,6 +90,7 @@ sub load($) {
 		$self->progress->( $count ) if defined $self->progress;
 	}
 
+print "six\n";
 	return $self;
 }
 

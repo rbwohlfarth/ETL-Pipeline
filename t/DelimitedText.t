@@ -43,5 +43,10 @@ is( $record->data->{4}, 'Field4', '$record->data->{4} == Field4' );
 is( $record->data->{5}, 'Field5', '$record->data->{5} == Field5' );
 
 
+# end_of_file()
+$record = $file->read_one_record;
+is( $file->read_one_record, undef, 'No record at the end of file' );
+ok( $file->end_of_file, 'End of file flag' );
+
 done_testing();
 

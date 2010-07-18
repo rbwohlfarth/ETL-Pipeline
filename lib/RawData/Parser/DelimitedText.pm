@@ -100,11 +100,13 @@ augment 'read_one_record' => sub {
 	$self->position( $self->position + 1 );
 
 	# Generate a record object...
-	if (defined( $fields ) and (scalar( @$fields ) > 0)) {
-		return RawData::Record->from_array( $fields );
-	} else {
-		return new RawData::Record( is_blank => 1 );
-	}
+	if (defined $fields) {
+		if (scalar( @$fields ) > 0) {
+			return RawData::Record->from_array( $fields );
+		} else {
+			return new RawData::Record( is_blank => 1 );
+		}
+	} else { return undef; }
 };
 
 
