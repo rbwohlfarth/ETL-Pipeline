@@ -2,7 +2,7 @@
 
 =head1 SYNOPSIS
 
- use RawData::File;
+ with 'RawData::File';
 
 =head1 DESCRIPTION
 
@@ -20,7 +20,7 @@ I assume a pretty simple setup: a few hundred records at a time, and one key
 field. A database is overkill. If you have millions of records or complex
 lookup requirements, then use a database. This class will disappoint you.
 
-Simple files that you just need loaded, I<RawData::File> can help.
+Simple files that you just need loaded, L<RawData::File> can help.
 
 =cut
 
@@ -90,7 +90,6 @@ sub load($) {
 		$self->progress->( $count ) if defined $self->progress;
 	}
 
-print "six\n";
 	return $self;
 }
 

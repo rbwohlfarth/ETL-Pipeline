@@ -27,7 +27,8 @@ loads it into the SQL database.
  my $cnv = new RawData::Converter::Example;
 
  # Access the data file.
- $cnv->parser->file( 'C:\sample_data.xls' );
+ $cnv->file->parser->file( 'C:\sample_data.xls' );
+ $cnv->file->load;
  
  # Process records one at a time, skipping blank rows.
  my @new_data;
@@ -36,7 +37,7 @@ loads it into the SQL database.
  }
 
 Notice that I don't tell the code anywhere about Excel? 
-I<RawData::Converter::Example> creates a L<RawData::Parser> parser of the 
+I<RawData::Converter::Example> creates a L<RawData::File> parser of the 
 correct type. It also defines exactly how the cells map to database fields.
 
 I expect most applications have a repetoire of I<RawData::Converter> classes.
@@ -52,6 +53,15 @@ use Moose::Role;
 =head1 METHODS & ATTRIBUTES
 
 =head2 Override These in the Consuming Class
+
+=head3 build_file()
+
+Return a L<RawData::File> object for reading the input data.
+
+=cut
+
+requires 'build_file';
+
 
 =head3 build_mapping()
 
@@ -87,26 +97,6 @@ Return an L<DBIx::Class::ResultSet> object for the database table.
 =cut
 
 requires 'build_model';
-
-
-=head3 build_parser()
-
-Return a L<RawData::Parser> object corresponding to the input file format.
-
-=cut
-
-requires 'build_parser';
-
-
-=head3 number_of_headers
-
-The number of header rows before any data. You do not want to load the 
-headers. This tells the file parser how many lines it can skip by setting
-the L</header_rows> attribute.
-
-=cut
-
-requires 'number_of_headers';
 
 
 =head2 Standard Attributes & Methods
@@ -160,32 +150,17 @@ sub error($$$) {
 }
 
 
-=head3 file( $path )
+=head3 file
 
-This convenience method sets the file name for the parser. It returns the
-instance reference, so you can chain it from the constructor.
-
-=cut
-
-sub file($$) {
-	my ($self, $path) = @_;
-
-	$self->parser->file( $path );
-	return $self;
-}
-
-
-=head3 header_rows
-
-The number of header rows before any data. You do not want to load the 
-headers. This tells the file parser how many lines it can skip.
+A L<RawData::File> object for accessing the input file. The L</build_file()>
+method creates an object of the for a specific file format.
 
 =cut
 
-has 'header_rows' => (
-	builder => 'number_of_headers',
-	is      => 'rw',
-	isa     => 'Int',
+has 'file' => (
+	builder => 'build_file',
+	is      => 'ro',
+	isa     => 'RawData::File',
 );
 
 
@@ -252,9 +227,9 @@ sub next_record($) {
 
 	# Skip blank records. They don't have any useful data. Notice that the
 	# parser determines I<blank>.
-	while (my $file = $self->parser->read_one_record) {
-		unless ($file->is_blank) {
-			$database = $self->convert( $file );
+	while (my $record = $self->file->parser->read_one_record) {
+		unless ($record->is_blank) {
+			$database = $self->convert( $record );
 			last;
 		}
 	}
@@ -264,23 +239,9 @@ sub next_record($) {
 }
 
 
-=head3 parser
-
-A L<RawData::Parser> object for accessing the file. The L</build_parser()> 
-method creates an object of the for this client's specific file format.
-
-=cut
-
-has 'parser' => (
-	builder => 'build_parser',
-	is      => 'ro',
-	isa     => 'RawData::Parser',
-);
-
-
 =head1 SEE ALSO
 
-L<DBIx::Class::ResultSet>, L<RawData::Parser>
+L<DBIx::Class::ResultSet>, L<RawData::File>, L<RawData::Record>
 
 =head1 LICENSE
 
