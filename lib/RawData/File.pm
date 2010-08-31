@@ -2,31 +2,39 @@
 
 =head1 SYNOPSIS
 
- use Moose;
- extends 'RawData::File';
+ use RawData::File;
+ my $input = RawData::File->new( 
+     header_rows => 4,
+     parser      => RawData::Parser::Excel2003->new( ... ),
+	 primary_key_field => 'A',
+	 progress    => \&display_progress,
+ );
+
+ $input->load;
+
+ while (my ($id, $list) = each %{$input->records}) {
+     foreach my $record (@$list) {
+		print "$id == ", $record->data->{'B'}, "\n";
+	 }
+ }
 
 =head1 DESCRIPTION
 
-A file parser reads data from an external data file. This base class defines 
-generic attributes and methods not dependent on the actual file type.
+L<RawData::Record> holds data from one record in a file. This class reads all
+of the records from a file and stores them for later retrieval. Use it with
+ancillary files that you will merge with a main record.
 
-Unlike data models, the parser does not define fields as attributes. It 
-creates a hash with the field name as the key. This data structure makes it
-very easy to analyze data before mapping it into a real data model.
+=head2 Why not a database?
 
-=head2 Using RawData::File
+A database would work like this... Load each file into its own table. Then
+extract the data I need using SQL. Of course, it means you need to setup a
+database to use these classes. And worse, you may not need it.
 
-I<RawData::File> is an abstract base class. Technically, you can create an
-instance. It can do nothing useful, though. 
+I assume a pretty simple setup: a few hundred records at a time, and one key
+field. A database is overkill. If you have millions of records or complex
+lookup requirements, then use a database. This class will disappoint you.
 
-Child classes inherit from I<RawData::File>, adding the necessary 
-functionality. The child class actually reads a real file and returns data. 
-Your application instantiates one of those children.
-
-Why not use a L<role|Moose::Manual::Roles>? The 
-L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> relationship
-better describes how I<RawData::File> interacts with the child class. Roles do
-not support L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT>.
+Simple files that you just need loaded, L<RawData::File> can help.
 
 =cut
 
@@ -36,185 +44,159 @@ use Moose;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override These in the Child Class
+=head3 header_rows
 
-=head3 open( $new_path, $old_path )
-
-This method opens a new file. The object automatically calls this method when
-the file name changes. It receives the new and old values as parameters. Refer
-to L<Moose::Manual::Attributes/Triggers> for more information.
-
-Your code returns a boolean value. B<True> means the open succeeded - go ahead
-and read records. B<False> means that you could not open the file.
-
-Child classes (what you're writing) 
-L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+The number of header rows before any data. You do not want to load the 
+headers. This tells the file parser how many lines it can skip.
 
 =cut
 
-sub open($$$) { 
-	my ($self, $new_path, $old_path) = @_;
-
-	$self->log->debug( __PACKAGE__ . '->open called' );
-	$self->log->debug( "New file name: $new_path" );
-
-	# Reset the position to a default. The child method may change this to
-	# something more suitable for the file type.
-	$self->position( 0 );
-
-	# If the child fails, we act like the end of the file.
-	if (inner()) {
-		$self->end_of_file( 0 );
-		return 1;
-	} else {
-		$self->end_of_file( 1 );
-		return 0;
-	}
-}
+has 'header_rows' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Int',
+);
 
 
-=head3 read_one_record()
+=head3 load()
 
-This method reads the next record from the file and breaks it apart into
-fields. It returns a reference to a L<RawData::Record> object. An C<undef>
-means that we reached the end of the file. The C<undef> causes this code to
-set the L</end_of_file> attribute.
+This method reads all of the records from the file into memory. I do not
+automatically trigger the load because it might take a while. Your application
+should have complete control over something that can pause the system.
 
-Child classes (what you're writing) 
-L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method. Your 
-code fills in the following attributes of L<RawData::Record>...
-
-=over
-
-=item L<data|RawData::Record/data>
-
-=item L<is_blank|RawData::Record/is_blank>
-
-=back
-
-The child class should also set the L</position> attribute of this class.
+The load I<appends> records into memory. It does not erase any previously 
+loaded data. You can, technically, use the same L<RawData::File> object for
+more than one file. Though it will cause confusion for you in the end.
 
 =cut
 
-sub read_one_record($) { 
+sub load($) {
 	my ($self) = @_;
-	$self->log->debug( __PACKAGE__ . '->read_one_record called' );
 
-	# Don't bother reading past the end of the file. Change the file name
-	# to read more data.
-	if ($self->end_of_file) {
-		$self->log->debug( 'At the end of the file' );
-		return undef;
+	# Only load the file once.
+	return $self if $self->parser->end_of_file;
+
+	# Skip the header records...
+	for (my $count = 0; $count < $self->header_rows; $count++) {
+		$self->parser->read_one_record;
+		return $self if $self->parser->end_of_file;
 	}
 
-	# Always read the first line, if we're not at the end of the file. This
-	# lets me put a debug message in the loop, and doesn't hurt performance
-	# all that much.
-	my $record = inner();
+	# Load all of the data records...
+	my $count = 0;
+	while (my $record = $self->parser->read_one_record) {
+		my $id = $record->data->{$self->primary_key_field};
 
-	# This loop accomplishes three things...
-	#   1. It stops reading once we reach the end of the file.
-	#   2. It skips completely blank records.
-	#   3. Calls the format specific parsing code.
-	while (ref( $record ) and $record->is_blank) {
-		$self->log->debug( 'Blank record skipped' );
-		$record = inner();
+		if (not defined $id) {
+			push @{$self->no_id}, $record;
+			$self->parser->log->error( 
+				"Primary key not set at " 
+				. $record->came_from
+			);
+		} else { 
+			$self->records->{$id} = [] 
+				unless defined $self->records->{$id};
+			push @{$self->records->{$id}}, $record; 
+		}
+
+		# Update the progress...
+		$count++;
+		$self->progress->( $count ) if defined $self->progress;
 	}
 
-	# Set the location information in the record. Error messages can then
-	# reference the original file and line number.
-	if (ref( $record )) {
-		$record->came_from( 
-			'record ' 
-			. $self->position 
-			. ' in ' 
-			. $self->file
-		);
-		return $record;
-	} else {
-		$self->end_of_file( 1 );
-		return undef;
-	}
+	return $self;
 }
 
 
-=head2 Standard Attributes & Methods
+=head3 no_id
 
-=head3 end_of_file
-
-This attribute indicates when we have reached the end of the input file. The
-code sets this flag when L</open> returns B<false>. Your child class should
-not change this value without a very good reason.
-
-Setting the attribute to 1 does not physically change the file pointer. It
-does stop this class from reading any more data, though.
+A list of records with an undefined primary key. L</load> cannot handle 
+records without a key. It simply logs an error and stores them in this list.
+Your application should check this list and handle the records appropriately.
 
 =cut
 
-has 'end_of_file' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Bool',
+has 'no_id' => (
+	default => sub { [] },
+	is      => 'ro',
+	isa     => 'ArrayRef[RawData::Record]',
 );
 
 
-=head3 file
+=head3 parser
 
-This attribute holds the current file path. Setting the file name stops
-reading the current file and starts the new one.
+A L<RawData::Parser> object for accessing the file. This object physically
+reads the file. This lets L<RawData::File> work with many input formats.
+
+L</parser> is required by the constructor.
 
 =cut
 
-has 'file' => (
-	is      => 'rw',
-	isa     => 'Str',
-	trigger => sub { my $self = shift; $self->open( @_ ); },
+has 'parser' => (
+	is       => 'ro',
+	isa      => 'RawData::Parser',
+	required => 1,
 );
 
 
-=head3 log
+=head3 primary_key_field
 
-This attribute prints debugging messages. I used the logger because it is easy
-to later switch from the screen to an actual log file.
+The name of the key field. L</load> reads the identifier from this field.
 
-=cut
-
-with 'MooseX::Log::Log4perl';
-
-
-=head3 position
-
-This attribute records the current record from the file. The exact value
-depends on the file type. For example, a text file might have the line
-number. A spreadsheet would keep the row number. We use this information
-to track down errors.
-
-After calling L</read_one_record>, this attribute holds the position of
-that record - not the next one. It's value is undefined before reading the
-first record.
-
-Changing this value may or may not have an effect on the actual file 
-position. It depends entirely on the actual file format. So B<do not> use
-this as a means of skipping records.
+L<RawData::File> only supports a single key field. If you need multiple 
+fields, use an SQL database instead of L<RawData::File>.
 
 =cut
 
-has 'position' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Str',
+has 'primary_key_field' => (
+	is  => 'rw',
+	isa => 'Str',
+);
+
+
+=head3 progress
+
+This attribute holds a callback function. L</load> calls this routine for 
+every record loaded into memory. The function should display progress to the 
+user in a manner consistent with the application's interface (GUI, text, etc).
+
+Your function takes one argument: the number of records loaded.
+
+=cut
+
+has 'progress' => (
+	is  => 'rw',
+	isa => 'CodeRef',
+);
+
+
+=head3 records
+
+This hash stores a list of records, sorted by identifier. It is a hash
+reference to an array reference to L<RawData::Record> objects. Confused?
+
+Imagine a file of notes. Each line represents one line of notes. It has an
+identifier followed by the text. You can have 50 lines for one identifier.
+This structure takes all 50 and stores them in an array - I<preserving file
+order>. 
+
+=cut
+
+has 'records' => (
+	default => sub { {} },
+	is      => 'ro',
+	isa     => 'HashRef[ArrayRef[RawData::Record]]',
 );
 
 
 =head1 SEE ALSO
 
-L<RawData::Record>
+L<RawData::Converter>, L<RawData::Parser>, L<RawData::Record>
 
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

@@ -1,16 +1,14 @@
 =pod
 
-=head1 SYNOPSIS
-
 =head1 DESCRIPTION
 
-Files are collections of records. The L<RawData::File> class takes individual
-records out of a file and copies them into memory. This class is that 
-in-memory representation of a record. 
+The L<RawData::Parser> class reads individual records from a file into memory.
+This is the in-memory representation of a record. You should use 
+L<RawData::Parser> to create the instances of this class.
 
-It knows almost nothing about the format or content of the records. Each 
-application has its own conversion code that applies some meaning to this
-data. And I can use this class to perform low level analysis on new files.
+This class knows almost nothing about the format or content of the records. 
+It provides a generic API. The API keeps L<RawData::Converter> from having
+different code covering every possible file format.
 
 =cut
 
@@ -23,7 +21,7 @@ use Moose;
 =head3 came_from
 
 This text goes into error messages so that the user can find and fix any
-problems with the original data. The L<RawData::File/read_one_record> class 
+problems with the original data. The L<RawData::Parser/read_one_record> class 
 normally sets this value.
 
 =cut
@@ -89,7 +87,7 @@ This boolean flag indicates if the record is blank. I<Blank> may mean
 different things to different file formats. using a flag gives me a standard
 means of checking.
 
-The L<RawData::File/read_one_record> normally sets this attribute.
+The L<RawData::Parser/read_one_record> normally sets this attribute.
 
 =cut
 

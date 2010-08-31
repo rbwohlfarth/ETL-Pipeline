@@ -2,8 +2,8 @@
 
 =head1 SYNOPSIS
 
- use RawData::DelimitedText;
- my $parser = new RawData::File::DelimitedText;
+ use RawData::Parser::DelimitedText;
+ my $parser = new RawData::Parser::DelimitedText;
  
  # Open a pipe delimited file for reading.
  $parser->csv->sep_char( '|' );
@@ -16,17 +16,18 @@
 
 =head1 DESCRIPTION
 
-This class handles text files with a field separator. The separator is 
-anything acceptable to L<Text::CSV> - comma, pipe, tab, whatever. The
-L<Text::CSV> module handles separators that appear inside of quotes or after
-escape characters. This should cover most delimited files.
+This class handles text files with a field separator (
+I<comma separated variable> or I<CSV>). The separator is anything acceptable 
+to L<Text::CSV> - comma, pipe, tab, whatever. The L<Text::CSV> module handles
+separators that appear inside of quotes or after escape characters. This 
+should cover most delimited files.
 
 =cut
 
-package RawData::File::DelimitedText;
+package RawData::Parser::DelimitedText;
 use Moose;
 
-extends 'RawData::File';
+extends 'RawData::Parser';
 
 use RawData::Record;
 use Text::CSV;
@@ -100,23 +101,24 @@ augment 'read_one_record' => sub {
 	$self->position( $self->position + 1 );
 
 	# Generate a record object...
-	if (defined( $fields ) and (scalar( @$fields ) > 0)) {
-		return RawData::Record->from_array( $fields );
-	} else {
-		return new RawData::Record( is_blank => 1 );
-	}
+	if (defined $fields) {
+		if (scalar( @$fields ) > 0) {
+			return RawData::Record->from_array( $fields );
+		} else {
+			return new RawData::Record( is_blank => 1 );
+		}
+	} else { return undef; }
 };
 
 
 =head1 SEE ALSO
 
-L<RawData::File>, L<RawData::Record>, L<Text::CSV>
+L<RawData::Parser>, L<RawData::Record>, L<Text::CSV>
 
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

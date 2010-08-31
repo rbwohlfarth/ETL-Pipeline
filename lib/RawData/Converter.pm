@@ -27,7 +27,8 @@ loads it into the SQL database.
  my $cnv = new RawData::Converter::Example;
 
  # Access the data file.
- $cnv->parser->file( 'C:\sample_data.xls' );
+ $cnv->file->parser->file( 'C:\sample_data.xls' );
+ $cnv->file->load;
  
  # Process records one at a time, skipping blank rows.
  my @new_data;
@@ -51,7 +52,16 @@ use Moose::Role;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override These in the Consuming Class
+=head2 Define These in the Consuming Class
+
+=head3 build_file()
+
+Return a L<RawData::File> object for reading the input data.
+
+=cut
+
+requires 'build_file';
+
 
 =head3 build_mapping()
 
@@ -89,26 +99,6 @@ Return an L<DBIx::Class::ResultSet> object for the database table.
 requires 'build_model';
 
 
-=head3 build_parser()
-
-Return a L<RawData::File> object corresponding to the input file format.
-
-=cut
-
-requires 'build_parser';
-
-
-=head3 number_of_headers
-
-The number of header rows before any data. You do not want to load the 
-headers. This tells the file parser how many lines it can skip by setting
-the L</header_rows> attribute.
-
-=cut
-
-requires 'number_of_headers';
-
-
 =head2 Standard Attributes & Methods
 
 =head3 convert( $record )
@@ -125,9 +115,7 @@ to handle this:
 
 =item 1. Put the call in your application.
 
-=item 2. Use the 
-L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> 
-method modifiers.
+=item 2. Use the L<before, after, or around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> method modifiers.
 
 =back
 
@@ -151,8 +139,8 @@ sub convert($$) {
 
 =head3 error( $message, $record )
 
-Log an error message for the given record. Call this from your validation code.
-It ensures a consistent format in error messages.
+Log an error message for the given record. Call this from your validation 
+code. It ensures a consistent format in error messages.
 
 =cut
 
@@ -162,17 +150,17 @@ sub error($$$) {
 }
 
 
-=head3 header_rows
+=head3 file
 
-The number of header rows before any data. You do not want to load the 
-headers. This tells the file parser how many lines it can skip.
+A L<RawData::File> object for accessing the input file. The L</build_file()>
+method creates an object of the for a specific file format.
 
 =cut
 
-has 'header_rows' => (
-	builder => 'number_of_headers',
-	is      => 'rw',
-	isa     => 'Int',
+has 'file' => (
+	builder => 'build_file',
+	is      => 'ro',
+	isa     => 'RawData::File',
 );
 
 
@@ -191,8 +179,8 @@ Stores a hash linking the database fields to the file fields. This is the
 heart of the conversion process.
 
 Key the hash with the database field name. The conversion process pulls data
-from the file. This is what you do manually - look at the fields you need, then
-see which file fields correspond.
+from the file. This is what you do manually - look at the fields you need, 
+then see which file fields correspond.
 
 The L</build_mapping()> method creates this hash.
 
@@ -219,55 +207,9 @@ has 'model' => (
 );
 
 
-=head3 next_record()
-
-Return the next L<database record|DBIx::Class::ResultSet> populated from the
-L<file|RawData::File>. This function calls the underlying 
-L<RawData::File/read_one_record> and L</convert> methods. It automatically 
-skips blank records.
-
-C<next_record> returns a schema class, like the L</convert> method. An 
-C<undef> value means that the file contains no more data.
-
-=cut
-
-sub next_record($) {
-	my ($self) = @_;
-
-	# Default to C<undef> - meaning that no record was read.
-	my $database = undef;
-
-	# Skip blank records. They don't have any useful data. Notice that the
-	# parser determines I<blank>.
-	while (my $file = $self->parser->read_one_record) {
-		unless ($file->is_blank) {
-			$database = $self->convert( $file );
-			last;
-		}
-	}
-
-	# Return a schema class so the application can affect the database.
-	return $database;
-}
-
-
-=head3 parser
-
-A L<RawData::File> object for accessing the file. The L</build_parser()> 
-method creates an object of the for this client's specific file format.
-
-=cut
-
-has 'parser' => (
-	builder => 'build_parser',
-	is      => 'ro',
-	isa     => 'RawData::File',
-);
-
-
 =head1 SEE ALSO
 
-L<DBIx::Class::ResultSet>, L<RawData::File>
+L<DBIx::Class::ResultSet>, L<RawData::File>, L<RawData::Record>
 
 =head1 LICENSE
 
