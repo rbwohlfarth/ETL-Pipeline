@@ -2,7 +2,21 @@
 
 =head1 SYNOPSIS
 
- with 'RawData::File';
+ use RawData::File;
+ my $input = RawData::File->new( 
+     header_rows => 4,
+     parser      => RawData::Parser::Excel2003->new( ... ),
+	 primary_key_field => 'A',
+	 progress    => \&display_progress,
+ );
+
+ $input->load;
+
+ while (my ($id, $list) = each %{$input->records}) {
+     foreach my $record (@$list) {
+		print "$id == ", $record->data->{'B'}, "\n";
+	 }
+ }
 
 =head1 DESCRIPTION
 
@@ -146,7 +160,7 @@ This attribute holds a callback function. L</load> calls this routine for
 every record loaded into memory. The function should display progress to the 
 user in a manner consistent with the application's interface (GUI, text, etc).
 
-The function takes one argument: the number of records loaded.
+Your function takes one argument: the number of records loaded.
 
 =cut
 
@@ -182,8 +196,7 @@ L<RawData::Converter>, L<RawData::Parser>, L<RawData::Record>
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

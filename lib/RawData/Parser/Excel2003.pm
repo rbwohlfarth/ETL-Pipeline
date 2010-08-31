@@ -15,8 +15,8 @@
 
 =head1 DESCRIPTION
 
-This class handles MS Excel 2003 files. These files have a different format
-from Excel 2007.
+This class handles MS Excel 2003 files (XLS). These files have a different 
+format from Excel 2007 (XLSX).
 
 =cut
 
@@ -148,22 +148,20 @@ has 'workbook' => (
 );
 
 
-=head3 worksheet
+=head3 worksheet( [$sheet_name] )
 
-The name of the worksheet with the data that you want. Reading the attribute
-returns an object for accessing cells. When writing, pass it the worksheet
-name. The class automatically sets the object from the current workbook.
-
-If you change this value, the code resets to the first row in the new 
+Returns or sets the current worksheet. This controls where Excel reads your
+data. If you change this value, the code resets to the first row in the new 
 worksheet.
+
+Pass a worksheet name and the method changes the current worksheet. The method
+always returns a reference to the current sheet.
 
 =cut
 
-has 'worksheet' => (
-	is     => 'rw',
-	isa    => 'Object',
-	reader => '_get_worksheet',
-	writer => '_set_worksheet',
+has '_worksheet' => (
+	is  => 'rw',
+	isa => 'Object',
 );
 
 
@@ -172,15 +170,15 @@ sub worksheet($;$) {
 
 	# Change the worksheet to a new value...
 	if (defined $name) {
-		$self->_set_worksheet( 
+		$self->_worksheet( 
 			$self->workbook->worksheet( $name )
 		);
 
-		if (defined $self->_get_worksheet) {
+		if (defined $self->_worksheet) {
 			# Find the actual starting row. The Excel parser begins with row 
 			# zero. I use row 1 - to match the Excel screen. So the number
 			# returned by Excel is the row before my first row of data.
-			my ($first_row, $last_row) = $self->_get_worksheet->row_range();
+			my ($first_row, $last_row) = $self->_worksheet->row_range();
 			$self->log->debug( "First row: $first_row" );
 
 			$self->position( $first_row );
@@ -191,7 +189,7 @@ sub worksheet($;$) {
 	}
 
 	# Reader and writer both return the object.
-	return $self->_get_worksheet;
+	return $self->_worksheet;
 }
 
 
@@ -203,8 +201,7 @@ L<Spreadsheet::ParseExcel>
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

@@ -7,7 +7,7 @@
 
 =head1 DESCRIPTION
 
-A file parser reads data from an external data file. This base class defines 
+A file parser reads data from an external file. This base class defines 
 generic attributes and methods not dependent on the actual file type.
 
 Unlike data models, the parser does not define fields as attributes. It 
@@ -37,7 +37,7 @@ use Moose;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override These in the Child Class
+=head2 L<Augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> in the Child Class
 
 =head3 open( $new_path, $old_path )
 
@@ -47,9 +47,6 @@ to L<Moose::Manual::Attributes/Triggers> for more information.
 
 Your code returns a boolean value. B<True> means the open succeeded - go ahead
 and read records. B<False> means that you could not open the file.
-
-Child classes (what you're writing) 
-L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
 
 =cut
 
@@ -78,22 +75,20 @@ sub open($$$) {
 
 This method reads the next record from the file and breaks it apart into
 fields. It returns a reference to a L<RawData::Record> object. An C<undef>
-means that we reached the end of the file. The C<undef> causes this code to
-set the L</end_of_file> attribute.
+means that we reached the end of the file and sets the L</end_of_file> 
+attribute.
 
-Child classes (what you're writing) 
-L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method. Your 
-code fills in the following attributes of L<RawData::Record>...
+Your code fills in the following attributes of L<RawData::Record>...
 
 =over
 
-=item L<data|RawData::Record/data>
+=item * L<data|RawData::Record/data>
 
-=item L<is_blank|RawData::Record/is_blank>
+=item * L<is_blank|RawData::Record/is_blank>
 
 =back
 
-The child class should also set the L</position> attribute of this class.
+Your code also sets its own L</position> attribute.
 
 =cut
 
@@ -143,12 +138,14 @@ sub read_one_record($) {
 
 =head3 end_of_file
 
-This attribute indicates when we have reached the end of the input file. The
-code sets this flag when L</open> returns B<false>. Your child class should
-not change this value without a very good reason.
+This attribute indicates when we have reached the end of the input file. 
 
-Setting the attribute to 1 does not physically change the file pointer. It
-does stop this class from reading any more data, though.
+This attribute does not reset the file when it changes from 1 to 0. You
+should set the L</file> attribute instead.
+
+So why bother with L</end_of_file>? Each child class has its own file 
+handling code. And I cannot rely on them providing a standard Perl file 
+handle. This attribute works regardless of the input file format.
 
 =cut
 
@@ -175,8 +172,9 @@ has 'file' => (
 
 =head3 log
 
-This attribute prints debugging messages. I used the logger because it is easy
-to later switch from the screen to an actual log file.
+This attrbiute accesses the logging subsystem. L<Log::Log4perl> provides a
+very robust logging setup. Your application can configure the appropriate
+setup. And L<RawData::Parser> uses it automatically.
 
 =cut
 
@@ -185,10 +183,10 @@ with 'MooseX::Log::Log4perl';
 
 =head3 position
 
-This attribute records the current record from the file. The exact value
-depends on the file type. For example, a text file might have the line
-number. A spreadsheet would keep the row number. We use this information
-to track down errors.
+This attribute records the position of the record just read from the file. 
+The exact value depends on the file type. For example, a text file might have
+the line number. A spreadsheet would keep the row number. We use this 
+information to track down errors.
 
 After calling L</read_one_record>, this attribute holds the position of
 that record - not the next one. It's value is undefined before reading the
@@ -209,6 +207,8 @@ has 'position' => (
 
 =head1 SEE ALSO
 
+L<Log::Log4perl>, 
+L<Moose::Manual::MethodModifiers/INNER AND AUGMENT>, 
 L<RawData::Record>
 
 =head1 LICENSE

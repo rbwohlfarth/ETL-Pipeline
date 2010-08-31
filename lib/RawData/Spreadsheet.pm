@@ -6,10 +6,11 @@
 
 =head1 DESCRIPTION
 
-This role provides helper methods for working with spreadsheet data.
+This role provides helper methods for working with spreadsheet data. It 
+extends the functionality of L<RawData::Parser>.
 
-It assumes one record per row of the spreadsheet. This is how our clients send
-their data. I don't want to add complexity that isn't necessary.
+The role assumes one record per row of the spreadsheet. This is how our 
+clients send their data. I don't want to add complexity that isn't necessary.
 
 =cut
 
@@ -18,6 +19,8 @@ use Moose::Role;
 
 use RawData::Record;
 
+
+=head1 METHODS & ATTRIBUTES
 
 =head2 Column Names
 
@@ -49,9 +52,8 @@ sub column_name_in_file($$) {
 	my @decimals;
 	
 	my @letters = split( //, $on_screen );
-	foreach my $letter (@letters) {
-		unshift @decimals, ord( $letter ) - ord( 'A' );
-	}
+	unshift @decimals, ord( $_ ) - ord( 'A' )
+		foreach (@letters);
 
 	# Now add the numbers together in base 26.
 	my $value = 0;
@@ -149,13 +151,12 @@ sub array_to_record($@) {
 
 =head1 SEE ALSO
 
-L<RawData::File>
+L<RawData::Parser>, L<RawData::Record>
 
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

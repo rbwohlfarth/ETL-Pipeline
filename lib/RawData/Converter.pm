@@ -52,7 +52,7 @@ use Moose::Role;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override These in the Consuming Class
+=head2 Define These in the Consuming Class
 
 =head3 build_file()
 
@@ -205,38 +205,6 @@ has 'model' => (
 	is      => 'ro',
 	isa     => 'DBIx::Class::ResultSet',
 );
-
-
-=head3 next_record()
-
-Return the next L<database record|DBIx::Class::ResultSet> populated from the
-L<file|RawData::Parser>. This function calls the underlying 
-L<RawData::Parser/read_one_record> and L</convert> methods. It automatically 
-skips blank records.
-
-C<next_record> returns a schema class, like the L</convert> method. An 
-C<undef> value means that the file contains no more data.
-
-=cut
-
-sub next_record($) {
-	my ($self) = @_;
-
-	# Default to C<undef> - meaning that no record was read.
-	my $database = undef;
-
-	# Skip blank records. They don't have any useful data. Notice that the
-	# parser determines I<blank>.
-	while (my $record = $self->file->parser->read_one_record) {
-		unless ($record->is_blank) {
-			$database = $self->convert( $record );
-			last;
-		}
-	}
-
-	# Return a schema class so the application can affect the database.
-	return $database;
-}
 
 
 =head1 SEE ALSO

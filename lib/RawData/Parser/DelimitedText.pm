@@ -16,10 +16,11 @@
 
 =head1 DESCRIPTION
 
-This class handles text files with a field separator. The separator is 
-anything acceptable to L<Text::CSV> - comma, pipe, tab, whatever. The
-L<Text::CSV> module handles separators that appear inside of quotes or after
-escape characters. This should cover most delimited files.
+This class handles text files with a field separator (
+I<comma separated variable> or I<CSV>). The separator is anything acceptable 
+to L<Text::CSV> - comma, pipe, tab, whatever. The L<Text::CSV> module handles
+separators that appear inside of quotes or after escape characters. This 
+should cover most delimited files.
 
 =cut
 
@@ -117,8 +118,7 @@ L<RawData::Parser>, L<RawData::Record>, L<Text::CSV>
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy, 
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
