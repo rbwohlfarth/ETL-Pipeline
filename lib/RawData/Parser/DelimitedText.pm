@@ -75,11 +75,15 @@ augment 'open' => sub {
 	# Close the old file, if it's open.
 	close $self->file_handle if (defined $self->file_handle);
 
-	# Open the new file for reading.
-	open( my $handle, '<', $new_path )
-		or $self->log->logdie( "Unable to open '$new_path' for reading" );
+	# Open the new file for reading. Failure = end of file.
+	unless (open( my $handle, '<', $new_path )) {
+		$self->log->fatal( "Unable to open '$new_path' for reading" );
+		return 0;
+	}
+
 	$self->file_handle( $handle );
 
+	# Tell the surrounding code that we're good to go.
 	return 1;
 };
 
