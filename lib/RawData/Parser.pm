@@ -17,7 +17,7 @@ very easy to analyze data before mapping it into a real data model.
 =head2 Using RawData::Parser
 
 I<RawData::Parser> is an abstract base class. Technically, you can create an
-instance. It can do nothing useful, though. 
+instance. It does nothing useful, though. 
 
 Child classes inherit from I<RawData::Parser>, adding the necessary 
 functionality. The child class actually reads a real file and returns data. 

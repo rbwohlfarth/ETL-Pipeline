@@ -68,17 +68,21 @@ augment 'open' => sub {
 	# Create the Excel parser.
 	$self->workbook( $self->excel->parse( $new_path ) );
 
-	# Crash if there's an error.
-	$self->log->logdie( 
-		'Unable to read any data from the Excel spreadsheet '
-		. $new_path
-		. ': '
-		. $self->excel->error()
-	) unless (defined $self->workbook);
+	# An error is the same as "end of file".
+	unless (defined $self->workbook) {
+		$self->log->fatal( 
+			"Unable to read the Excel spreadsheet $new_path:"
+			. $self->excel->error()
+		);
+		return 0;
+	}
 
 	# Setting the worksheet also sets our position in the file. By default,
 	# we use the first worksheet.
 	$self->worksheet( 0 );
+
+	# Tell the surrounding code that we're good to go.
+	return 1;
 };
 
 
