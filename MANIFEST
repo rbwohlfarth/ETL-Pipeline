@@ -1,16 +1,19 @@
-Build.PL	Installation script
-lib/RawData/Parser/DelimitedText.pm	Read text files with field delimiters (csv, tab, etc)
-lib/RawData/Parser/Excel2003.pm	Read MS Excel 2003 spread sheet files
-lib/RawData/Converter.pm	Generic role for data conversions
-lib/RawData/File.pm	Loads records from a file into memory
-lib/RawData/Parser.pm	Parses individual records from a file
-lib/RawData/Record.pm	A single record loaded into memory
-lib/RawData/Spreadsheet.pm	Generic role for spread sheet files
-MANIFEST	This list of files
-t/DelimitedText.t	Test script for RawData::DelimitedText
-t/DelimitedText.txt	Test data file for RawData::DelimitedText
-t/Excel2003.t	Test script for RawData::Excel2003
-t/Excel2003.xls	Test data file for RawData::Excel2003
-t/File.t	Test script for RawData::File
-t/Parser.t	Test script for RawData::Parser
-t/Record.t	Test script for RawData::Record
+Build.PL
+lib/RawData/Converter.pm
+lib/RawData/File.pm
+lib/RawData/Parser.pm
+lib/RawData/Parser/DelimitedText.pm
+lib/RawData/Parser/Excel2003.pm
+lib/RawData/Parser/Excel2007.pm
+lib/RawData/Record.pm
+lib/RawData/Spreadsheet.pm
+MANIFEST
+t/DelimitedText.t
+t/DelimitedText.txt
+t/Excel2003.t
+t/Excel2003.xls
+t/Excel2007.t
+t/Excel2007.xlsx
+t/File.t
+t/Parser.t
+t/Record.t
