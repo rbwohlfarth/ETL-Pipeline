@@ -66,7 +66,7 @@ augment 'open' => sub {
 	$self->log->debug( __PACKAGE__ . '->open called' );
 
 	# Create the Excel parser.
-	$self->excel( Spreadsheet::XLSX->new( $newPath ) );
+	$self->excel( Spreadsheet::XLSX->new( $new_path ) );
 	$self->worksheet( shift @{$self->excel->{Worksheet}} );
 
 	# An error is the same as "end of file".
@@ -101,10 +101,10 @@ augment 'read_one_record' => sub {
 	my $last_row  = $self->worksheet->{'MaxRow'};
 	$self->log->debug( "Last row: $last_row" );
 
-	if ($self->position >= $last_row) {
+	if ($self->position > $last_row) {
 		$self->log->debug( 
-			"No data past the last row: $last_row <= " 
-			. $self->record
+			"No data past the last row: $last_row < " 
+			. $self->position
 		);
 		return undef;
 	}
@@ -126,7 +126,7 @@ augment 'read_one_record' => sub {
 
 	# I count from 1, the Excel class counts from zero. So I read the data
 	# before incrementing the position. That way "position" always returns
-	# the Excel row number of the current data.
+	# the Excel row number for the file handling logic above.
 	$self->position( $self->position + 1 );
 
 	# Build a record from the list.

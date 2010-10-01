@@ -76,7 +76,8 @@ augment 'open' => sub {
 	close $self->file_handle if (defined $self->file_handle);
 
 	# Open the new file for reading. Failure = end of file.
-	unless (open( my $handle, '<', $new_path )) {
+	my $handle;
+	unless (open( $handle, '<', $new_path )) {
 		$self->log->fatal( "Unable to open '$new_path' for reading" );
 		return 0;
 	}
