@@ -2,22 +2,22 @@
 
 =head1 SYNOPSIS
 
- with 'RawData::Spreadsheet';
+ with 'ETL::Extract::FromFile::Spreadsheet';
 
 =head1 DESCRIPTION
 
 This role provides helper methods for working with spreadsheet data. It 
-extends the functionality of L<RawData::Parser>.
+extends the functionality of L<ETL::Extract::FromFile>.
 
 The role assumes one record per row of the spreadsheet. This is how our 
 clients send their data. I don't want to add complexity that isn't necessary.
 
 =cut
 
-package RawData::Spreadsheet;
+package ETL::Extract::FromFile::Spreadsheet;
 use Moose::Role;
 
-use RawData::Record;
+use ETL::Extract::Record;
 
 
 =head1 METHODS & ATTRIBUTES
@@ -103,14 +103,14 @@ column goes into field B<A>, second into B<B>, third into B<C>, etc.
 =head3 array_to_record
 
 Convert data from an array of values into a hash, keyed by the column name.
-The method accepts a list of data, or a reference to a list. It returns the 
-populated L<RawData::Record> object.
+The method accepts a list of data, or a reference to a list. It returns a 
+populated L<ETL::Extract::Record> object.
 
 =cut
 
 sub array_to_record($@) {
 	my ($self, @data) = @_;
-	$self->log->debug( __PACKAGE__ . '->array_to_record called' );
+	$self->log->debug( __PACKAGE__ . '->array_to_record called...' );
 
 	# Accept either an array or an array reference. If I always use a 
 	# reference, then I don't cut and paste code.
@@ -125,9 +125,9 @@ sub array_to_record($@) {
 
 	# Create a new record object. I assume the record is blank until we find
 	# a non-blank field.
-	my $record = RawData::Record->new();
+	my $record = ETL::Extract::Record->new();
 	   $record->is_blank( 1 );
-	$self->log->debug( "Create a new record: $record" );
+	$self->log->debug( "Created a new record: $record" );
 
 	# Populate the fields using the column name - not its index.
 	$self->log->debug( scalar( @$array ) . ' columns of data' );
@@ -151,7 +151,7 @@ sub array_to_record($@) {
 
 =head1 SEE ALSO
 
-L<RawData::Parser>, L<RawData::Record>
+L<ETL::Extract::FromFile>, L<ETL::Extract::Record>
 
 =head1 LICENSE
 

@@ -2,17 +2,17 @@
 
 =head1 DESCRIPTION
 
-The L<RawData::Parser> class reads individual records from a file into memory.
-This is the in-memory representation of a record. You should use 
-L<RawData::Parser> to create the instances of this class.
+The L<ETL::Extract::Record> class stores individual records. This is the 
+in-memory representation of a record. You should use L<ETL::Extract> to
+create instances of this class.
 
-This class knows almost nothing about the format or content of the records. 
-It provides a generic API. The API keeps L<RawData::Converter> from having
-different code covering every possible file format.
+This class knows nothing about the format or content of the records. It
+provides a generic API - so that I don't have different code covering every
+possible input format.
 
 =cut
 
-package RawData::Record;
+package ETL::Extract::Record;
 use Moose;
 
 
@@ -21,8 +21,7 @@ use Moose;
 =head3 came_from
 
 This text goes into error messages so that the user can find and fix any
-problems with the original data. The L<RawData::Parser/read_one_record> class 
-normally sets this value.
+problems with the original data. L<ETL::Extract/extract> sets this value.
 
 =cut
 
@@ -34,9 +33,9 @@ has 'came_from' => (
 
 =head3 data
 
-This hash holds the actual data. It is keyed by the file field name. The
-name depends on the file format. For example, a spreadsheet would use the
-column. A text file might use the field number.
+This hash holds the actual data. It is keyed by the input field name, 
+depending on the input format. For example, a spreadsheet would use the
+column. A text file might use a field number.
 
 =cut
 
@@ -47,11 +46,14 @@ has 'data' => (
 );
 
 
-=head3 from_array
+=head3 from_array( @data )
 
-This class method returns a new L<RawData::Record> object with data from a
-Perl list - or a reference to a list. L</data>'s hash key is the position 
+This class method returns a new L<ETL::Extract::Record> object with data from
+a Perl list - or a reference to a list. L</data>'s hash key is the position 
 number in the list.
+
+L</from_array> is a convenience method because a lot of input formats can
+load into a list.
 
 =cut
 
@@ -87,7 +89,7 @@ This boolean flag indicates if the record is blank. I<Blank> may mean
 different things to different file formats. using a flag gives me a standard
 means of checking.
 
-The L<RawData::Parser/read_one_record> normally sets this attribute.
+The L<ETL::Extract/extract> normally sets this attribute.
 
 =cut
 
@@ -100,13 +102,12 @@ has 'is_blank' => (
 
 =head1 SEE ALSO
 
-L<RawData::File>
+L<ETL::Extract>, L<ETL::Extract::FromFile>
 
 =head1 LICENSE
 
 Copyright 2010  The Center for Patient and Professional Advocacy,
-Vanderbilt University Medical Center
-
+                Vanderbilt University Medical Center
 Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
