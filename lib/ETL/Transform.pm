@@ -53,6 +53,23 @@ required by your application. Ignore the rest.
 requires 'build_mapping';
 
 
+=head3 log
+
+You create this attribute with the command C<with 'MooseX::Log::Log4perl>. It
+holds a L<Log::Log4perl> instance. L<Log::Log4perl> provides a very robust
+logging setup. You can configure the appropriate setup in one place, and
+L<ETL::Load> uses it automatically.
+
+Why doesn't L<ETL::Load> define it? L<ETL::Extract>, L<ETL::Transform>, and
+L<ETL::Load> all use the same attribute. I expect your application classes 
+consume all three of these. Each definition would interfere with the others.
+So I require the consuming class to define it once for all three.
+
+=cut
+
+require log;
+
+
 =head2 Standard Attributes & Methods
 
 =head3 error( $message, $record )
@@ -67,15 +84,6 @@ sub error($$$) {
 
 	$self->log->error( "$message at " . $record->came_from );
 }
-
-
-=head3 log
-
-A L<Moose::Log::Log4perl> object for reporting errors.
-
-=cut
-
-with 'Moose::Log::Log4perl';
 
 
 =head3 mapping
@@ -98,7 +106,7 @@ has 'mapping' => (
 );
 
 
-=head3 transform()
+=head3 transform( $record )
 
 Convert an L<ETL::Extract::Record> into a standardized hash.
 
@@ -109,7 +117,8 @@ data. Your application should provide that functionality by:
 
 =item 1. Calling validation/formatting code from the application.
 
-=item 2. Or using method modifiers such as L<before, after, and around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> method modifiers.
+=item 2. Or using method modifiers such as L<before, after, and around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND> 
+method modifiers.
 
 =back
 
