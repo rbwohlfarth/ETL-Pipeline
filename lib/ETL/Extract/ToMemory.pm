@@ -44,6 +44,11 @@ use Moose;
 
 =head1 METHODS & ATTRIBUTES
 
+=head3 connect( $path [, @options] )
+
+This convenience method connects the object with an actual file. See 
+L<ETL::Extract> for more information about C<connect>.
+
 =head3 headers
 
 The number of header rows before any data. You do not want to load the 
@@ -132,6 +137,7 @@ I<parser> is required by the constructor.
 =cut
 
 has 'parser' => (
+	handles  => [qw/connect/],
 	is       => 'ro',
 	isa      => 'ETL::Extract',
 	required => 1,
