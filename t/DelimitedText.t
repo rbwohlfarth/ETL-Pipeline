@@ -1,8 +1,8 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'RawData::Parser::DelimitedText' ); }
-require_ok( 'RawData::Parser::DelimitedText' );
+BEGIN { use_ok( 'ETL::Extract::FromFile::DelimitedText' ); }
+require_ok( 'ETL::Extract::FromFile::DelimitedText' );
 
 
 # Prevent bogus warning messages in the tests.
@@ -10,23 +10,18 @@ Log::Log4perl->easy_init( $ERROR );
 
 
 # Test object creation - does it compile?
-my $file = new_ok( 'RawData::Parser::DelimitedText' );
+my $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' );
 
 
 # open()
-is( 
-	$file->file( 't/DelimitedText.txt' ), 
-	't/DelimitedText.txt', 
-	'open()'
-);
-is( $file->end_of_file, 0, 'end_of_file()' );
-is( $file->position   , 0, 'position == 0' );
+ok( $file->input( 't/DelimitedText.txt' ), 'Opened the file for reading' );
+is( $file->end_of_input, 0, 'Not at the end_of_input()' );
+is( $file->position    , 0, 'position() at first record' );
 
 
 # read_one_record()
-my $record = $file->read_one_record;
-ok( defined $record                  , 'read_one_record => object'          );
-ok( $record->isa( 'RawData::Record' ), 'read_one_record => RawData::Record' );
+my $record = $file->extract;
+isa_ok( $record, 'ETL::Extract::Record', 'extract() return value' );
 
 my @keys = sort keys( %{$record->data} );
 is( scalar( @keys )   , 5       , 'Five columns of data'         );
@@ -44,9 +39,9 @@ is( $record->data->{5}, 'Field5', '$record->data->{5} == Field5' );
 
 
 # end_of_file()
-$record = $file->read_one_record;
-is( $file->read_one_record, undef, 'No record at the end of file' );
-ok( $file->end_of_file, 'End of file flag' );
+$record = $file->extract;
+is( $file->extract, undef, 'No record at the end of file' );
+ok( $file->end_of_input, 'End of input flag set' );
 
 done_testing();
 

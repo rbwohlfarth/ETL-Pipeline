@@ -1,8 +1,8 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'RawData::Parser::Excel2003' ); }
-require_ok( 'RawData::Parser::Excel2003' );
+BEGIN { use_ok( 'ETL::Extract::FromFile::Excel::2003' ); }
+require_ok( 'ETL::Extract::FromFile::Excel::2003' );
 
 
 # Prevent bogus warning messages in the tests.
@@ -10,19 +10,18 @@ Log::Log4perl->easy_init( $ERROR );
 
 
 # Test object creation - does it compile?
-my $file = new_ok( 'RawData::Parser::Excel2003' );
+my $file = new_ok( 'ETL::Extract::FromFile::Excel::2003' );
 
 
-# open()
-is( $file->file( 't/Excel2003.xls' ), 't/Excel2003.xls', 'open()'        );
-is( $file->end_of_file              , 0                , 'end_of_file()' );
-is( $file->position                 , 0                , 'position == 0' );
+# connect()
+ok( $file->input( 't/Excel2003.xls' ), 'open()' );
+is( $file->end_of_input, 0, 'end_of_input()' );
+is( $file->position    , 0, 'position == 0'  );
 
 
-# read_one_record()
-my $record = $file->read_one_record;
-ok( defined $record                  , 'read_one_record => object'          );
-ok( $record->isa( 'RawData::Record' ), 'read_one_record => RawData::Record' );
+# extract()
+my $record = $file->extract;
+isa_ok( $record, 'ETL::Extract::Record', 'extract() return value' );
 
 my @keys = sort keys( %{$record->data} );
 is( scalar( @keys )     , 5       , 'Three columns of data'        );

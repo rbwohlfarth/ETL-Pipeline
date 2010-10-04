@@ -2,29 +2,28 @@
 
 =head1 SYNOPSIS
 
- use RawData::Parser::Excel2007;
- my $parser = new RawData::Parser::Excel2007;
+ use ETL::Extract::FromFile::Excel::2007;
+ my $parser = new ETL::Extract::FromFile::Excel::2007;
  
  # Open a spreadsheet for reading.
- $parser->file( 'C:\InputData.xlsx' );
+ $parser->connect( 'C:\InputData.xlsx' );
 
  # Read the file, one record at a time.
- while (my $record = $parser->read_one_record) {
+ while (my $record = $parser->extract) {
      # Do stuff here...
  }
 
 =head1 DESCRIPTION
 
-This class handles MS Excel 2007 files (XLSX). These files have a different 
-format from Excel 2003 (XLS).
+L<ETL::Extract::FromFile::Excel::2007> reads MS Excel 2007 files.
 
 =cut
 
-package RawData::Parser::Excel2007;
+package ETL::Extract::FromFile::Excel::2007;
 use Moose;
 
-extends 'RawData::Parser';
-with 'RawData::Spreadsheet';
+extends 'ETL::Extract::FromFile';
+with 'ETL::Extract::FromFile::Spreadsheet';
 
 use Spreadsheet::XLSX;
 use String::Util qw/define/;
@@ -46,55 +45,14 @@ has 'excel' => (
 );
 
 
-=head3 augment open( $new_path, $old_path )
+=head3 augment extract()
 
-Perl automatically triggers this code when the C<file> attribute changes.
-This method...
-
-=over
-
-=item * Opens the new file using the L</excel> attribute.
-
-=item * Sets the record at the first populated row.
-
-=back
+This method populates an L<ETL::Extract::FromFile::Record> with information
+from the spreadsheet.
 
 =cut
 
-augment 'open' => sub {
-	my ($self, $new_path, $old_path) = @_;
-	$self->log->debug( __PACKAGE__ . '->open called' );
-
-	# Create the Excel parser.
-	$self->excel( Spreadsheet::XLSX->new( $new_path ) );
-	$self->worksheet( shift @{$self->excel->{Worksheet}} );
-
-	# An error is the same as "end of file".
-	unless (defined $self->worksheet) {
-		$self->log->fatal( 
-			"Unable to read the Excel spreadsheet $new_path: "
-			. $self->excel->error()
-		);
-		return 0;
-	}
-
-	# Find the starting row.
-	$self->position( $self->worksheet->{'MinRow'} );
-	$self->log->debug( 'First row: ' . $self->position );
-
-	# Tell the surrounding code that we're good to go.
-	return 1;
-};
-
-
-=head3 augment read_one_record()
-
-This method populates a L<RawData::Record> with information from the 
-spreadsheet.
-
-=cut
-
-augment 'read_one_record' => sub {
+augment 'extract' => sub {
 	my ($self) = @_;
 
 	# Stop processing once we reach the last record.
@@ -134,6 +92,38 @@ augment 'read_one_record' => sub {
 };
 
 
+=head3 augment input( $path )
+
+This method opens the spread sheet for reading.
+
+=cut
+
+augment 'input' => sub {
+	my ($self, $path) = @_;
+	$self->log->debug( __PACKAGE__ . '->connect called...' );
+
+	# Create the Excel parser.
+	$self->excel( Spreadsheet::XLSX->new( $path ) );
+	$self->worksheet( shift @{$self->excel->{Worksheet}} );
+
+	# An error is the same as "end of file".
+	unless (defined $self->worksheet) {
+		$self->log->fatal( 
+			"Unable to read the Excel spreadsheet $path: "
+			. $self->excel->error()
+		);
+		return 0;
+	}
+
+	# Find the starting row.
+	$self->position( $self->worksheet->{'MinRow'} );
+	$self->log->debug( 'First row: ' . $self->position );
+
+	# Tell the surrounding code that we're good to go.
+	return 1;
+};
+
+
 =head3 worksheet
 
 The code creates this object to traverse the Excel data.
@@ -148,7 +138,8 @@ has 'worksheet' => (
 
 =head1 SEE ALSO
 
-L<RawData::Parser>, L<RawData::Record>, L<Spreadsheet::XLSX>
+L<ETL::Extract::FromFile>, L<ETL::Extract::FromFile::Record>,
+L<Spreadsheet::XLSX>
 
 =head1 LICENSE
 
