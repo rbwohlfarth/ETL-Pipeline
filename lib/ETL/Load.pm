@@ -54,7 +54,7 @@ So I require the consuming class to define it once for all three.
 
 =cut
 
-require log;
+requires 'log';
 
 
 =head3 output( $target [, @options ] )
@@ -66,7 +66,7 @@ The consuming class defines the value of C<$target>.
 
 =cut
 
-require 'output';
+requires 'output';
 
 
 =head1 SEE ALSO
@@ -81,6 +81,5 @@ Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
-no Moose;
-__PACKAGE__->meta->make_immutable;
-
+# Perl requires this to load the module.
+1;

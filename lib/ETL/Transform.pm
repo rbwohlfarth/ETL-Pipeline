@@ -155,4 +155,3 @@ Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 # Perl requires this to load the module.
 1;
-

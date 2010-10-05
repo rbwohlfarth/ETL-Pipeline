@@ -34,7 +34,7 @@ use Moose;
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 L<Augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> in the Child Class
+=head2 Defined in the Child Class
 
 =head3 extract()
 
@@ -42,7 +42,10 @@ This method reads the next record and breaks it apart into fields. It returns
 an L<ETL::Extract::Record> object. An C<undef> means that we reached the end
 of the file.
 
-Your code fills in the following attributes of L<ETL::Extract::Record>...
+You should L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> 
+C<extract> in your child class. The 
+L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code fills in these 
+L<ETL::Extract::Record> attributes...
 
 =over
 
@@ -100,28 +103,33 @@ sub extract($) {
 }
 
 
+=head3 headers
+
+The number of header rows. Header rows usually contain meta data - such as 
+column names. The application should skip over this many records before it
+finds real data.
+
+=cut
+
+has 'headers' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Int',
+);
+
+
 =head3 input( $path [, @options...] )
 
-C<input> attaches L<ETL::Extract> with a file. Your augment method 
+C<input> attaches L<ETL::Extract> with a file. You should 
+L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<input> in your 
+child class. The L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code
 performs the actual I<open> command. This allows you to read files from Excel
 and Word using existing modules.
 
-Your code returns a boolean value. B<True> means the open succeeded - go ahead
-and read records. B<False> means that you could not open the file.
-
-C<input> also returns a boolean:
-
-=over
-
-=item True
-
-The C<open> command succeeded and the file is ready for processing.
-
-=item False
-
-An error prevented the file from opening and no data is available.
-
-=back
+The L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code returns a 
+boolean value. B<True> means the open succeeded - go ahead and read records. 
+B<False> means that you could not open the file. C<input> passes that boolean
+back to the caller.
 
 =cut
 
