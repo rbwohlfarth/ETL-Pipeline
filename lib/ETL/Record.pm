@@ -2,9 +2,9 @@
 
 =head1 DESCRIPTION
 
-The L<ETL::Extract::Record> class stores individual records. This is the 
-in-memory representation of a record. You should use L<ETL::Extract> to
-create instances of this class.
+L<ETL::Record> stores an individual record. This is the in-memory 
+representation of a record. Applications create instances with the 
+L<ETL/extract()> method.
 
 This class knows nothing about the format or content of the records. It
 provides a generic API - so that I don't have different code covering every
@@ -12,7 +12,7 @@ possible input format.
 
 =cut
 
-package ETL::Extract::Record;
+package ETL::Record;
 use Moose;
 
 
@@ -21,7 +21,7 @@ use Moose;
 =head3 came_from
 
 This text goes into error messages so that the user can find and fix any
-problems with the original data. L<ETL::Extract/extract> sets this value.
+problems with the original data. L<ETL/extract()> sets this value.
 
 =cut
 
@@ -48,12 +48,12 @@ has 'data' => (
 
 =head3 from_array( @data )
 
-This class method returns a new L<ETL::Extract::Record> object with data from
-a Perl list - or a reference to a list. L</data>'s hash key is the position 
-number in the list.
+This class method returns a new L<ETL::Record> object with data from a Perl
+list - or a reference to a list. L</data>'s hash key is the position number
+in the list.
 
-L</from_array> is a convenience method because a lot of input formats can
-load into a list.
+C<from_array> is a convenience method because a lot of input formats load data
+into a list.
 
 =cut
 
@@ -86,10 +86,10 @@ sub from_array($@) {
 =head3 is_blank
 
 This boolean flag indicates if the record is blank. I<Blank> may mean 
-different things to different file formats. using a flag gives me a standard
+different things to different file formats. Using a flag gives me a standard
 means of checking.
 
-The L<ETL::Extract/extract> normally sets this attribute.
+The L<ETL/extract()> normally sets this attribute.
 
 =cut
 
@@ -102,12 +102,11 @@ has 'is_blank' => (
 
 =head1 SEE ALSO
 
-L<ETL::Extract>, L<ETL::Extract::FromFile>
+L<ETL>, L<ETL::Extract::FromFile>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy,
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

@@ -1,17 +1,8 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use ETL::Extract::FromFile::DelimitedText;
- my $parser = new ETL::Extract::FromFile::DelimitedText;
- 
- # Open a pipe delimited file for reading.
- $parser->connect( 'C:\InputData.txt', '|' );
-
- # Read the file, one record at a time.
- while (my $record = $parser->extract) {
-     # Do stuff here...
- }
+ETL::Extract::FromFile::DelimitedText - Read data from CSV files
 
 =head1 DESCRIPTION
 
@@ -28,11 +19,32 @@ use Moose;
 
 extends 'ETL::Extract::FromFile';
 
-use ETL::Extract::Record;
+use ETL::Record;
 use Text::CSV;
 
 
 =head1 METHODS & ATTRIBUTES
+
+=head3 BUILD()
+
+L<Moose> calls this method dring object construction. It opens the text file
+and prepares it for reading.
+
+=cut
+
+sub BUILD {
+	my ($self, $path, $seperator) = @_;
+
+	# Open the new file for reading. Failure = end of file.
+	my $handle;
+	$self->log->logdie( "Unable to open '$path' for reading" )
+		unless open( $handle, '<', $path );
+	$self->handle( $handle );
+
+	# Set the seperator for parsing.
+	$self->csv->seperator( $seperator ) if defined $seperator;
+}
+
 
 =head3 csv
 
@@ -50,7 +62,7 @@ has 'csv' => (
 
 =head3 augment extract()
 
-This method populates an L<ETL::Extract::Record> with data from the file.
+This method populates an L<ETL::Record> with data from the file.
 
 This code sets the position to the line number last read. Line numbers
 begin at 1 - not 0.
@@ -67,9 +79,9 @@ augment 'extract' => sub {
 	# Generate a record object...
 	if (defined $fields) {
 		if (scalar( @$fields ) > 0) {
-			return ETL::Extract::Record->from_array( $fields );
+			return ETL::Record->from_array( $fields );
 		} else {
-			return new ETL::Extract::Record( is_blank => 1 );
+			return new ETL::Record( is_blank => 1 );
 		}
 	} else { return undef; }
 };
@@ -87,46 +99,16 @@ has 'handle' => (
 );
 
 
-=head3 augment input( $path [, $seperator] )
-
-C<input> creates and configures a L<Text::CSV> object for accessing the
-data.
-
-=cut
-
-augment 'input' => sub {
-	my ($self, $path, $seperator) = @_;
-	$self->log->debug( __PACKAGE__ . '->connect called...' );
-
-	# Open the new file for reading. Failure = end of file.
-	my $handle;
-	unless (open( $handle, '<', $path )) {
-		$self->log->fatal( "Unable to open '$path' for reading" );
-		return 0;
-	}
-
-	$self->handle( $handle );
-
-	# Set the seperator for parsing.
-	$self->csv->seperator( $seperator ) if defined $seperator;
-
-	# Tell the surrounding code that we're good to go.
-	return 1;
-};
-
-
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Extract::Record>, L<Text::CSV>
+L<ETL::Extract::FromFile>, L<ETL::Record>, L<Text::CSV>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-

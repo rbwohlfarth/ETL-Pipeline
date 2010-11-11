@@ -1,8 +1,8 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- with 'ETL::Extract::FromFile::Spreadsheet';
+ETL::Extract::FromFile::Spreadsheet - Generic API for spreadsheet files
 
 =head1 DESCRIPTION
 
@@ -17,7 +17,8 @@ clients send their data. I don't want to add complexity that isn't necessary.
 package ETL::Extract::FromFile::Spreadsheet;
 use Moose::Role;
 
-use ETL::Extract::Record;
+use ETL::Record;
+use String::Util qw/hascontent/;
 
 
 =head1 METHODS & ATTRIBUTES
@@ -26,7 +27,7 @@ use ETL::Extract::Record;
 
 Spreadsheet programs reference cells with a column and row. They typically
 show columns as letters across the top of the window. The Perl drivers, 
-though, reference columns using numbers. These methodss translate from one
+though, reference columns using numbers. These methods translate from one
 format to the other. I want my code using the letters - just like it appears
 to the user on the screen.
 
@@ -104,7 +105,7 @@ column goes into field B<A>, second into B<B>, third into B<C>, etc.
 
 Convert data from an array of values into a hash, keyed by the column name.
 The method accepts a list of data, or a reference to a list. It returns a 
-populated L<ETL::Extract::Record> object.
+populated L<ETL::Record> object.
 
 =cut
 
@@ -125,7 +126,7 @@ sub array_to_record($@) {
 
 	# Create a new record object. I assume the record is blank until we find
 	# a non-blank field.
-	my $record = ETL::Extract::Record->new();
+	my $record = ETL::Record->new();
 	   $record->is_blank( 1 );
 	$self->log->debug( "Created a new record: $record" );
 
@@ -138,7 +139,7 @@ sub array_to_record($@) {
 		$record->data->{$column} = $value;
 		$self->log->debug( "Column $column = '$value'" );
 
-		unless ($value =~ m/^\s*$/) {
+		unless (hascontent( $value )) {
 			$record->is_blank( 0 );
 			$self->log->debug( 'Row is not blank' );
 		}
@@ -151,16 +152,14 @@ sub array_to_record($@) {
 
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Extract::Record>
+L<ETL::Extract::FromFile>, L<ETL::Record>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 # Perl requires this to load the module.
 1;
-

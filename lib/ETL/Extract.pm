@@ -1,48 +1,41 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use Moose;
- with'ETL::Extract';
+ETL::Extract - Base class for ETL input sources
 
 =head1 DESCRIPTION
 
-The I<Extract-Transform-Load> (ETL) pattern typically appears with Data 
-Warehousing. Data Warehousing covers a subset of the larger data conversion 
-problem space. The difference is one of scope. The ETL B<pattern> applies to 
-the entire problem space.
-
-L<ETL::Extract> defines the API for a generic I<extract> part of the pattern 
-as a L<Moose Role|Moose::Manual::Roles>. You consume L<ETL::Extract> and
-define the actual methods that retrieve real data.
+This class defines the Application Programming Interface (API) for all ETL
+input sources. The API allows applications to interact with the source without
+worrying about its specific format (CSV file, spreadsheet, database, etc.).
 
 =cut
 
 package ETL::Extract;
-use Moose::Role;
+use Moose;
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Defined by the consuming class
+=head2 Override in Child Classes
 
 =head3 extract()
 
-Returns the next record from input. I<extract> provides a generic call for
-all input methods - database, file, etc. The consuming class defines the 
-actual extraction code.
+Returns the next record from input. This base method does absolutely nothing.
+The child class defines exactly how this works for its input format.
 
-Your code should return one of two values:
+The child class returns one of two values:
 
 =over
 
-=item An L<ETL::Extract::Record> object.
+=item An L<ETL::Record> object.
 
 =item C<undef> for the end of the input.
 
 =back
 
-Your I<extract> method should set these attributes:
+The child class also sets these attributes:
 
 =over
 
@@ -54,39 +47,10 @@ Your I<extract> method should set these attributes:
 
 =cut
 
-requires 'extract';
+sub extract($) { return undef; }
 
 
-=head3 input( $source [, @options ] )
-
-This method connects with the input source. A database may make an actual
-network connection. Files are opened and prepped for reading.
-
-The consuming class defines the value of C<$source>.
-
-=cut
-
-requires 'input';
-
-
-=head3 log
-
-You create this attribute with the command C<with 'MooseX::Log::Log4perl>. It
-holds a L<Log::Log4perl> instance. L<Log::Log4perl> provides a very robust
-logging setup. You can configure the appropriate setup in one place, and
-L<ETL::Extract> uses it automatically.
-
-Why doesn't L<ETL::Extract> define it? L<ETL::Extract>, L<ETL::Transform>, and
-L<ETL::Load> all use the same attribute. I expect your application classes 
-consume all three of these. Each definition would interfere with the others.
-So I require the consuming class to define it once for all three.
-
-=cut
-
-requires 'log';
-
-
-=head2 Standard methods and attributes
+=head2 Standard Methods & Attributes
 
 =head3 end_of_input
 
@@ -105,9 +69,19 @@ has 'end_of_input' => (
 );
 
 
+=head3 log
+
+This attrbiute provides an access point into the L<Log::Log4perl> logging
+system. Child classes must log all errors messages.
+
+=cut
+
+with 'MooseX::Log::Log4perl';
+
+
 =head3 position
 
-I<position> identifies the last record loaded by I<extract>. You will find
+I<position> identifies the last record loaded by L<extract()>. You will find
 this useful for error messages.
 
 The exact value depends on the input type. For example, a text file might have
@@ -128,12 +102,11 @@ has 'position' => (
 
 =head1 SEE ALSO
 
-L<Log::Log4perl>, L<ETL::Extract::Record>
+L<ETL>, L<ETL::Record>, L<Log::Log4perl>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

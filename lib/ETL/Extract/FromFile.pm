@@ -1,61 +1,45 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use Moose;
- extends 'ETL::Extract::FromFile';
+ETL::Extract::FromFile - Input data from any type of file
 
 =head1 DESCRIPTION
 
-L<ETL::Extract> provides a very generic API for extracting data from a store
-(database, file, etc). L<ETL::Extract::FromFile> adds more meat to the bones.
-It provides functionality specifically for files.
-
-L<ETL::Extract::FromFile> is an abstract base class. It performs nothing 
-useful by itself. The child classes interface with the varied file formats.
-
-=head2 Using ETL::Extract::FromFile
-
-Child classes inherit from L<ETL::Extract::FromFile>, adding the necessary 
-functionality. The child class actually reads a real file and returns data. 
-Your application instantiates one of those children.
-
-Why not use a L<role|Moose::Manual::Roles>? The 
-L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> relationship
-better describes how L<ETL::Extract::FromFile> interacts with the child
-class. Roles do not support 
-L<inner/augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT>.
+L<ETL::Extract::FromFile> adds meat to the bones of the L<ETL::Extract> API. It
+provides functionality specifically for files - B<any> type of file. Child 
+classes further specify file types (CSV, spreadsheet, etc.).
 
 =cut
 
 package ETL::Extract::FromFile;
 use Moose;
 
+extends 'ETL::Extract';
+
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Defined in the Child Class
+=head2 Override in the Child Class
 
 =head3 extract()
 
 This method reads the next record and breaks it apart into fields. It returns
-an L<ETL::Extract::Record> object. An C<undef> means that we reached the end
-of the file.
+an L<ETL::Record> object. C<undef> means that we reached the end of the file.
 
-You should L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> 
-C<extract> in your child class. The 
-L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code fills in these 
-L<ETL::Extract::Record> attributes...
+The child class L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> 
+C<extract>. The L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code 
+fills in these L<ETL::Record> attributes...
 
 =over
 
-=item * L<data|ETL::Extract::Record/data>
+=item * L<data|ETL::Record/data>
 
-=item * L<is_blank|ETL::Extract::Record/is_blank>
+=item * L<is_blank|ETL::Record/is_blank>
 
 =back
 
-Your code also sets the L<ETL::Extract/position> attribute.
+The I<inner> code also sets the L<ETL::Extract/position> attribute.
 
 =cut
 
@@ -106,8 +90,15 @@ sub extract($) {
 =head3 headers
 
 The number of header rows. Header rows usually contain meta data - such as 
-column names. The application should skip over this many records before it
-finds real data.
+column names. 
+
+L</extract()> does not recognize header rows. Headers are the first lines in a
+file. They have a I<file> scope. L</extract()> has a I<line> scope. It does not
+differentiate between a line at the beginning of the file and one from the 
+middle. They are both merely I<a line>.
+
+The child class uses this value when it opens a file. At that point, the child 
+skips header rows by calling L</extract()> discarding the return value.
 
 =cut
 
@@ -118,57 +109,7 @@ has 'headers' => (
 );
 
 
-=head3 input( $path [, @options...] )
-
-C<input> attaches L<ETL::Extract> with a file. You should 
-L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<input> in your 
-child class. The L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code
-performs the actual I<open> command. This allows you to read files from Excel
-and Word using existing modules.
-
-The L<inner|Moose::Manual::MethodModifiers/INNER AND AUGMENT> code returns a 
-boolean value. B<True> means the open succeeded - go ahead and read records. 
-B<False> means that you could not open the file. C<input> passes that boolean
-back to the caller.
-
-=cut
-
-sub input($$;@) { 
-	my ($self, $path, @options) = @_;
-	$self->log->debug( __PACKAGE__ . '->input called...' );
-
-	# Reset the position to a default. The child method may change this to
-	# something more suitable for the file type.
-	$self->position( 0 );
-
-	# Save the path name for use in error messages.
-	$self->path( $path );
-
-	# If the child fails, we act like the end of the file.
-	if (inner()) {
-		$self->log->debug( '...input succeeded' );
-		$self->end_of_input( 0 );
-		return 1;
-	} else {
-		$self->log->debug( '...input failed' );
-		$self->end_of_input( 1 );
-		return 0;
-	}
-}
-
-
 =head2 Standard Attributes & Methods
-
-=head3 log
-
-This attrbiute accesses the logging subsystem. L<Log::Log4perl> provides a
-very robust logging setup. Your application can configure the appropriate
-setup. And L<ETL::Extract> uses it automatically.
-
-=cut
-
-with 'MooseX::Log::Log4perl';
-
 
 =head3 path
 
@@ -178,31 +119,23 @@ effect. Use the C<input> method to read a new file.
 =cut
 
 has 'path' => (
-	is      => 'rw',
-	isa     => 'Str',
+	is       => 'ro',
+	isa      => 'Str',
+	required => 1,
 );
 
 
 =head1 SEE ALSO
 
-L<ETL::Extract>,
-L<ETL::Extract::Record>,
-L<Log::Log4perl>, 
+L<ETL::Extract>, L<ETL::Record>, 
 L<Moose::Manual::MethodModifiers/INNER AND AUGMENT>
-
-=cut
-
-with 'ETL::Extract';
-
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-

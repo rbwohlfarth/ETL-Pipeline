@@ -1,25 +1,20 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'ETL::Extract::FromFile::DelimitedText' ); }
-require_ok( 'ETL::Extract::FromFile::DelimitedText' );
-
-
 # Prevent bogus warning messages in the tests.
 Log::Log4perl->easy_init( $ERROR );
 
 
-# Test object creation - does it compile?
-my $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' );
+BEGIN { use_ok( 'ETL::Extract::FromFile::DelimitedText' ); }
+require_ok( 'ETL::Extract::FromFile::DelimitedText' );
 
+my $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' => [
+	path => 't/DelimitedText.txt',
+] );
 
-# open()
-ok( $file->input( 't/DelimitedText.txt' ), 'Opened the file for reading' );
 is( $file->end_of_input, 0, 'Not at the end_of_input()' );
 is( $file->position    , 0, 'position() at first record' );
 
-
-# read_one_record()
 my $record = $file->extract;
 isa_ok( $record, 'ETL::Extract::Record', 'extract() return value' );
 
@@ -37,11 +32,9 @@ is( $record->data->{3}, 'Field3', '$record->data->{3} == Field3' );
 is( $record->data->{4}, 'Field4', '$record->data->{4} == Field4' );
 is( $record->data->{5}, 'Field5', '$record->data->{5} == Field5' );
 
-
-# end_of_file()
 $record = $file->extract;
 is( $file->extract, undef, 'No record at the end of file' );
 ok( $file->end_of_input, 'End of input flag set' );
 
-done_testing();
 
+done_testing();

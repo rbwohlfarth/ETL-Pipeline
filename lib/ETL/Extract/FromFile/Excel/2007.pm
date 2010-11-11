@@ -1,21 +1,12 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use ETL::Extract::FromFile::Excel::2007;
- my $parser = new ETL::Extract::FromFile::Excel::2007;
- 
- # Open a spreadsheet for reading.
- $parser->connect( 'C:\InputData.xlsx' );
-
- # Read the file, one record at a time.
- while (my $record = $parser->extract) {
-     # Do stuff here...
- }
+ETL::Extract::FromFile::Excel::2007 - Read data from XLSX files
 
 =head1 DESCRIPTION
 
-L<ETL::Extract::FromFile::Excel::2007> reads MS Excel 2007 files.
+This class extracts data from MS Excel 2007 spreadsheet files.
 
 =cut
 
@@ -30,6 +21,34 @@ use String::Util qw/define/;
 
 
 =head1 METHODS & ATTRIBUTES
+
+=head3 BUILD()
+
+L<Moose> calls this method dring object construction. It opens the spreadsheet
+file and prepares it for reading.
+
+=cut
+
+sub BUILD {
+	my ($self, $path) = @_;
+
+	# Create the Excel parser.
+	my $path = $self->path;
+	$self->excel( Spreadsheet::XLSX->new( $path ) );
+
+	$self->worksheet( shift @{$self->excel->{Worksheet}} );
+	if (defined $self->worksheet) {
+		# Find the starting row.
+		$self->position( $self->worksheet->{'MinRow'} );
+		$self->log->debug( 'First row: ' . $self->position );
+	} else {
+		$self->log->logdie( 
+			"Unable to read the Excel spreadsheet $path: "
+			. $self->excel->error()
+		);
+	}
+}
+
 
 =head3 excel
 
@@ -47,8 +66,7 @@ has 'excel' => (
 
 =head3 augment extract()
 
-This method populates an L<ETL::Extract::FromFile::Record> with information
-from the spreadsheet.
+This method populates an L<ETL::Record> with information from the spreadsheet.
 
 =cut
 
@@ -79,7 +97,7 @@ augment 'extract' => sub {
 		$self->log->debug( 'Cell ' . $self->position . ",$column" );
 
 		my $cell = $self->worksheet->{Cells}[$self->position][$column];
-		push @spreadsheet, (defined( $cell ) ? $cell->value : '');
+		push @spreadsheet, (define( $cell ) ? $cell->value : '');
 	}
 
 	# I count from 1, the Excel class counts from zero. So I read the data
@@ -89,38 +107,6 @@ augment 'extract' => sub {
 
 	# Build a record from the list.
 	return $self->array_to_record( @spreadsheet );
-};
-
-
-=head3 augment input( $path )
-
-This method opens the spread sheet for reading.
-
-=cut
-
-augment 'input' => sub {
-	my ($self, $path) = @_;
-	$self->log->debug( __PACKAGE__ . '->connect called...' );
-
-	# Create the Excel parser.
-	$self->excel( Spreadsheet::XLSX->new( $path ) );
-	$self->worksheet( shift @{$self->excel->{Worksheet}} );
-
-	# An error is the same as "end of file".
-	unless (defined $self->worksheet) {
-		$self->log->fatal( 
-			"Unable to read the Excel spreadsheet $path: "
-			. $self->excel->error()
-		);
-		return 0;
-	}
-
-	# Find the starting row.
-	$self->position( $self->worksheet->{'MinRow'} );
-	$self->log->debug( 'First row: ' . $self->position );
-
-	# Tell the surrounding code that we're good to go.
-	return 1;
 };
 
 
@@ -138,17 +124,14 @@ has 'worksheet' => (
 
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Extract::FromFile::Record>,
-L<Spreadsheet::XLSX>
+L<ETL::Extract::FromFile>, L<ETL::Record>, L<Spreadsheet::XLSX>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-

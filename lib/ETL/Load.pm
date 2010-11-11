@@ -1,82 +1,53 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use Moose;
- with'ETL::Load';
+ETL::Load - Base class for ETL output destinations
 
 =head1 DESCRIPTION
 
-The I<Extract-Transform-Load> (ETL) pattern typically appears with Data 
-Warehousing. Data Warehousing covers a subset of the larger data conversion 
-problem space. The difference is one of scope. The ETL B<pattern> applies to 
-the entire problem space.
-
-L<ETL::Load> defines the API for a generic I<load> part of the pattern as a 
-L<Moose Role|Moose::Manual::Roles>. You consume L<ETL::Extract> and define
-the actual methods that save the data.
+This class defines the Application Programming Interface (API) for all ETL
+output destinations. The API allows applications to interact with the 
+destination without worrying about its specific format (file, database, etc.).
 
 =cut
 
 package ETL::Load;
-use Moose::Role;
+use Moose;
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Defined by the consuming class
+=head2 Override in Child Classes
 
 =head3 load( $data_hash_reference )
 
 Saves data into permanent storage such as a database or file. I<load>
 provides a generic call for all output methods (database, file, etc.). The
-consuming class defines the actual extraction code.
-
-Your code returns a boolean where B<true> indicates success. Error messages
-are sent to the log file.
+child class defines the actual output code.
 
 =cut
 
-requires 'load';
+sub load($$) { }
 
 
 =head3 log
 
-You create this attribute with the command C<with 'MooseX::Log::Log4perl>. It
-holds a L<Log::Log4perl> instance. L<Log::Log4perl> provides a very robust
-logging setup. You can configure the appropriate setup in one place, and
-L<ETL::Load> uses it automatically.
-
-Why doesn't L<ETL::Load> define it? L<ETL::Extract>, L<ETL::Transform>, and
-L<ETL::Load> all use the same attribute. I expect your application classes 
-consume all three of these. Each definition would interfere with the others.
-So I require the consuming class to define it once for all three.
+This attrbiute provides an access point into the L<Log::Log4perl> logging
+system. Child classes must log all errors messages.
 
 =cut
 
-requires 'log';
-
-
-=head3 output( $target [, @options ] )
-
-This method connects with the permanent storage. A database may make an actual
-network connection. Files are opened and prepped for writing.
-
-The consuming class defines the value of C<$target>.
-
-=cut
-
-requires 'output';
+with 'MooseX::Log::Log4perl';
 
 
 =head1 SEE ALSO
 
-L<Log::Log4perl>, L<ETL::Extract::Record>
+L<ETL>, L<Log::Log4perl>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

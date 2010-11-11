@@ -1,21 +1,12 @@
 =pod
 
-=head1 SYNOPSIS
+=head1 NAME
 
- use ETL::Extract::FromFile::Excel::2003;
- my $parser = new ETL::Extract::FromFile::Excel::2003;
- 
- # Open a spreadsheet for reading.
- $parser->connect( 'C:\InputData.xls' );
-
- # Read the file, one record at a time.
- while (my $record = $parser->extract) {
-     # Do stuff here...
- }
+ETL::Extract::FromFile::Excel::2003 - Read data from XLS files
 
 =head1 DESCRIPTION
 
-L<ETL::Extract::FromFile::Excel::2003> reads MS Excel 2003 files.
+This class extracts data from MS Excel 97/2003 spreadsheet files.
 
 =cut
 
@@ -29,6 +20,32 @@ use Spreadsheet::ParseExcel;
 
 
 =head1 METHODS & ATTRIBUTES
+
+=head3 BUILD()
+
+L<Moose> calls this method dring object construction. It opens the spreadsheet
+file and prepares it for reading.
+
+=cut
+
+sub BUILD {
+	my ($self, $options) = @_;
+
+	my $path = $self->path;
+	$self->workbook( $self->excel->parse( $path ) );
+
+	if (defined $self->workbook) {
+		# Setting the worksheet also sets our position in the file. By default,
+		# we use the first worksheet.
+		$self->worksheet( 0 );
+	} else {
+		$self->log->logdie( 
+			"Unable to read the Excel spreadsheet $path:"
+			. $self->excel->error()
+		);
+	}
+}
+
 
 =head3 excel
 
@@ -47,8 +64,7 @@ has 'excel' => (
 
 =head3 augument extract()
 
-This method populates an L<ETL::Extract::Record> with information from the 
-spreadsheet.
+This method populates an L<ETL::Record> with information from the spreadsheet.
 
 =cut
 
@@ -96,37 +112,6 @@ augment 'extract' => sub {
 
 	# Build a record from the list.
 	return $self->array_to_record( @spreadsheet );
-};
-
-
-=head3 augument input( $path )
-
-Open the Excel spread sheet for reading.
-
-=cut
-
-augment 'input' => sub {
-	my ($self, $path) = @_;
-	$self->log->debug( __PACKAGE__ . '->connect called...' );
-
-	# Create the Excel parser.
-	$self->workbook( $self->excel->parse( $path ) );
-
-	# An error is the same as "end of file".
-	unless (defined $self->workbook) {
-		$self->log->fatal( 
-			"Unable to read the Excel spreadsheet $path:"
-			. $self->excel->error()
-		);
-		return 0;
-	}
-
-	# Setting the worksheet also sets our position in the file. By default,
-	# we use the first worksheet.
-	$self->worksheet( 0 );
-
-	# Tell the surrounding code that we're good to go.
-	return 1;
 };
 
 
@@ -189,17 +174,15 @@ sub worksheet($;$) {
 
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Extract::FromFile::Record>,
+L<ETL::Extract::FromFile>, L<ETL::Record>,
 L<ETL::Extract::FromFile::Spreadsheet>, L<Spreadsheet::ParseExcel>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, 
-                Vanderbilt University Medical Center
+Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-

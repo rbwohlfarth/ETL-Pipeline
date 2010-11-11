@@ -1,27 +1,22 @@
 use Log::Log4perl qw/:easy/;
 use Test::More;
 
-BEGIN { use_ok( 'ETL::Extract::FromFile::Excel::2007' ); }
-require_ok( 'ETL::Extract::FromFile::Excel::2007' );
-
-
 # Prevent bogus warning messages in the tests.
 Log::Log4perl->easy_init( $ERROR );
 
 
-# Test object creation - does it compile?
-my $file = new_ok( 'ETL::Extract::FromFile::Excel::2007' );
+BEGIN { use_ok( 'ETL::Extract::FromFile::Excel::2007' ); }
+require_ok( 'ETL::Extract::FromFile::Excel::2007' );
 
+my $file = new_ok( 'ETL::Extract::FromFile::Excel::2007' => [
+	path => 't/Excel2007.xlsx',
+] );
 
-# connect()
-ok( $file->input( 't/Excel2007.xlsx' ), 'Opening the file' );
 is( $file->end_of_input, 0, 'Not at the end_of_input()' );
 is( $file->position    , 0, 'position() at first record'  );
 
-
-# extract()
 my $record = $file->extract;
-isa_ok( $record, 'ETL::Extract::Record', 'extract() return value' ); 
+isa_ok( $record, 'ETL::Record', 'extract() return value' ); 
 
 my @keys = sort keys( %{$record->data} );
 is( scalar( @keys )     , 5       , 'Three columns of data'        );
@@ -39,4 +34,3 @@ is( $record->data->{'E'}, 'Field5', '$record->data->{E} == Field5' );
 
 
 done_testing();
-
