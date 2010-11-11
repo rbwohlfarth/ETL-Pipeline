@@ -33,16 +33,20 @@ and prepares it for reading.
 =cut
 
 sub BUILD {
-	my ($self, $path, $seperator) = @_;
+	my ($self, $options) = @_;
 
 	# Open the new file for reading. Failure = end of file.
+	my $path = $self->path;
 	my $handle;
+
 	$self->log->logdie( "Unable to open '$path' for reading" )
 		unless open( $handle, '<', $path );
+
 	$self->handle( $handle );
 
 	# Set the seperator for parsing.
-	$self->csv->seperator( $seperator ) if defined $seperator;
+	$self->csv->seperator( $options->{seperator} ) 
+		if defined $options->{seperator};
 }
 
 

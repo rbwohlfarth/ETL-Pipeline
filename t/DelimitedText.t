@@ -16,7 +16,7 @@ is( $file->end_of_input, 0, 'Not at the end_of_input()' );
 is( $file->position    , 0, 'position() at first record' );
 
 my $record = $file->extract;
-isa_ok( $record, 'ETL::Extract::Record', 'extract() return value' );
+isa_ok( $record, 'ETL::Record', 'extract() return value' );
 
 my @keys = sort keys( %{$record->data} );
 is( scalar( @keys )   , 5       , 'Five columns of data'         );

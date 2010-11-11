@@ -8,7 +8,7 @@ my $empty = new_ok( 'ETL::Record' );
 is( $empty->is_blank( 1 ), 1, 'is_blank() is true' );
 
 
-my $from_list = ETL::Extract::Record->from_array(
+my $from_list = ETL::Record->from_array(
 	qw/Field1 Field2 Field3 Field4 Field5/
 );
 ok( defined $from_list, 'from_array() creates instance' );
