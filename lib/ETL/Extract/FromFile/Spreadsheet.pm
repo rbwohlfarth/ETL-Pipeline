@@ -139,7 +139,7 @@ sub array_to_record($@) {
 		$record->data->{$column} = $value;
 		$self->log->debug( "Column $column = '$value'" );
 
-		unless (hascontent( $value )) {
+		if (hascontent( $value )) {
 			$record->is_blank( 0 );
 			$self->log->debug( 'Row is not blank' );
 		}

@@ -30,7 +30,7 @@ file and prepares it for reading.
 =cut
 
 sub BUILD {
-	my ($self, $path) = @_;
+	my ($self) = @_;
 
 	# Create the Excel parser.
 	my $path = $self->path;
