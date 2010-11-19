@@ -13,10 +13,10 @@ my $from_list = ETL::Record->from_array(
 );
 ok( defined $from_list, 'from_array() creates instance' );
 ok( $from_list->isa( 'ETL::Record' ), 'from_array() creates correct type' );
-ok( defined $from_list->data, 'from_array() set data()' );
+ok( defined $from_list->raw, 'from_array() set raw()' );
 
-my @keys = sort keys( %{$from_list->data} );
-is( scalar( @keys ), 5, 'data() has correct number of fields' );
+my @keys = sort keys( %{$from_list->raw} );
+is( scalar( @keys ), 5, 'raw() has correct number of fields' );
 
 foreach my $index (1..5) {
 	is( $keys[$index - 1], $index, "Field $index has the correct key" );
@@ -24,7 +24,7 @@ foreach my $index (1..5) {
 
 foreach my $key (@keys) {
 	is( 
-		$from_list->data->{$key}, 
+		$from_list->raw->{$key}, 
 		"Field$key", 
 		"Field $key has the correct value"
 	);

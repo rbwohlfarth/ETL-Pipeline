@@ -56,7 +56,7 @@ reads the file and parses it.
 =cut
 
 has 'excel' => (
-	default => sub { new Spreadsheet::ParseExcel; },
+	default => sub { Spreadsheet::ParseExcel->new; },
 	is      => 'ro',
 	isa     => 'Spreadsheet::ParseExcel',
 );

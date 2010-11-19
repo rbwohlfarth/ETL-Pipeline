@@ -6,14 +6,15 @@ L<ETL::Record> stores an individual record. This is the in-memory
 representation of a record. Applications create instances with the 
 L<ETL/extract()> method.
 
-This class knows nothing about the format or content of the records. It
-provides a generic API - so that I don't have different code covering every
-possible input format.
+The class helps track a record through the entire ETL pipeline. Inidvidual
+records carry their state as they move from extract to transform to load.
 
 =cut
 
 package ETL::Record;
 use Moose;
+
+use Log::Log4perl;
 
 
 =head1 METHODS & ATTRIBUTES
@@ -31,15 +32,36 @@ has 'came_from' => (
 );
 
 
-=head3 data
+=head3 error
 
-This hash holds the actual data. It is keyed by the input field name, 
-depending on the input format. For example, a spreadsheet would use the
-column. A text file might use a field number.
+The last error message regarding this data. C<undef> indicates no error. The 
+class automatically logs error messages along with the origin of the record.
+That way you can trace errors back to the raw data.
 
 =cut
 
-has 'data' => (
+has 'error' => (
+	is      => 'rw',
+	isa     => 'Str',
+	trigger => \&_log_error,
+);
+
+
+sub _log_error($$$) {
+	my ($self, $new, $old) = @_;
+	Log::Log4perl->get_logger->error( "$new at " . $self->came_from )
+		if hascontent( $new );
+}
+
+
+=head3 fields
+
+This hash holds the processed data formatted for loading. The L<ETL/transform>
+method converts L</raw> into L</fields>.
+
+=cut
+
+has 'fields' => (
 	default => sub { {} },
 	is      => 'ro',
 	isa     => 'HashRef',
@@ -79,7 +101,7 @@ sub from_array($@) {
 	}
 
 	# Create an object that stores this data.
-	return $class->new( data => \%data );
+	return $class->new( raw => \%data );
 }
 
 
@@ -100,6 +122,34 @@ has 'is_blank' => (
 );
 
 
+=head3 is_valid()
+
+Invalid records have an error of some kind. The error prevents us from loading
+the data to its final destination.
+
+=cut
+
+sub is_valid($) {
+	my ($self) = @_;
+	return (not defined( $self->error ));
+}
+
+
+=head3 raw
+
+This hash holds the raw data as extracted from the input stream. It is keyed 
+by the input field name, depending on the input format. For example, a 
+spreadsheet would use the column. A text file might use a field number.
+
+=cut
+
+has 'raw' => (
+	default => sub { {} },
+	is      => 'ro',
+	isa     => 'HashRef',
+);
+
+
 =head1 SEE ALSO
 
 L<ETL>, L<ETL::Extract::FromFile>
@@ -113,4 +163,3 @@ Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-

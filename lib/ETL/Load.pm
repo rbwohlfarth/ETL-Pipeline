@@ -10,6 +10,9 @@ This class defines the Application Programming Interface (API) for all ETL
 output destinations. The API allows applications to interact with the 
 destination without worrying about its specific format (file, database, etc.).
 
+The I<load> part of the process blindly moves data from L<ETL::Record/fields>
+into a data store. Use the I<transform> process for validation and formatting.
+
 =cut
 
 package ETL::Load;

@@ -207,7 +207,8 @@ has 'mapping' => (
 
 =head3 transform( $record )
 
-Convert an L<ETL::Record> into a standardized hash.
+Transformation maps the input data to the output fields. In pure data terms,
+it converts L<ETL::Record/raw> into L<ETL::Record/fields>.
 
 L<ETL::Transform> does not perform any formatting or validation on the
 data. Your application should provide that functionality by:
@@ -220,9 +221,6 @@ data. Your application should provide that functionality by:
 
 =back
 
-In a scalar context, C<transform> returns a hash reference. In array context,
-it returns the hash contents. 
-
 =cut
 
 sub transform($$) {
@@ -232,10 +230,8 @@ sub transform($$) {
 	my $mapping = $self->mapping;
 
 	while (my ($to, $from) = each %$mapping) {
-		$data{$to} = $record->data->{$from} if defined $from;
+		$record->fields->{$to} = $record->raw->{$from} if defined $from;
 	}
-
-	return (wantarray ? %data : \%data);
 }
 
 
@@ -263,20 +259,6 @@ has 'output' => (
 
 
 =head2 Standard Methods & Attributes
-
-=head3 error( $message, $record )
-
-Log an error message for the given record. Call this from your validation 
-code. It ensures a consistent format in error messages.
-
-=cut
-
-sub error($$$) {
-	my ($self, $message, $record) = @_;
-
-	$self->log->error( "$message at " . $record->came_from );
-}
-
 
 =head3 log
 

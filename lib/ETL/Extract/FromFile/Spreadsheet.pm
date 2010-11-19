@@ -136,7 +136,7 @@ sub array_to_record($@) {
 		my $column = $self->column_name_on_screen( $index );
 		my $value  = $array->[$index];
 
-		$record->data->{$column} = $value;
+		$record->raw->{$column} = $value;
 		$self->log->debug( "Column $column = '$value'" );
 
 		if (hascontent( $value )) {

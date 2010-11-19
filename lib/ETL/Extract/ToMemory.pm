@@ -138,7 +138,7 @@ sub slurp($) {
 	# Load all of the data records...
 	my $count = 0;
 	while (my $record = $self->parser->extract) {
-		my $id = $record->data->{$self->primary_key};
+		my $id = $record->raw->{$self->primary_key};
 
 		if (not defined $id) {
 			push @{$self->no_id}, $record;

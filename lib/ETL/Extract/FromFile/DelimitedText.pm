@@ -58,7 +58,7 @@ lets me build on the bug fixes and hard learned lessons of others.
 =cut
 
 has 'csv' => (
-	default => sub { new Text::CSV; },
+	default => sub { Text::CSV->new; },
 	is      => 'ro',
 	isa     => 'Text::CSV',
 );

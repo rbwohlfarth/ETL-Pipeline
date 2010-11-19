@@ -33,7 +33,7 @@ fills in these L<ETL::Record> attributes...
 
 =over
 
-=item * L<data|ETL::Record/data>
+=item * L<data|ETL::Record/raw>
 
 =item * L<is_blank|ETL::Record/is_blank>
 
