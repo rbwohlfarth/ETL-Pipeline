@@ -4,6 +4,12 @@
 
 ETL - Translating Data
 
+=cut
+
+package ETL;
+use Moose;
+
+
 =head1 DESCRIPTION
 
 B<ETL> stands for I<Extract-Transform-Load>. You often hear this design
@@ -178,7 +184,7 @@ conversion class's input format.
 has 'input' => (
 	builder => 'build_input',
 	handles => [qw/extract/],
-	is      => ro,
+	is      => 'ro',
 	isa     => 'ETL::Extract',
 );
 
@@ -253,7 +259,7 @@ class's output format.
 has 'output' => (
 	builder => 'build_output',
 	handles => [qw/load/],
-	is      => ro,
+	is      => 'ro',
 	isa     => 'ETL::Load',
 );
 
