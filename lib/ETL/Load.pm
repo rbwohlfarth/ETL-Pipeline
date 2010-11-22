@@ -23,11 +23,14 @@ use Moose;
 
 =head2 Override in Child Classes
 
-=head3 load( $data_hash_reference )
+=head3 load( $etl_record )
 
 Saves data into permanent storage such as a database or file. I<load>
 provides a generic call for all output methods (database, file, etc.). The
 child class defines the actual output code.
+
+You pass in an L<ETL::Record> instance that has gone through the
+L<transformation process|ETL/transform( $record )>.
 
 =cut
 
@@ -46,7 +49,7 @@ with 'MooseX::Log::Log4perl';
 
 =head1 SEE ALSO
 
-L<ETL>, L<Log::Log4perl>
+L<ETL>, L<ETL::Record>, L<Log::Log4perl>
 
 =head1 LICENSE
 

@@ -61,6 +61,7 @@ has 'csv' => (
 	default => sub { Text::CSV->new; },
 	is      => 'ro',
 	isa     => 'Text::CSV',
+	handles => [qw/seperator/],
 );
 
 

@@ -62,11 +62,6 @@ Your application instantiates and uses the I<Conversion Class>.
 That's it - pretty simple? The complexity really comes from instantiating
 the L<ETL::Extract> and L<ETL::Load> classes. 
 
-
-ETL::PARS::Vanderbilt::Complaints
-ETL::PARS::Vanderbilt::Physicians
-
-
 =head4 Extract: Input formats
 
 An input format reads individual records. The data can come from all kinds of
@@ -97,12 +92,24 @@ I<fill the Name field from column A>.
 =head4 Load: Output formats
 
 An input format writes individual records to a data store. The data can go
-into all kinds of different stores - CSV file or SQL database. You pass it a
-hash reference with the data fields. And the output format writes it.
+into all kinds of different stores - CSV file or SQL database. You pass it an
+L<ETL::Record> with the data fields. And the output format writes it.
 
 Each conversion class has exactly one output format.
 
 =head3 How does the application use a conversion class?
+
+Here is a very simplified example...
+
+  use ETL::Example;
+  my $etl = ETL::Example->new;
+  while (my $record = $etl->extract) {
+      $etl->transform( $record );
+      $etl->load( $record ) if $record->is_valid;
+  }
+
+The I<ETL::Example> class handles all of the details about opening the input 
+file, connecting to the output database, and validating the information.
 
 =head2 Why not use Moose roles?
 
@@ -186,6 +193,7 @@ has 'input' => (
 	handles => [qw/extract/],
 	is      => 'ro',
 	isa     => 'ETL::Extract',
+	lazy    => 1,
 );
 
 
@@ -208,6 +216,7 @@ has 'mapping' => (
 	builder => 'build_mapping',
 	is      => 'ro',
 	isa     => 'HashRef[Str]',
+	lazy    => 1,
 );
 
 
@@ -261,6 +270,7 @@ has 'output' => (
 	handles => [qw/load/],
 	is      => 'ro',
 	isa     => 'ETL::Load',
+	lazy    => 1,
 );
 
 
