@@ -151,6 +151,22 @@ has 'raw' => (
 );
 
 
+=head3 stash
+
+This hash shares data between the L<ETL> phases - especially I<Transform> and
+I<Load>. It holds extra information that does not belong in the final data, yet
+the ETL class needs it for processing. The stash gives you standardized names
+without defining new attributes for every process specific variable.
+
+=cut
+
+has 'stash' => (
+	default => sub { {} },
+	is      => 'ro',
+	isa     => 'HashRef',
+);
+
+
 =head1 SEE ALSO
 
 L<ETL>, L<ETL::Extract::FromFile>
