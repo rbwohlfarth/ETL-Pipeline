@@ -15,6 +15,7 @@ package ETL::Record;
 use Moose;
 
 use Log::Log4perl;
+use String::Util qw/hascontent/;
 
 
 =head1 METHODS & ATTRIBUTES
