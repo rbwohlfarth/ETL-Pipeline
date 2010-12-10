@@ -9,6 +9,8 @@ ETL - Translating Data
 package ETL;
 use Moose;
 
+use File::Find::Rule;
+
 
 =head1 DESCRIPTION
 
@@ -211,7 +213,27 @@ has 'input' => (
 );
 
 
-=head2 source
+=head3 find( $pattern )
+
+Returns the first file that matches the given regular expression. This method
+searches for files under the L<source> directory.
+
+I found a lot of ETL classes calling L<File::Find::Rule> in exactly the same
+manner. This method provides a convenient way of re-using that code.
+
+=cut
+
+sub find($$) {
+	my ($self, $pattern) = @_;
+	
+	my @matches = File::Find::Rule->file()
+		->name( $pattern )
+		->in( $self->source );
+	shift @matches;
+}
+
+
+=head3 source
 
 The source folder where this object finds input files. An ETL class normally
 covers a repeated process. For example, client A sends data and you load it
