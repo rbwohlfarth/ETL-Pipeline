@@ -213,7 +213,7 @@ has 'input' => (
 );
 
 
-=head3 find( $pattern )
+=head3 find_file_matching( $pattern )
 
 Returns the first file that matches the given regular expression. This method
 searches for files under the L<source> directory.
@@ -223,7 +223,7 @@ manner. This method provides a convenient way of re-using that code.
 
 =cut
 
-sub find($$) {
+sub find_file_matching($$) {
 	my ($self, $pattern) = @_;
 	
 	my @matches = File::Find::Rule->file()
