@@ -134,7 +134,7 @@ and instantiates an object for its specific input format.
 
 =cut
 
-sub build_input($) { return undef; }
+sub build_input($) { undef }
 
 
 =head3 build_mapping()
@@ -158,7 +158,7 @@ required by your application. Ignore the rest.
 
 =cut
 
-sub build_mapping($) { return {}; }
+sub build_mapping($) { {} }
 
 
 =head3 build_output()
@@ -169,7 +169,21 @@ C<build_output> and instantiates an object for its specific input format.
 
 =cut
 
-sub build_output($) { return undef; }
+sub build_output($) { undef }
+
+
+=head3 is_responsible_for( $source )
+
+This class method returns a boolean value. B<True> indicates that this class
+handles data from the given folder. B<False> means that it does not.
+
+The ETL process assumes that we have a repeatable and consistent process. 
+Client A follows a different naming convention than client B. This method
+encapsulates the naming convention inside of the client specific class.
+
+=cut
+
+sub is_responsible_for($$) { 0 }
 
 
 =head2 E => Extract
@@ -194,6 +208,27 @@ has 'input' => (
 	is      => 'ro',
 	isa     => 'ETL::Extract',
 	lazy    => 1,
+);
+
+
+=head2 source
+
+The source folder where this object finds input files. An ETL class normally
+covers a repeated process. For example, client A sends data and you load it
+into your database. Client A puts their file in the same location every month.
+They name the file according to the same pattern every month. This ETL process 
+is repeatable and consistent. Rather than have the application get the file 
+name, the ETL class finds it inside of this folder.
+
+That is one example of how ETL classes use this attribute. For more details, 
+please refer to the documentation of your specific ETL module.
+
+=cut
+
+has 'source' => (
+	is       => 'ro',
+	isa      => 'Str',
+	required => 1,
 );
 
 
