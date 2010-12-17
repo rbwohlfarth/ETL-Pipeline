@@ -54,6 +54,12 @@ sub extract($) {
 		return undef;
 	}
 
+	# Bypass header records.
+	if ($self->_unread_headers) {
+		$self->_skip_headers;
+		return undef if $self->end_of_input;
+	}
+
 	# Always read the first line, if we're not at the end of the file. This
 	# lets me put a debug message in the loop, and doesn't hurt performance
 	# all that much.
@@ -123,6 +129,30 @@ has 'path' => (
 	isa      => 'Str',
 	required => 1,
 );
+
+
+# Bypass header records from the input source. User code should never set 
+# this value. It is internal to the object, and will cause data loss.
+has '_unread_headers' => (
+	default => 1,
+	is      => 'rw',
+	isa     => 'Bool',
+);
+
+sub _skip_headers($) {
+	my $self = shift;
+	$self->log->debug( __PACKAGE__ . '->_skip_headers called...' );
+
+	for (1 .. $self->headers) {
+		unless (defined inner()) {
+			$self->end_of_input( 1 );
+			$self->log->debug( '...end of file reached' );
+			last;
+		}
+	}
+
+	$self->_unread_headers( 0 );
+}
 
 
 =head1 SEE ALSO
