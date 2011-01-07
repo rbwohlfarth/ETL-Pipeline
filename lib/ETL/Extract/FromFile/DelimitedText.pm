@@ -45,7 +45,7 @@ sub BUILD {
 	$self->handle( $handle );
 
 	# Set the seperator for parsing.
-	$self->csv->seperator( $options->{seperator} ) 
+	$self->csv->sep_char( $options->{seperator} ) 
 		if defined $options->{seperator};
 }
 
@@ -61,7 +61,7 @@ has 'csv' => (
 	default => sub { Text::CSV->new; },
 	is      => 'ro',
 	isa     => 'Text::CSV',
-	handles => [qw/seperator/],
+	handles => {seperator => 'sep_char'},
 );
 
 
