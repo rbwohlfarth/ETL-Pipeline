@@ -9,6 +9,8 @@ ETL - Translating Data
 package ETL;
 use Moose;
 
+use File::Find::Rule;
+
 
 =head1 DESCRIPTION
 
@@ -134,7 +136,7 @@ and instantiates an object for its specific input format.
 
 =cut
 
-sub build_input($) { return undef; }
+sub build_input($) { undef }
 
 
 =head3 build_mapping()
@@ -158,7 +160,7 @@ required by your application. Ignore the rest.
 
 =cut
 
-sub build_mapping($) { return {}; }
+sub build_mapping($) { {} }
 
 
 =head3 build_output()
@@ -169,7 +171,21 @@ C<build_output> and instantiates an object for its specific input format.
 
 =cut
 
-sub build_output($) { return undef; }
+sub build_output($) { undef }
+
+
+=head3 is_responsible_for( $source )
+
+This class method returns a boolean value. B<True> indicates that this class
+handles data from the given folder. B<False> means that it does not.
+
+The ETL process assumes that we have a repeatable and consistent process. 
+Client A follows a different naming convention than client B. This method
+encapsulates the naming convention inside of the client specific class.
+
+=cut
+
+sub is_responsible_for($$) { 0 }
 
 
 =head2 E => Extract
@@ -194,6 +210,47 @@ has 'input' => (
 	is      => 'ro',
 	isa     => 'ETL::Extract',
 	lazy    => 1,
+);
+
+
+=head3 find_file_matching( $pattern )
+
+Returns the first file that matches the given regular expression. This method
+searches for files under the L<source> directory.
+
+I found a lot of ETL classes calling L<File::Find::Rule> in exactly the same
+manner. This method provides a convenient way of re-using that code.
+
+=cut
+
+sub find_file_matching($$) {
+	my ($self, $pattern) = @_;
+	
+	my @matches = File::Find::Rule->file()
+		->name( $pattern )
+		->in( $self->source );
+	shift @matches;
+}
+
+
+=head3 source
+
+The source folder where this object finds input files. An ETL class normally
+covers a repeated process. For example, client A sends data and you load it
+into your database. Client A puts their file in the same location every month.
+They name the file according to the same pattern every month. This ETL process 
+is repeatable and consistent. Rather than have the application get the file 
+name, the ETL class finds it inside of this folder.
+
+That is one example of how ETL classes use this attribute. For more details, 
+please refer to the documentation of your specific ETL module.
+
+=cut
+
+has 'source' => (
+	is       => 'ro',
+	isa      => 'Str',
+	required => 1,
 );
 
 
