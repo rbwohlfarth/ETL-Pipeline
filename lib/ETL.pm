@@ -9,6 +9,8 @@ ETL - Translating Data
 package ETL;
 use Moose;
 
+use MooseX::SetOnce;
+
 
 =head1 DESCRIPTION
 
@@ -132,6 +134,8 @@ The conversion class
 L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> C<build_input> 
 and instantiates an object for its specific input format.
 
+C<build_input> takes one parameter - the input source.
+
 =cut
 
 sub build_input { undef }
@@ -166,6 +170,8 @@ sub build_mapping { {} }
 This method creates and returns an instance of an L<ETL::Load> subclass. The
 conversion class L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> 
 C<build_output> and instantiates an object for its specific input format.
+
+C<build_output> takes one parameter - the input source.
 
 =cut
 
@@ -210,11 +216,10 @@ all kinds of bugs.
 =cut
 
 has 'input' => (
-	builder => 'build_input',
 	handles => [qw/extract source/],
-	is      => 'ro',
+	is      => 'rw',
 	isa     => 'ETL::Extract',
-	lazy    => 1,
+	traits  => [qw/SetOnce/],
 );
 
 
@@ -287,15 +292,29 @@ class's output format.
 =cut
 
 has 'output' => (
-	builder => 'build_output',
 	handles => [qw/load/],
-	is      => 'ro',
+	is      => 'rw',
 	isa     => 'ETL::Load',
-	lazy    => 1,
+	traits  => [qw/SetOnce/],
 );
 
 
 =head2 Standard Methods & Attributes
+
+=head3 BUILD
+
+L<Moose> calls this after constructing the object. I manually build the 
+L<input> and L<output> attributes so that I can pass the source name.
+
+=cut
+
+sub BUILD {
+	my ($self, $options) = @_;
+	
+	$self->input ( build_input ( $options->{source} ) );
+	$self->output( build_output( $options->{source} ) );
+}
+
 
 =head3 log
 
