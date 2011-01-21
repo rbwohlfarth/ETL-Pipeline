@@ -9,8 +9,6 @@ ETL - Translating Data
 package ETL;
 use Moose;
 
-use MooseX::SetOnce;
-
 
 =head1 DESCRIPTION
 
@@ -216,10 +214,10 @@ all kinds of bugs.
 =cut
 
 has 'input' => (
+	builder => 'build_input',
 	handles => [qw/extract source/],
-	is      => 'rw',
+	is      => 'ro',
 	isa     => 'ETL::Extract',
-	traits  => [qw/SetOnce/],
 );
 
 
@@ -292,29 +290,14 @@ class's output format.
 =cut
 
 has 'output' => (
+	builder => 'build_output',
 	handles => [qw/load/],
 	is      => 'rw',
 	isa     => 'ETL::Load',
-	traits  => [qw/SetOnce/],
 );
 
 
 =head2 Standard Methods & Attributes
-
-=head3 BUILD
-
-L<Moose> calls this after constructing the object. I manually build the 
-L<input> and L<output> attributes so that I can pass the source name.
-
-=cut
-
-sub BUILD {
-	my ($self, $options) = @_;
-	
-	$self->input ( build_input ( $options->{source} ) );
-	$self->output( build_output( $options->{source} ) );
-}
-
 
 =head3 log
 

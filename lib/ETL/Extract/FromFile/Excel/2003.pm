@@ -21,32 +21,6 @@ use Spreadsheet::ParseExcel;
 
 =head1 METHODS & ATTRIBUTES
 
-=head3 BUILD()
-
-L<Moose> calls this method dring object construction. It opens the spreadsheet
-file and prepares it for reading.
-
-=cut
-
-sub BUILD {
-	my ($self, $options) = @_;
-
-	my $path = $self->source;
-	$self->workbook( $self->excel->parse( $path ) );
-
-	if (defined $self->workbook) {
-		# Setting the worksheet also sets our position in the file. By default,
-		# we use the first worksheet.
-		$self->worksheet( 0 );
-	} else {
-		$self->log->logdie( 
-			"Unable to read the Excel spreadsheet $path:"
-			. $self->excel->error()
-		);
-	}
-}
-
-
 =head3 excel
 
 Rather than re-invent the wheel, I used the L<Spreadsheet::ParseExcel> module.
@@ -112,6 +86,31 @@ augment 'extract' => sub {
 
 	# Build a record from the list.
 	return $self->array_to_record( @spreadsheet );
+};
+
+
+=head3 open()
+
+This code opens the file for reading.
+
+=cut
+
+override 'open' => sub {
+	my ($self) = @_;
+
+	my $path = $self->source;
+	$self->workbook( $self->excel->parse( $path ) );
+
+	if (defined $self->workbook) {
+		# Setting the worksheet also sets our position in the file. By default,
+		# we use the first worksheet.
+		$self->worksheet( 0 );
+	} else {
+		$self->log->logdie( 
+			"Unable to read the Excel spreadsheet $path:"
+			. $self->excel->error()
+		);
+	}
 };
 
 

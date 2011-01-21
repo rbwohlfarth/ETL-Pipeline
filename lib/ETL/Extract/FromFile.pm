@@ -43,26 +43,18 @@ The I<inner> code also sets the L<ETL::Extract/position> attribute.
 
 =cut
 
-sub extract($) { 
+sub extract { 
 	my ($self) = @_;
 	$self->log->debug( __PACKAGE__ . '->extract called...' );
 
-	# Don't bother reading past the end of the file. Change the file name
-	# to read more data.
 	if ($self->end_of_input) {
 		$self->log->debug( '...past the end of the file' );
 		return undef;
 	}
 
-	# Bypass header records.
-	if ($self->_unread_headers) {
-		$self->_skip_headers;
-		return undef if $self->end_of_input;
-	}
+	$self->_prepare_for_reading unless $self->_opened;
 
-	# Always read the first line, if we're not at the end of the file. This
-	# lets me put a debug message in the loop, and doesn't hurt performance
-	# all that much.
+	# Reading the first line lets me put a debug message in the loop.
 	my $record = inner();
 
 	# This loop accomplishes three things...
@@ -93,6 +85,24 @@ sub extract($) {
 }
 
 
+# Prepare the input file for reading. This is called by the "extract" method.
+# It needs the "inner" function to skip the headers. Otherwise I could have
+# used the "before" modifier.
+sub _prepare_for_reading {
+	my ($self) = @_;
+
+	$self->open;
+	for (1 .. $self->headers) {
+		unless (defined inner()) {
+			$self->end_of_input( 1 );
+			$self->log->debug( '...end of file reached' );
+			last;
+		}
+	}
+	$self->_opened( 1 );
+}
+
+
 =head3 headers
 
 The number of header rows. Header rows usually contain meta data - such as 
@@ -115,32 +125,23 @@ has 'headers' => (
 );
 
 
-=head2 Standard Attributes & Methods
+=head3 open()
+
+Open the file for reading. Each child class overrides this method with its own
+specific code. If an error occurs, your code should call C<$self->log->logdie>.
 
 =cut
 
+sub open {}
+
+
 # Bypass header records from the input source. User code should never set 
 # this value. It is internal to the object, and will cause data loss.
-has '_unread_headers' => (
-	default => 1,
+has '_opened' => (
+	default => 0,
 	is      => 'rw',
 	isa     => 'Bool',
 );
-
-sub _skip_headers($) {
-	my $self = shift;
-	$self->log->debug( __PACKAGE__ . '->_skip_headers called...' );
-
-	for (1 .. $self->headers) {
-		unless (defined inner()) {
-			$self->end_of_input( 1 );
-			$self->log->debug( '...end of file reached' );
-			last;
-		}
-	}
-
-	$self->_unread_headers( 0 );
-}
 
 
 =head1 SEE ALSO
