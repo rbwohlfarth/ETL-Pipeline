@@ -36,7 +36,7 @@ sub BUILD {
 	my ($self, $options) = @_;
 
 	# Open the new file for reading. Failure = end of file.
-	my $path = $self->path;
+	my $path = $self->source;
 	my $handle;
 
 	$self->log->logdie( "Unable to open '$path' for reading" )

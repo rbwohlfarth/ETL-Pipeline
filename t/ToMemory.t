@@ -12,7 +12,7 @@ require_ok( 'ETL::Extract::ToMemory' );
 # Test object creation - does it compile?
 my $file = new_ok( 'ETL::Extract::ToMemory' => [
 	parser => new ETL::Extract::FromFile::DelimitedText(
-		path => 't/DelimitedText.txt',
+		source => 't/DelimitedText.txt',
 	),
 	primary_key => 1,
 ] );

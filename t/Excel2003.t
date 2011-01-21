@@ -9,7 +9,7 @@ BEGIN { use_ok( 'ETL::Extract::FromFile::Excel::2003' ); }
 require_ok( 'ETL::Extract::FromFile::Excel::2003' );
 
 my $file = new_ok( 'ETL::Extract::FromFile::Excel::2003' => [
-	path => 't/Excel2003.xls',
+	source => 't/Excel2003.xls',
 ] );
 
 is( $file->end_of_input, 0, 'end_of_input()' );

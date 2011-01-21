@@ -82,7 +82,7 @@ sub extract($) {
 			'record ' 
 			. $self->position 
 			. ' in ' 
-			. $self->path
+			. $self->source
 		);
 		return $record;
 	} else {
@@ -117,19 +117,7 @@ has 'headers' => (
 
 =head2 Standard Attributes & Methods
 
-=head3 path
-
-This attribute holds the current file path. Changing this value has no
-effect. Use the C<input> method to read a new file.
-
 =cut
-
-has 'path' => (
-	is       => 'ro',
-	isa      => 'Str',
-	required => 1,
-);
-
 
 # Bypass header records from the input source. User code should never set 
 # this value. It is internal to the object, and will cause data loss.

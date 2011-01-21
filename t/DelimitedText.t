@@ -9,7 +9,7 @@ BEGIN { use_ok( 'ETL::Extract::FromFile::DelimitedText' ); }
 require_ok( 'ETL::Extract::FromFile::DelimitedText' );
 
 my $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' => [
-	path => 't/DelimitedText.txt',
+	source => 't/DelimitedText.txt',
 ] );
 
 is( $file->end_of_input, 0, 'Not at the end_of_input()' );
@@ -38,7 +38,7 @@ ok( $file->end_of_input, 'End of input flag set' );
 
 $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' => [
 	headers => 1,
-	path    => 't/DelimitedText.txt',
+	source    => 't/DelimitedText.txt',
 ] );
 $record = $file->extract;
 is( $file->position  , 2       , 'header row skipped'          );

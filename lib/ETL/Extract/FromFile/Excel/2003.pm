@@ -31,7 +31,7 @@ file and prepares it for reading.
 sub BUILD {
 	my ($self, $options) = @_;
 
-	my $path = $self->path;
+	my $path = $self->source;
 	$self->workbook( $self->excel->parse( $path ) );
 
 	if (defined $self->workbook) {

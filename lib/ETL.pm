@@ -9,8 +9,6 @@ ETL - Translating Data
 package ETL;
 use Moose;
 
-use File::Find::Rule;
-
 
 =head1 DESCRIPTION
 
@@ -136,7 +134,7 @@ and instantiates an object for its specific input format.
 
 =cut
 
-sub build_input($) { undef }
+sub build_input { undef }
 
 
 =head3 build_mapping()
@@ -160,7 +158,7 @@ required by your application. Ignore the rest.
 
 =cut
 
-sub build_mapping($) { {} }
+sub build_mapping { {} }
 
 
 =head3 build_output()
@@ -171,7 +169,7 @@ C<build_output> and instantiates an object for its specific input format.
 
 =cut
 
-sub build_output($) { undef }
+sub build_output { undef }
 
 
 =head3 is_responsible_for( $source )
@@ -185,7 +183,7 @@ encapsulates the naming convention inside of the client specific class.
 
 =cut
 
-sub is_responsible_for($$) { 0 }
+sub is_responsible_for { 0 }
 
 
 =head2 E => Extract
@@ -202,55 +200,21 @@ The method returns C<undef> at the end of the data.
 This attribute holds an L<ETL::Extract> object. This object defines the 
 conversion class's input format.
 
+=head3 source
+
+I<source> tells you where the data comes from. It might contain a file path,
+or a database name. L</build_input()> sets this value when it creates the
+L<ETL::Extract> object. It may B<not> change during execution. That would cause
+all kinds of bugs.
+
 =cut
 
 has 'input' => (
 	builder => 'build_input',
-	handles => [qw/extract/],
+	handles => [qw/extract source/],
 	is      => 'ro',
 	isa     => 'ETL::Extract',
 	lazy    => 1,
-);
-
-
-=head3 find_file_matching( $pattern )
-
-Returns the first file that matches the given regular expression. This method
-searches for files under the L<source> directory.
-
-I found a lot of ETL classes calling L<File::Find::Rule> in exactly the same
-manner. This method provides a convenient way of re-using that code.
-
-=cut
-
-sub find_file_matching($$) {
-	my ($self, $pattern) = @_;
-	
-	my @matches = File::Find::Rule->file()
-		->name( $pattern )
-		->in( $self->source );
-	shift @matches;
-}
-
-
-=head3 source
-
-The source folder where this object finds input files. An ETL class normally
-covers a repeated process. For example, client A sends data and you load it
-into your database. Client A puts their file in the same location every month.
-They name the file according to the same pattern every month. This ETL process 
-is repeatable and consistent. Rather than have the application get the file 
-name, the ETL class finds it inside of this folder.
-
-That is one example of how ETL classes use this attribute. For more details, 
-please refer to the documentation of your specific ETL module.
-
-=cut
-
-has 'source' => (
-	is       => 'ro',
-	isa      => 'Str',
-	required => 1,
 );
 
 

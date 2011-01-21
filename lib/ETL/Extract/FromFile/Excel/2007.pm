@@ -33,7 +33,7 @@ sub BUILD {
 	my ($self) = @_;
 
 	# Create the Excel parser.
-	my $path = $self->path;
+	my $path = $self->source;
 	$self->excel( Spreadsheet::XLSX->new( $path ) );
 
 	$self->worksheet( shift @{$self->excel->{Worksheet}} );
