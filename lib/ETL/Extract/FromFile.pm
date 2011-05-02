@@ -43,14 +43,9 @@ The I<inner> code also sets the L<ETL::Extract/position> attribute.
 
 =cut
 
-sub extract { 
+augument 'extract' => sub { 
 	my ($self) = @_;
 	$self->log->debug( __PACKAGE__ . '->extract called...' );
-
-	if ($self->end_of_input) {
-		$self->log->debug( '...past the end of the file' );
-		return undef;
-	}
 
 	$self->_prepare_for_reading unless $self->_opened;
 
@@ -123,6 +118,18 @@ has 'headers' => (
 	is      => 'rw',
 	isa     => 'Int',
 );
+
+
+=head3 log
+
+This attrbiute provides an access point into the L<Log::Log4perl> logging
+system. C<ETL> logs all warning and error messages. Users can run the 
+application, and I do not need to ask them for error messages. The log file
+always has a copy.
+
+=cut
+
+with 'MooseX::Log::Log4perl';
 
 
 =head3 open()

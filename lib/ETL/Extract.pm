@@ -22,10 +22,9 @@ use Moose;
 
 =head3 extract()
 
-Returns the next record from input. This base method does absolutely nothing.
-The child class defines exactly how this works for its input format.
-
-The child class returns one of two values:
+This method returns the next record from input. The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<extract>. The 
+child class returns one of two values:
 
 =over
 
@@ -35,19 +34,27 @@ The child class returns one of two values:
 
 =back
 
-The child class also sets these attributes:
-
-=over
-
-=item * end_of_input
-
-=item * position
-
-=back
+The child class should set the L</position> attribute to something that makes
+sense for its format.
 
 =cut
 
-sub extract { return undef; }
+sub extract { 
+	my ($self) = @_;
+
+	# If we reached the end of the input, then I want to return undef.
+	my $record = undef;
+	
+	# Stop reading if there is no more data. This prevents errors from the
+	# input source.
+	unless ($self->end_of_input) {
+		$record = inner();
+		if (defined $record) { $self->validate( $record ); }
+		else                 { $self->end_of_input( 1 )  ; }
+	}
+
+	return $record;
+}
 
 
 =head2 Standard Methods & Attributes
@@ -57,7 +64,7 @@ sub extract { return undef; }
 I<end_of_input> indicates when we reach the end of the input data. It holds
 a boolean flag: B<true> = no more data.
 
-I<extract> uses this flag. When the falg becomes true, I<extract> returns
+I<extract> uses this flag. When the flag becomes true, I<extract> returns
 the C<undef> value.
 
 =cut
@@ -67,16 +74,6 @@ has 'end_of_input' => (
 	is      => 'rw',
 	isa     => 'Bool',
 );
-
-
-=head3 log
-
-This attrbiute provides an access point into the L<Log::Log4perl> logging
-system. Child classes must log all errors messages.
-
-=cut
-
-with 'MooseX::Log::Log4perl';
 
 
 =head3 position
@@ -104,7 +101,7 @@ has 'position' => (
 
 I<source> tells you where the data comes from. It might contain a file path,
 or a database name. You set the value only once. It may B<not> change during 
-execution. That would cause all kinds of bugs.
+execution. That causes all kinds of bugs.
 
 =cut
 
@@ -114,16 +111,30 @@ has 'source' => (
 );
 
 
+=head3 validate( $record )
+
+This method checks the raw data for errors. Becuase the data is still very
+format specific, most of your validation should occur in the L<ETL::Load> 
+class instead.
+
+C<validate> does not return a value. Your validation code sets the
+L<ETL::Record/error> attribute.
+
+=cut
+
+sub validate { }
+
+
 =head1 SEE ALSO
 
 L<ETL>, L<ETL::Record>, L<Log::Log4perl>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
-# Perl requires this to load the module.
-1;
+no Moose;
+__PACKAGE__->meta->make_immutable;

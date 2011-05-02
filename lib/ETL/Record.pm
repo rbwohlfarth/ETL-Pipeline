@@ -39,6 +39,8 @@ The last error message regarding this data. C<undef> indicates no error. The
 class automatically logs error messages along with the origin of the record.
 That way you can trace errors back to the raw data.
 
+Your code can clear the error status by passing in a null.
+
 =cut
 
 has 'error' => (
@@ -132,7 +134,7 @@ the data to its final destination.
 
 sub is_valid($) {
 	my ($self) = @_;
-	return (defined( $self->error ) ? 0 : 1);
+	return (hascontent( $self->error ) ? 0 : 1);
 }
 
 
