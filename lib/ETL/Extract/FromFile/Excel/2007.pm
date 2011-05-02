@@ -22,34 +22,6 @@ use String::Util qw/define/;
 
 =head1 METHODS & ATTRIBUTES
 
-=head3 BUILD()
-
-L<Moose> calls this method dring object construction. It opens the spreadsheet
-file and prepares it for reading.
-
-=cut
-
-sub BUILD {
-	my ($self) = @_;
-
-	# Create the Excel parser.
-	my $path = $self->path;
-	$self->excel( Spreadsheet::XLSX->new( $path ) );
-
-	$self->worksheet( shift @{$self->excel->{Worksheet}} );
-	if (defined $self->worksheet) {
-		# Find the starting row.
-		$self->position( $self->worksheet->{'MinRow'} );
-		$self->log->debug( 'First row: ' . $self->position );
-	} else {
-		$self->log->logdie( 
-			"Unable to read the Excel spreadsheet $path: "
-			. $self->excel->error()
-		);
-	}
-}
-
-
 =head3 excel
 
 Rather than re-invent the wheel. I used the C<Spreadsheet::Excel> module. The
@@ -107,6 +79,33 @@ augment 'extract' => sub {
 
 	# Build a record from the list.
 	return $self->array_to_record( @spreadsheet );
+};
+
+
+=head3 open()
+
+This code opens the file for reading.
+
+=cut
+
+override 'open' => sub {
+	my ($self) = @_;
+
+	# Create the Excel parser.
+	my $path = $self->source;
+	$self->excel( Spreadsheet::XLSX->new( $path ) );
+
+	$self->worksheet( shift @{$self->excel->{Worksheet}} );
+	if (defined $self->worksheet) {
+		# Find the starting row.
+		$self->position( $self->worksheet->{'MinRow'} );
+		$self->log->debug( 'First row: ' . $self->position );
+	} else {
+		$self->log->logdie( 
+			"Unable to read the Excel spreadsheet $path: "
+			. $self->excel->error()
+		);
+	}
 };
 
 

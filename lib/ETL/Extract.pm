@@ -47,7 +47,7 @@ The child class also sets these attributes:
 
 =cut
 
-sub extract($) { return undef; }
+sub extract { return undef; }
 
 
 =head2 Standard Methods & Attributes
@@ -100,6 +100,20 @@ has 'position' => (
 );
 
 
+=head3 source
+
+I<source> tells you where the data comes from. It might contain a file path,
+or a database name. You set the value only once. It may B<not> change during 
+execution. That would cause all kinds of bugs.
+
+=cut
+
+has 'source' => (
+	is  => 'rw',
+	isa => 'Str',
+);
+
+
 =head1 SEE ALSO
 
 L<ETL>, L<ETL::Record>, L<Log::Log4perl>
@@ -113,4 +127,3 @@ Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 # Perl requires this to load the module.
 1;
-

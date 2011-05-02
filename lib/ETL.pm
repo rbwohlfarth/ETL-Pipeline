@@ -132,9 +132,11 @@ The conversion class
 L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> C<build_input> 
 and instantiates an object for its specific input format.
 
+C<build_input> takes one parameter - the input source.
+
 =cut
 
-sub build_input($) { return undef; }
+sub build_input { undef }
 
 
 =head3 build_mapping()
@@ -158,7 +160,7 @@ required by your application. Ignore the rest.
 
 =cut
 
-sub build_mapping($) { return {}; }
+sub build_mapping { {} }
 
 
 =head3 build_output()
@@ -167,9 +169,25 @@ This method creates and returns an instance of an L<ETL::Load> subclass. The
 conversion class L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> 
 C<build_output> and instantiates an object for its specific input format.
 
+C<build_output> takes one parameter - the input source.
+
 =cut
 
-sub build_output($) { return undef; }
+sub build_output { undef }
+
+
+=head3 is_responsible_for( $source )
+
+This class method returns a boolean value. B<True> indicates that this class
+handles data from the given folder. B<False> means that it does not.
+
+The ETL process assumes that we have a repeatable and consistent process. 
+Client A follows a different naming convention than client B. This method
+encapsulates the naming convention inside of the client specific class.
+
+=cut
+
+sub is_responsible_for { 0 }
 
 
 =head2 E => Extract
@@ -186,14 +204,20 @@ The method returns C<undef> at the end of the data.
 This attribute holds an L<ETL::Extract> object. This object defines the 
 conversion class's input format.
 
+=head3 source
+
+I<source> tells you where the data comes from. It might contain a file path,
+or a database name. L</build_input()> sets this value when it creates the
+L<ETL::Extract> object. It may B<not> change during execution. That would cause
+all kinds of bugs.
+
 =cut
 
 has 'input' => (
 	builder => 'build_input',
-	handles => [qw/extract/],
+	handles => [qw/extract source/],
 	is      => 'ro',
 	isa     => 'ETL::Extract',
-	lazy    => 1,
 );
 
 
@@ -268,9 +292,8 @@ class's output format.
 has 'output' => (
 	builder => 'build_output',
 	handles => [qw/load/],
-	is      => 'ro',
+	is      => 'rw',
 	isa     => 'ETL::Load',
-	lazy    => 1,
 );
 
 

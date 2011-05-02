@@ -25,31 +25,6 @@ use Text::CSV;
 
 =head1 METHODS & ATTRIBUTES
 
-=head3 BUILD()
-
-L<Moose> calls this method dring object construction. It opens the text file
-and prepares it for reading.
-
-=cut
-
-sub BUILD {
-	my ($self, $options) = @_;
-
-	# Open the new file for reading. Failure = end of file.
-	my $path = $self->path;
-	my $handle;
-
-	$self->log->logdie( "Unable to open '$path' for reading" )
-		unless open( $handle, '<', $path );
-
-	$self->handle( $handle );
-
-	# Set the seperator for parsing.
-	$self->csv->seperator( $options->{seperator} ) 
-		if defined $options->{seperator};
-}
-
-
 =head3 csv
 
 The L<Text::CSV> object for doing the actual parsing work. Using the module
@@ -61,7 +36,7 @@ has 'csv' => (
 	default => sub { Text::CSV->new; },
 	is      => 'ro',
 	isa     => 'Text::CSV',
-	handles => [qw/seperator/],
+	handles => {seperator => 'sep_char'},
 );
 
 
@@ -102,6 +77,26 @@ has 'handle' => (
 	is  => 'rw',
 	isa => 'Maybe[FileHandle]',
 );
+
+
+=head3 open()
+
+This code opens the file for reading.
+
+=cut
+
+override 'open' => sub {
+	my ($self) = @_;
+
+	# Open the new file for reading. Failure = end of file.
+	my $path = $self->source;
+	my $handle;
+
+	$self->log->logdie( "Unable to open '$path' for reading" )
+		unless open( $handle, '<', $path );
+
+	$self->handle( $handle );
+};
 
 
 =head1 SEE ALSO

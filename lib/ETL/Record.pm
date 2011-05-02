@@ -132,7 +132,7 @@ the data to its final destination.
 
 sub is_valid($) {
 	my ($self) = @_;
-	return (not defined( $self->error ));
+	return (defined( $self->error ) ? 0 : 1);
 }
 
 
