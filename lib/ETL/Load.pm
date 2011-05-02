@@ -32,24 +32,10 @@ child class returns null for success, or an error message.
 
 =cut
 
-sub load {
-	my ($self) = @_;
-
-	if ($record->is_valid) {
-		$self->validate( $record );
-		return ($record->is_valid ? inner() : $record->error);
-	} else { return $record->error; }
+sub load { 
+	my ($self, $record) = @_;
+	return ($record->is_valid ? inner() : $record->error); 
 }
-
-
-=head3 validate( $record )
-
-This method checks the output data for errors. C<validate> does not return a 
-value. Your validation code sets the L<ETL::Record/error> attribute.
-
-=cut
-
-sub validate { }
 
 
 =head1 SEE ALSO
