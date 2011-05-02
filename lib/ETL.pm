@@ -36,14 +36,16 @@ The C<ETL> module works in layers.
 
  +-------------------+
  | Input file format |------------------+-------------+
- +-------------------+ Conversion Class | Application |
+ +-------------------+                  |             |
+ | Transformation    | Conversion Class | Application |
+ +-------------------+                  |             |
  | Output format     |------------------+-------------+
  +-------------------+
 
-The I<Conversion Class> inherits from C<ETL>. It defines an input format and an
-output format. C<ETL> is format agnostic - abstract if you will. The 
-I<Conversion Class> pulls together real, tangilble, formats that physically
-move around the data.
+The I<Conversion Class> inherits from C<ETL>. It defines an input format, 
+transformation logic, and an output format. C<ETL> is format agnostic - 
+abstract if you will. The I<Conversion Class> pulls together real, tangilble, 
+formats that physically move around the data.
 
 Your application instantiates and uses the I<Conversion Class>.
 
@@ -53,14 +55,16 @@ Your application instantiates and uses the I<Conversion Class>.
 
 =item 1. Inherit from I<ETL>.
 
-=item 2. L<Override|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> L</build_input()>. Returns an instance of a child of L<ETL::Extract>.
+=item 2. Define a L<BUILD|Moose::Manual::Construction/BUILD> method.
 
-=item 3. L<Override|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> L</build_output()>. Returns an instance of a child of L<ETL::Load>.
+=item 3. Instantiate an L<ETL::Extract> class.
 
-=item 4. L<Override|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> L</build_mapping()>. Returns a hash reference.
+=item 4. Instantiate an L<ETL::Transform> class.
+
+=item 5. Instantiate an L<ETL::Load> class.
 
 That's it - pretty simple? The complexity really comes from instantiating
-the L<ETL::Extract> and L<ETL::Load> classes. 
+the L<ETL::Extract>, L<ETL::Transform>, and L<ETL::Load> classes. 
 
 =head4 Extract: Input formats
 
@@ -109,7 +113,16 @@ Here is a very simplified example...
   }
 
 The I<ETL::Example> class handles all of the details about opening the input 
-file, connecting to the output database, and validating the information.
+file, connecting to the output database, and validating the information. It 
+fits into our diagram this way...
+
+ +-------------------+
+ | ETL::Extract      |------------------+-------------+
+ +-------------------+                  |             |
+ | ETL::Transform    | ETL::Example     | Sample code |
+ +-------------------+                  |             |
+ | ETL::Load         |------------------+-------------+
+ +-------------------+
 
 =head2 Why not use Moose roles?
 
@@ -118,68 +131,17 @@ load. The input formats consumed the extract role. Output formats consumed the
 load role. And the conversion class was a mixture of consuming roles and 
 inheritance. Yuck!
 
-This design feels cleaner. Conversion classes inherit from one base and 
-instantiate instances of input/output formats.
+This design feels cleaner. Conversion classes inherit from one base and create 
+instances of input/output formats.
 
 =head1 METHODS & ATTRIBUTES
 
 =head2 Override in Child Classes
 
-=head3 build_input()
-
-This method creates and returns an instance of an L<ETL::Extract> subclass. 
-The conversion class 
-L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> C<build_input> 
-and instantiates an object for its specific input format.
-
-C<build_input> takes one parameter - the input source.
-
-=cut
-
-sub build_input { undef }
-
-
-=head3 build_mapping()
-
-Return a hash reference. The hash links output field names with the 
-corresponding input field name. This example maps a spreadsheet. Column A goes 
-into the I<Name> field, B into I<Date>, etc.
-
- {
-   Name => 'A',
-   Date => 'B',
-   Age  => 'C',
- }
-
-The keys are your standard field names. The values are the input field names. 
-You should read the example as saying I<fill the Name field from column A>. 
-This layout makes it easy to see where your data originated.
-
-You do not need to map every field from the input. Map only the fields
-required by your application. Ignore the rest. 
-
-=cut
-
-sub build_mapping { {} }
-
-
-=head3 build_output()
-
-This method creates and returns an instance of an L<ETL::Load> subclass. The
-conversion class L<overrides|Moose::Manual::MethodModifiers/OVERRIDE AND SUPER> 
-C<build_output> and instantiates an object for its specific input format.
-
-C<build_output> takes one parameter - the input source.
-
-=cut
-
-sub build_output { undef }
-
-
 =head3 is_responsible_for( $source )
 
 This class method returns a boolean value. B<True> indicates that this class
-handles data from the given folder. B<False> means that it does not.
+handles data from the given source. B<False> means that it does not.
 
 The ETL process assumes that we have a repeatable and consistent process. 
 Client A follows a different naming convention than client B. This method
@@ -201,123 +163,73 @@ The method returns C<undef> at the end of the data.
 
 =head3 input
 
-This attribute holds an L<ETL::Extract> object. This object defines the 
-conversion class's input format.
+This attribute holds an L<ETL::Extract> object. The L<ETL::Extract> object 
+defines the input format.
 
 =head3 source
 
 I<source> tells you where the data comes from. It might contain a file path,
-or a database name. L</build_input()> sets this value when it creates the
-L<ETL::Extract> object. It may B<not> change during execution. That would cause
-all kinds of bugs.
+or a database name. The source should B<not> change during execution. That 
+causes all kinds of bugs.
 
 =cut
 
 has 'input' => (
-	builder => 'build_input',
 	handles => [qw/extract source/],
-	is      => 'ro',
+	is      => 'rw',
 	isa     => 'ETL::Extract',
 );
 
 
 =head2 T => Transform
 
-=head3 mapping
+=head3 logic
 
-Stores a hash linking the output fields to the input fields. This is the heart
-of the conversion process.
-
-Key the hash with the output field name. The conversion process pulls data
-from the input source. This is what you do manually - look at the fields you 
-need, then see which input fields correspond.
-
-The L</build_mapping()> method creates this hash.
-
-=cut
-
-has 'mapping' => (
-	builder => 'build_mapping',
-	is      => 'ro',
-	isa     => 'HashRef[Str]',
-	lazy    => 1,
-);
-
+This attribute holds an L<ETL::Transform> object. The L<ETL::Transform> object 
+defines the conversion logic.
 
 =head3 transform( $record )
 
-Transformation maps the input data to the output fields. In pure data terms,
-it converts L<ETL::Record/raw> into L<ETL::Record/fields>.
-
-L<ETL::Transform> does not perform any formatting or validation on the
-data. Your application should provide that functionality by:
-
-=over
-
-=item 1. Calling validation/formatting code from the application.
-
-=item 2. Or using method modifiers such as L<before, after, and around|Moose::Manual::MethodModifiers/BEFORE, AFTER, AND AROUND>.
-
-=back
+This method converts a single L<ETL::Record> from raw data into output fields.
 
 =cut
 
-sub transform($$) {
-	my ($self, $record) = @_;
-
-	my %data    = ();
-	my $mapping = $self->mapping;
-
-	while (my ($to, $from) = each %$mapping) {
-		$record->fields->{$to} = $record->raw->{$from} if defined $from;
-	}
-}
+has 'logic' => (
+	handles => [qw/transform/],
+	is      => 'rw',
+	isa     => 'ETL::Transform',
+);
 
 
 =head2 L => Load
 
-=head3 load( $data )
+=head3 load( $record )
 
-This method saves a single record in its final destination. C<$data> is a hash
-reference keyed by the output field names. L</transform( $record )> creates 
-the hash.
+This method saves a single record in its final destination. C<$record> is an 
+L<ETL::Record> object.
 
 =head3 output
 
-This attribute holds an L<ETL::Load> object. This object defines the conversion 
-class's output format.
+This attribute holds an L<ETL::Load> object. The L<ETL::Load> object defines 
+the output format.
 
 =cut
 
 has 'output' => (
-	builder => 'build_output',
 	handles => [qw/load/],
 	is      => 'rw',
 	isa     => 'ETL::Load',
 );
 
 
-=head2 Standard Methods & Attributes
-
-=head3 log
-
-This attrbiute provides an access point into the L<Log::Log4perl> logging
-system. C<ETL> logs all warning and error messages. Users can run the 
-application, and I do not need to ask them for error messages. The log file
-always has a copy.
-
-=cut
-
-with 'MooseX::Log::Log4perl';
-
-
 =head1 SEE ALSO
 
-L<ETL::Extract>, L<ETL::Load>, L<ETL::Record>, L<Log::Log4perl>
+L<ETL::Extract>, L<ETL::Load>, L<ETL::Record>, L<ETL::Transform>, 
+L<Log::Log4perl>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

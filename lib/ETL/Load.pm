@@ -10,8 +10,8 @@ This class defines the Application Programming Interface (API) for all ETL
 output destinations. The API allows applications to interact with the 
 destination without worrying about its specific format (file, database, etc.).
 
-The I<load> part of the process blindly moves data from L<ETL::Record/fields>
-into a data store. Use the I<transform> process for validation and formatting.
+The I<load> part of the process validates the output and then moves the data 
+from L<ETL::Record/fields> into a data store.
 
 =cut
 
@@ -23,28 +23,33 @@ use Moose;
 
 =head2 Override in Child Classes
 
-=head3 load( $etl_record )
+=head3 load( $record )
 
-Saves data into permanent storage such as a database or file. I<load>
-provides a generic call for all output methods (database, file, etc.). The
-child class defines the actual output code.
-
-You pass in an L<ETL::Record> instance that has gone through the
-L<transformation process|ETL/transform( $record )>.
+This method saves the L<ETL::Record> into permanent storage such as a database 
+or file. The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<load>. The 
+child class returns null for success, or an error message.
 
 =cut
 
-sub load($$) { }
+sub load {
+	my ($self) = @_;
+
+	if ($record->is_valid) {
+		$self->validate( $record );
+		return ($record->is_valid ? inner() : $record->error);
+	} else { return $record->error; }
+}
 
 
-=head3 log
+=head3 validate( $record )
 
-This attrbiute provides an access point into the L<Log::Log4perl> logging
-system. Child classes must log all errors messages.
+This method checks the output data for errors. C<validate> does not return a 
+value. Your validation code sets the L<ETL::Record/error> attribute.
 
 =cut
 
-with 'MooseX::Log::Log4perl';
+sub validate { }
 
 
 =head1 SEE ALSO
@@ -58,5 +63,5 @@ Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
 
-# Perl requires this to load the module.
-1;
+no Moose;
+__PACKAGE__->meta->make_immutable;
