@@ -1,0 +1,18 @@
+Process...
+	Grab a record                 ---> Extract
+	Validate the raw data (rare)  --->
+	Convert the data fields       ---> Transform
+	Format the data               --->
+	Validate the converted data   ---> Load
+	Load the converted data       --->
+
+ETL::Extract::File::...
+ETL::Transform::PARS::Complaints (standard formatting)
+ETL::Load::PARS::Complaints (send to MSAccess)
+
+Load into Access for review
+Let Access find duplicates in PARS
+Access loads new records into PARS
+
+How do I override methods in the Extract/Load classes from the conversion class?
+
