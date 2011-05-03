@@ -50,7 +50,7 @@ The L</load( $record )> method puts these fields into the database.
 
 has 'fields' => (
 	default => sub { {} },
-	is      => ro,
+	is      => rw,
 	isa     => 'HashRef[Str]',
 );
 
