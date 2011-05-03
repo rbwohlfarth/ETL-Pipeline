@@ -223,9 +223,40 @@ has 'input' => (
 
 =head2 T => Transform
 
+=head3 mapping
+
+Stores a hash linking the output fields to the input fields. This is the heart
+of the conversion process.
+
+Key the hash with the output field name. The conversion process pulls data
+from the input source. This is what you do manually - look at the fields you 
+need, then see which input fields correspond.
+
 =cut
 
-#TODO: Copy "mapping" and "transform" from Transform.pm
+has 'mapping' => (
+	is  => 'rw',
+	isa => 'HashRef[Str]',
+);
+
+
+=head3 transform( $record )
+
+Transformation maps the input data to the output fields. In pure data terms,
+it converts L<ETL::Record/raw> into L<ETL::Record/fields>.
+
+=cut
+
+sub transform {
+	my ($self, $record) = @_;
+
+	if ($record->is_valid) {
+		my $mapping = $self->mapping;
+		while (my ($to, $from) = each %$mapping) {
+			$record->fields->{$to} = $record->raw->{$from} if defined $from;
+		}
+	}
+}
 
 
 =head2 L => Load

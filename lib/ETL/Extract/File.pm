@@ -43,7 +43,7 @@ The I<inner> code also sets the L<ETL::Extract/position> attribute.
 
 =cut
 
-augument 'extract' => sub { 
+augment 'extract' => sub { 
 	my ($self) = @_;
 	$self->log->debug( __PACKAGE__ . '->extract called...' );
 
@@ -77,7 +77,7 @@ augument 'extract' => sub {
 		$self->end_of_input( 1 );
 		return undef;
 	}
-}
+};
 
 
 =head3 open()
@@ -93,18 +93,16 @@ sub open {
 
 	# The child class actually opens the file.
 	inner();
+	$self->_opened( 1 );
 	
 	# Skip over the header rows. We simply ignore them.
 	for (1 .. $self->headers) {
-		unless (defined inner()) {
+		unless (defined $self->extract) {
 			$self->end_of_input( 1 );
 			$self->log->debug( '...end of file reached' );
 			last;
 		}
 	}
-
-	# I only open the file once.
-	$self->_opened( 1 );
 }
 
 

@@ -7,6 +7,7 @@ my $build = Module::Build->new(
 	module_name   => 'ETL',
 	requires      => {
 		'perl'      => '5.10.1',
+		'DBI'       => '1.615',
 		'Moose'     => '1.01',
 		'Spreadsheet::ParseExcel' => '',
 		'Spreadsheet::XLSX'       => '',
@@ -14,4 +15,3 @@ my $build = Module::Build->new(
 	},
 );
 $build->create_build_script;
-
