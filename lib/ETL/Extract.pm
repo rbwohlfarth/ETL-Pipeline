@@ -112,7 +112,7 @@ has 'source' => (
 
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>, L<Log::Log4perl>
+L<ETL>, L<ETL::Record>
 
 =head1 LICENSE
 

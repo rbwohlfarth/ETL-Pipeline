@@ -38,9 +38,25 @@ sub load {
 }
 
 
+=head2 Standard Methods & Attributes
+
+=head3 destination
+
+I<destination> tells you where the data comes goes. It might contain a file 
+path or a database name. You set the value only once. It may B<not> change 
+during execution. That causes all kinds of bugs.
+
+=cut
+
+has 'destination' => (
+	is  => 'rw',
+	isa => 'Str',
+);
+
+
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>, L<Log::Log4perl>
+L<ETL>, L<ETL::Record>
 
 =head1 LICENSE
 
