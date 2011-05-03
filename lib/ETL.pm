@@ -14,7 +14,7 @@ use Moose;
 
 B<ETL> stands for I<Extract-Transform-Load>. You often hear this design
 pattern associated with Data Warehousing. In fact, ETL works with almost
-any type of data conversion. You read the source (I<extract>), translate the
+any type of data conversion. You read the source (I<Extract>), translate the
 data for your target (I<Transform>), and store the result (I<Load>).
 
 By dividing a conversion into 3 steps, we isolate the input from the output.
@@ -36,20 +36,18 @@ The C<ETL> module works in layers.
 
  +-------------------+
  | Input file format |------------------+-------------+
- +-------------------+                  |             |
- | Transformation    | Conversion Class | Application |
- +-------------------+                  |             |
+ +-------------------+ Conversion Class | Application |
  | Output format     |------------------+-------------+
  +-------------------+
 
-The I<Conversion Class> inherits from C<ETL>. It defines an input format, 
-transformation logic, and an output format. C<ETL> is format agnostic - 
-abstract if you will. The I<Conversion Class> pulls together real, tangilble, 
-formats that physically move around the data.
+A I<Conversion Class> inherits from C<ETL>. It defines an input format and an 
+output format. C<ETL> is format agnostic - abstract if you will. The 
+I<Conversion Class> pulls together real, tangilble, formats that physically 
+move around the data.
 
 Your application instantiates and uses the I<Conversion Class>.
 
-=head3 How does one create a conversion class?
+=head2 How does one create a conversion class?
 
 =over
 
@@ -59,24 +57,25 @@ Your application instantiates and uses the I<Conversion Class>.
 
 =item 3. Instantiate an L<ETL::Extract> class.
 
-=item 4. Instantiate an L<ETL::Transform> class.
-
 =item 5. Instantiate an L<ETL::Load> class.
 
-That's it - pretty simple? The complexity really comes from instantiating
-the L<ETL::Extract>, L<ETL::Transform>, and L<ETL::Load> classes. 
+=item 6. Override L</is_responsible_for( $source )>.
 
-=head4 Extract: Input formats
+=item 7. Augment L</process_raw_data( $record )>.
+
+=item 8. Augment L</process_converted_data( $record )>.
+
+=head3 Extract: Input formats
 
 An input format reads individual records. The data can come from all kinds of
 different sources - CSV file, Excel spreadsheet, or an Access database. For 
-example, the L<ETL::Extract::FromFile::Excel::2003> class extracts data one 
-row at a time from an Excel spreadsheet.
+example, the L<ETL::Extract::File::Excel::2003> class extracts data one row
+at a time from an Excel spreadsheet.
 
 Each conversion class has exactly one input format. The input format returns
 an L<ETL::Record> object.
 
-=head4 Transform: Mappings
+=head3 Transform: Mappings
 
 C<ETL> maps fields using a Perl hash. The keys represent output fields. The 
 values identify input fields. Let's look at an example...
@@ -93,24 +92,26 @@ column B goes into the I<Date> field. And column C populates the I<Age> field.
 The keys are your B<output> field names. Read the example as saying 
 I<fill the Name field from column A>.
 
-=head4 Load: Output formats
+=head3 Load: Output formats
 
-An input format writes individual records to a data store. The data can go
+An output format writes individual records to a data store. The data can go
 into all kinds of different stores - CSV file or SQL database. You pass it an
 L<ETL::Record> with the data fields. And the output format writes it.
 
 Each conversion class has exactly one output format.
 
-=head3 How does the application use a conversion class?
+=head2 How does the application use a conversion class?
 
-Here is a very simplified example...
+The L<ETL> class sets up a data pipeline. Each record travels the pipeline from
+start to finish:
+
+ extract -> process_raw_data -> transform -> process_converted_data -> load
+
+The most basic application simply kicks off the pipeline, like this...
 
   use ETL::Example;
-  my $etl = ETL::Example->new;
-  while (my $record = $etl->extract) {
-      $etl->transform( $record );
-      $etl->load( $record ) if $record->is_valid;
-  }
+  my $etl = ETL::Example->new( source => $input_file );
+  $etl->run;
 
 The I<ETL::Example> class handles all of the details about opening the input 
 file, connecting to the output database, and validating the information. It 
@@ -118,9 +119,7 @@ fits into our diagram this way...
 
  +-------------------+
  | ETL::Extract      |------------------+-------------+
- +-------------------+                  |             |
- | ETL::Transform    | ETL::Example     | Sample code |
- +-------------------+                  |             |
+ +-------------------+ ETL::Example     | Sample code |
  | ETL::Load         |------------------+-------------+
  +-------------------+
 
@@ -150,6 +149,47 @@ encapsulates the naming convention inside of the client specific class.
 =cut
 
 sub is_responsible_for { 0 }
+
+
+=head3 process_raw_data( $record )
+
+The ETL pipeline calls this method after L</extract()> and before 
+L</transform( $record )>. It allows the child class to manipulate the raw
+data before transformation.
+
+Unless absolutely necessary, you should do your formatting and validation in
+the L</process_converted_data( $record )> method. The input format can be very
+specific - hindering code re-use.
+
+The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+
+=cut
+
+sub process_raw_data {
+	my ($self, $record) = @_;
+	inner() if $record->is_valid;
+}
+
+
+=head3 process_converted_data( $record )
+
+The ETL pipeline calls this method after L</transform( $record )> and before 
+L</load( $record )>. It allows the child class to manipulate fields before 
+writing them to the data store.
+
+This is where client specific formatting and validation occurs. If you find an
+error, set the L<ETL::Record/error> attribute.
+
+The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+
+=cut
+
+sub process_converted_data {
+	my ($self, $record) = @_;
+	inner() if $record->is_valid;
+}
 
 
 =head2 E => Extract
@@ -183,22 +223,40 @@ has 'input' => (
 
 =head2 T => Transform
 
-=head3 logic
+=head3 mapping
 
-This attribute holds an L<ETL::Transform> object. The L<ETL::Transform> object 
-defines the conversion logic.
+Stores a hash linking the output fields to the input fields. This is the heart
+of the conversion process.
 
-=head3 transform( $record )
-
-This method converts a single L<ETL::Record> from raw data into output fields.
+Key the hash with the output field name. The conversion process pulls data
+from the input source. This is what you do manually - look at the fields you 
+need, then see which input fields correspond.
 
 =cut
 
-has 'logic' => (
-	handles => [qw/transform/],
-	is      => 'rw',
-	isa     => 'ETL::Transform',
+has 'mapping' => (
+	is  => 'rw',
+	isa => 'HashRef[Str]',
 );
+
+
+=head3 transform( $record )
+
+Transformation maps the input data to the output fields. In pure data terms,
+it converts L<ETL::Record/raw> into L<ETL::Record/fields>.
+
+=cut
+
+sub transform {
+	my ($self, $record) = @_;
+
+	if ($record->is_valid) {
+		my $mapping = $self->mapping;
+		while (my ($to, $from) = each %$mapping) {
+			$record->fields->{$to} = $record->raw->{$from} if defined $from;
+		}
+	}
+}
 
 
 =head2 L => Load
@@ -220,6 +278,48 @@ has 'output' => (
 	is      => 'rw',
 	isa     => 'ETL::Load',
 );
+
+
+=head2 Pipeline
+
+=head3 progress
+
+The ETL pipeline calls this subroutine after it extracts each record. This is a
+callback for displaying progress. L<ETL> sends one parameter: the number of 
+records read from the file.
+
+This attribute is optional.
+
+=cut
+
+has 'progress' => (
+	is  => 'rw',
+	isa => 'CodeRef',
+);
+
+
+=head3 run()
+
+This method executes an ETL pipeline. It starts the whole thing going.
+
+=cut
+
+sub run {
+	my ($self) = @_;
+	
+	my $count = 0;
+	while (my $record = $self->extract) {
+		# Let the application display a progress indicator.
+		$count++;
+		$self->progress->( $count ) if defined $self->progress;
+		
+		# Execute the ETL pipeline on the data record.
+		$self->process_raw_data( $record );
+		$self->transform( $record );
+		$self->process_converted_data( $record );
+		$self->load( $record );
+	}
+}
 
 
 =head1 SEE ALSO

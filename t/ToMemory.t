@@ -11,7 +11,7 @@ require_ok( 'ETL::Extract::ToMemory' );
 
 # Test object creation - does it compile?
 my $file = new_ok( 'ETL::Extract::ToMemory' => [
-	parser => new ETL::Extract::FromFile::DelimitedText(
+	parser => new ETL::Extract::File::DelimitedText(
 		source => 't/DelimitedText.txt',
 	),
 	primary_key => 1,

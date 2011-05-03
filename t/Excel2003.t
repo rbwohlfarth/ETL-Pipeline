@@ -5,10 +5,10 @@ use Test::More;
 Log::Log4perl->easy_init( $ERROR );
 
 
-BEGIN { use_ok( 'ETL::Extract::FromFile::Excel::2003' ); }
-require_ok( 'ETL::Extract::FromFile::Excel::2003' );
+BEGIN { use_ok( 'ETL::Extract::File::Excel::2003' ); }
+require_ok( 'ETL::Extract::File::Excel::2003' );
 
-my $file = new_ok( 'ETL::Extract::FromFile::Excel::2003' => [
+my $file = new_ok( 'ETL::Extract::File::Excel::2003' => [
 	source => 't/Excel2003.xls',
 ] );
 

@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-ETL::Extract::FromFile::DelimitedText - Read data from CSV files
+ETL::Extract::File::DelimitedText - Read data from CSV files
 
 =head1 DESCRIPTION
 
-L<ETL::Extract::FromFile::DelimitedText> handles text files with a field
+L<ETL::Extract::File::DelimitedText> handles text files with a field
 separator (I<comma separated variable> or I<CSV>). The separator is anything
 acceptable to L<Text::CSV> - comma, pipe, tab, whatever. The L<Text::CSV>
 module handles separators that appear inside of quotes or after escape
@@ -14,10 +14,10 @@ characters. This should cover most delimited files.
 
 =cut
 
-package ETL::Extract::FromFile::DelimitedText;
+package ETL::Extract::File::DelimitedText;
 use Moose;
 
-extends 'ETL::Extract::FromFile';
+extends 'ETL::Extract::File';
 
 use ETL::Record;
 use Text::CSV;
@@ -85,7 +85,7 @@ This code opens the file for reading.
 
 =cut
 
-override 'open' => sub {
+augment 'open' => sub {
 	my ($self) = @_;
 
 	# Open the new file for reading. Failure = end of file.
@@ -101,7 +101,7 @@ override 'open' => sub {
 
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Record>, L<Text::CSV>
+L<ETL::Extract::File>, L<ETL::Record>, L<Text::CSV>
 
 =head1 LICENSE
 

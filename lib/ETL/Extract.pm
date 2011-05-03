@@ -42,18 +42,17 @@ sense for its format.
 sub extract { 
 	my ($self) = @_;
 
-	# If we reached the end of the input, then I want to return undef.
-	my $record = undef;
-	
-	# Stop reading if there is no more data. This prevents errors from the
-	# input source.
-	unless ($self->end_of_input) {
-		$record = inner();
-		if (defined $record) { $self->validate( $record ); }
-		else                 { $self->end_of_input( 1 )  ; }
+	# If we reached the end of the input, then I want to return undef. This
+	# effectively stops reading and prevents errors from the source.
+	if ($self->end_of_input) { return undef; }
+	else {
+		my $record = inner();
+		if (defined $record) { return $record; }
+		else {
+			$self->end_of_input( 1 );
+			return undef;
+		}
 	}
-
-	return $record;
 }
 
 
@@ -111,23 +110,9 @@ has 'source' => (
 );
 
 
-=head3 validate( $record )
-
-This method checks the raw data for errors. Becuase the data is still very
-format specific, most of your validation should occur in the L<ETL::Load> 
-class instead.
-
-C<validate> does not return a value. Your validation code sets the
-L<ETL::Record/error> attribute.
-
-=cut
-
-sub validate { }
-
-
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>, L<Log::Log4perl>
+L<ETL>, L<ETL::Record>
 
 =head1 LICENSE
 

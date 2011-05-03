@@ -32,29 +32,31 @@ child class returns null for success, or an error message.
 
 =cut
 
-sub load {
-	my ($self) = @_;
-
-	if ($record->is_valid) {
-		$self->validate( $record );
-		return ($record->is_valid ? inner() : $record->error);
-	} else { return $record->error; }
+sub load { 
+	my ($self, $record) = @_;
+	return ($record->is_valid ? inner() : $record->error); 
 }
 
 
-=head3 validate( $record )
+=head2 Standard Methods & Attributes
 
-This method checks the output data for errors. C<validate> does not return a 
-value. Your validation code sets the L<ETL::Record/error> attribute.
+=head3 destination
+
+I<destination> tells you where the data comes goes. It might contain a file 
+path or a database name. You set the value only once. It may B<not> change 
+during execution. That causes all kinds of bugs.
 
 =cut
 
-sub validate { }
+has 'destination' => (
+	is  => 'rw',
+	isa => 'Str',
+);
 
 
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>, L<Log::Log4perl>
+L<ETL>, L<ETL::Record>
 
 =head1 LICENSE
 

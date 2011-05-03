@@ -5,10 +5,10 @@ use Test::More;
 Log::Log4perl->easy_init( $ERROR );
 
 
-BEGIN { use_ok( 'ETL::Extract::FromFile::DelimitedText' ); }
-require_ok( 'ETL::Extract::FromFile::DelimitedText' );
+BEGIN { use_ok( 'ETL::Extract::File::DelimitedText' ); }
+require_ok( 'ETL::Extract::File::DelimitedText' );
 
-my $file = new_ok( 'ETL::Extract::FromFile::DelimitedText' => [
+my $file = new_ok( 'ETL::Extract::File::DelimitedText' => [
 	source => 't/DelimitedText.txt',
 ] );
 
@@ -36,7 +36,7 @@ $record = $file->extract;
 is( $file->extract, undef, 'No record at the end of file' );
 ok( $file->end_of_input, 'End of input flag set' );
 
-$file = new_ok( 'ETL::Extract::FromFile::DelimitedText' => [
+$file = new_ok( 'ETL::Extract::File::DelimitedText' => [
 	headers => 1,
 	source    => 't/DelimitedText.txt',
 ] );
