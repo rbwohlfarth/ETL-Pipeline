@@ -1,5 +1,5 @@
 use Log::Log4perl qw/:easy/;
-use ETL::Extract::FromFile::DelimitedText;
+use ETL::Extract::File::DelimitedText;
 use Test::More;
 
 # Prevent bogus warning messages in the tests.
