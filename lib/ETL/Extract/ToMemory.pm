@@ -31,7 +31,7 @@ use Moose;
 
 =head3 no_id
 
-A list of records with an undefined primary key. The C<load> method cannot
+A list of records with an undefined primary key. The L<slurp()> method cannot
 handle records without a key. It simply logs an error and stores them in this
 list. Your application should check this list and handle the records 
 appropriately.
@@ -121,7 +121,7 @@ it will cause confusion for you in the end.
 
 =cut
 
-sub slurp($) {
+sub slurp {
 	my ($self) = @_;
 
 	# Only load the file once.
@@ -167,7 +167,7 @@ L<ETL::Extract>, L<ETL::Record>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

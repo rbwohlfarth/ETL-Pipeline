@@ -253,9 +253,9 @@ has 'output' => (
 
 =head3 progress
 
-The ETL pipeline calls this subroutine after it extracts each record. Think of
-this like a callback for displaying progress. L<ETL> sends no parameters. The 
-subroutine is responsible for keeping a counter.
+The ETL pipeline calls this subroutine after it extracts each record. This is a
+callback for displaying progress. L<ETL> sends one parameter: the number of 
+records read from the file.
 
 This attribute is optional.
 
@@ -276,8 +276,13 @@ This method executes an ETL pipeline. It starts the whole thing going.
 sub run {
 	my ($self) = @_;
 	
+	my $count = 0;
 	while (my $record = $self->extract) {
-		$self->progress->() if defined $self->progress;
+		# Let the application display a progress indicator.
+		$count++;
+		$self->progress->( $count ) if defined $self->progress;
+		
+		# Execute the ETL pipeline on the data record.
 		$self->process_raw_data( $record );
 		$self->transform( $record );
 		$self->process_converted_data( $record );

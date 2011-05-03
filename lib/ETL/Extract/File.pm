@@ -2,17 +2,17 @@
 
 =head1 NAME
 
-ETL::Extract::FromFile - Input data from any type of file
+ETL::Extract::File - Input data from any type of file
 
 =head1 DESCRIPTION
 
-L<ETL::Extract::FromFile> adds meat to the bones of the L<ETL::Extract> API. It
+L<ETL::Extract::File> adds meat to the bones of the L<ETL::Extract> API. It
 provides functionality specifically for files - B<any> type of file. Child 
 classes further specify file types (CSV, spreadsheet, etc.).
 
 =cut
 
-package ETL::Extract::FromFile;
+package ETL::Extract::File;
 use Moose;
 
 extends 'ETL::Extract';
@@ -47,7 +47,7 @@ augument 'extract' => sub {
 	my ($self) = @_;
 	$self->log->debug( __PACKAGE__ . '->extract called...' );
 
-	$self->_prepare_for_reading unless $self->_opened;
+	$self->open unless $self->_opened;
 
 	# Reading the first line lets me put a debug message in the loop.
 	my $record = inner();
@@ -80,13 +80,21 @@ augument 'extract' => sub {
 }
 
 
-# Prepare the input file for reading. This is called by the "extract" method.
-# It needs the "inner" function to skip the headers. Otherwise I could have
-# used the "before" modifier.
-sub _prepare_for_reading {
+=head3 open()
+
+Open the file for reading. The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method with
+its own specific code. If an error occurs, call C<$self->log->logdie>.
+
+=cut
+
+sub open {
 	my ($self) = @_;
 
-	$self->open;
+	# The child class actually opens the file.
+	inner();
+	
+	# Skip over the header rows. We simply ignore them.
 	for (1 .. $self->headers) {
 		unless (defined inner()) {
 			$self->end_of_input( 1 );
@@ -94,9 +102,22 @@ sub _prepare_for_reading {
 			last;
 		}
 	}
+
+	# I only open the file once.
 	$self->_opened( 1 );
 }
 
+
+# Bypass header records from the input source. User code should never set 
+# this value. It is internal to the object and will cause data loss.
+has '_opened' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Bool',
+);
+
+
+=head2 Standard Methods & Attributes
 
 =head3 headers
 
@@ -132,25 +153,6 @@ always has a copy.
 with 'MooseX::Log::Log4perl';
 
 
-=head3 open()
-
-Open the file for reading. Each child class overrides this method with its own
-specific code. If an error occurs, your code should call C<$self->log->logdie>.
-
-=cut
-
-sub open {}
-
-
-# Bypass header records from the input source. User code should never set 
-# this value. It is internal to the object, and will cause data loss.
-has '_opened' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Bool',
-);
-
-
 =head1 SEE ALSO
 
 L<ETL::Extract>, L<ETL::Record>, 
@@ -158,7 +160,7 @@ L<Moose::Manual::MethodModifiers/INNER AND AUGMENT>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

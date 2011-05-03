@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-ETL::Extract::FromFile::Excel::2007 - Read data from XLSX files
+ETL::Extract::File::Excel::2007 - Read data from XLSX files
 
 =head1 DESCRIPTION
 
@@ -10,11 +10,11 @@ This class extracts data from MS Excel 2007 spreadsheet files.
 
 =cut
 
-package ETL::Extract::FromFile::Excel::2007;
+package ETL::Extract::File::Excel::2007;
 use Moose;
 
-extends 'ETL::Extract::FromFile';
-with 'ETL::Extract::FromFile::Spreadsheet';
+extends 'ETL::Extract::File';
+with 'ETL::Extract::File::Spreadsheet';
 
 use Spreadsheet::XLSX;
 use String::Util qw/define/;
@@ -88,7 +88,7 @@ This code opens the file for reading.
 
 =cut
 
-override 'open' => sub {
+augment 'open' => sub {
 	my ($self) = @_;
 
 	# Create the Excel parser.
@@ -123,11 +123,11 @@ has 'worksheet' => (
 
 =head1 SEE ALSO
 
-L<ETL::Extract::FromFile>, L<ETL::Record>, L<Spreadsheet::XLSX>
+L<ETL::Extract::File>, L<ETL::Record>, L<Spreadsheet::XLSX>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

@@ -2,19 +2,19 @@
 
 =head1 NAME
 
-ETL::Extract::FromFile::Spreadsheet - Generic API for spreadsheet files
+ETL::Extract::File::Spreadsheet - Generic API for spreadsheet files
 
 =head1 DESCRIPTION
 
 This role provides helper methods for working with spreadsheet data. It 
-extends the functionality of L<ETL::Extract::FromFile>.
+extends the functionality of L<ETL::Extract::File>.
 
 The role assumes one record per row of the spreadsheet. This is how our 
 clients send their data. I don't want to add complexity that isn't necessary.
 
 =cut
 
-package ETL::Extract::FromFile::Spreadsheet;
+package ETL::Extract::File::Spreadsheet;
 use Moose::Role;
 
 use ETL::Record;
@@ -156,7 +156,7 @@ L<ETL::Extract::FromFile>, L<ETL::Record>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut
