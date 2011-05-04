@@ -137,6 +137,32 @@ instances of input/output formats.
 
 =head2 Override in Child Classes
 
+=head3 initialize()
+
+This method prepare the ETL pipeline for execution. The child class may use 
+this to load auxillary files, set the input source, or any other last minute
+items.
+
+The child class 
+L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+
+Yes, you could use the constructor for the same purpose. This is a little 
+more explicit.
+
+=cut
+
+sub initialize { 
+	my ($self) = @_;
+	
+	inner();
+
+	$self->log->logdie( 'The input format is not defined' ) 
+		unless defined $self->input;
+	$self->log->logdie( 'The output format is not defined' ) 
+		unless defined $self->output;
+}
+
+
 =head3 is_responsible_for( $source )
 
 This class method returns a boolean value. B<True> indicates that this class
@@ -282,6 +308,18 @@ has 'output' => (
 
 =head2 Pipeline
 
+=head3 log
+
+This attrbiute provides an access point into the L<Log::Log4perl> logging
+system. C<ETL> logs all warning and error messages. Users can run the 
+application, and I do not need to ask them for error messages. The log file
+always has a copy.
+
+=cut
+
+with 'MooseX::Log::Log4perl';
+
+
 =head3 progress
 
 The ETL pipeline calls this subroutine after it extracts each record. This is a
@@ -306,6 +344,8 @@ This method executes an ETL pipeline. It starts the whole thing going.
 
 sub run {
 	my ($self) = @_;
+	
+	$self->initialize;
 	
 	my $count = 0;
 	while (my $record = $self->extract) {
