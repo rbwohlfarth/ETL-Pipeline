@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-ETL - Translating Data
+ETL - Extract-Transform-Load pattern for converting data
 
 =cut
 
@@ -136,32 +136,6 @@ instances of input/output formats.
 =head1 METHODS & ATTRIBUTES
 
 =head2 Override in Child Classes
-
-=head3 initialize()
-
-This method prepare the ETL pipeline for execution. The child class may use 
-this to load auxillary files, set the input source, or any other last minute
-items.
-
-The child class 
-L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
-
-Yes, you could use the constructor for the same purpose. This is a little 
-more explicit.
-
-=cut
-
-sub initialize { 
-	my ($self) = @_;
-	
-	inner();
-
-	$self->log->logdie( 'The input format is not defined' ) 
-		unless defined $self->input;
-	$self->log->logdie( 'The output format is not defined' ) 
-		unless defined $self->output;
-}
-
 
 =head3 is_responsible_for( $source )
 
@@ -340,13 +314,21 @@ has 'progress' => (
 
 This method executes an ETL pipeline. It starts the whole thing going.
 
+What if the child class needs to load an auxillary file? Use 
+L<Moose's|Moose::Manual> L<before|Moose::Manual::MethodModifiers> modifier.
+
 =cut
 
 sub run {
 	my ($self) = @_;
 	
-	$self->initialize;
+	# Check for fatal errors.
+	$self->log->logdie( 'The input format is not defined' ) 
+		unless defined $self->input;
+	$self->log->logdie( 'The output format is not defined' ) 
+		unless defined $self->output;
 	
+	# Process each record, in order.
 	my $count = 0;
 	while (my $record = $self->extract) {
 		# Let the application display a progress indicator.
