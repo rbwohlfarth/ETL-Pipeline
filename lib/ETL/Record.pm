@@ -1,5 +1,9 @@
 =pod
 
+=head1 NAME
+
+ETL::Record - Represents a single data record for processing
+
 =head1 DESCRIPTION
 
 L<ETL::Record> stores an individual record. This is the in-memory 

@@ -42,9 +42,9 @@ sub load {
 
 =head3 destination
 
-I<destination> tells you where the data comes goes. It might contain a file 
-path or a database name. You set the value only once. It may B<not> change 
-during execution. That causes all kinds of bugs.
+I<destination> tells you where the data goes. It might contain a file path or
+a database name. You set the value only once. It may B<not> change during 
+execution. That causes all kinds of bugs.
 
 =cut
 

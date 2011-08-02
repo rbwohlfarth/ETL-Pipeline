@@ -17,7 +17,6 @@ extends 'ETL::Extract::File';
 with 'ETL::Extract::File::Spreadsheet';
 
 use Spreadsheet::XLSX;
-use String::Util qw/define/;
 
 
 =head1 METHODS & ATTRIBUTES
@@ -69,7 +68,7 @@ augment 'extract' => sub {
 		$self->log->debug( 'Cell ' . $self->position . ",$column" );
 
 		my $cell = $self->worksheet->{Cells}[$self->position][$column];
-		push @spreadsheet, (define( $cell ) ? $cell->value : '');
+		push @spreadsheet, (defined( $cell ) ? $cell->value : '');
 	}
 
 	# I count from 1, the Excel class counts from zero. So I read the data

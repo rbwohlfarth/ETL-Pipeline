@@ -66,11 +66,7 @@ augment 'extract' => sub {
 	$self->log->debug( "Columns $first_column to $last_column" );
 
 	for my $column ($first_column .. $last_column) {
-		$self->log->debug( 
-			'Cell ' 
-			. $self->column_name_on_screen( $column )
-			. ($self->position + 1)
-		);
+		$self->log->debug( 'Cell ' . $self->position . ",$column" );
 
 		my $cell = $self->worksheet->get_cell( 
 			$self->position, 
@@ -128,12 +124,13 @@ has 'workbook' => (
 
 =head3 worksheet( [$sheet_name] )
 
-Returns or sets the current worksheet. This controls where Excel reads your
-data. If you change this value, the code resets to the first row in the new 
-worksheet.
+Returns or sets the current worksheet. A worksheet is an object. The 
+C<worksheet> method lets you change the worksheet B<by name>. Pass a worksheet 
+name and the method changes the current worksheet. Leave out the name, and it 
+returns the current worksheet B<object>.
 
-Pass a worksheet name and the method changes the current worksheet. The method
-always returns a reference to the current sheet.
+The worksheet controls where Excel reads your data. If you change this value, 
+the code resets to the first row in the new worksheet.
 
 =cut
 
@@ -158,7 +155,6 @@ sub worksheet($;$) {
 			# returned by Excel is the row before my first row of data.
 			my ($first_row, $last_row) = $self->_worksheet->row_range();
 			$self->log->debug( "First row: $first_row" );
-
 			$self->position( $first_row );
 		} else {
 			$self->log->error( "Worksheet '$name' does not exist" );

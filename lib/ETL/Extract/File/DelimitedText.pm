@@ -105,7 +105,7 @@ L<ETL::Extract::File>, L<ETL::Record>, L<Text::CSV>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
+Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
 Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =cut

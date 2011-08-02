@@ -59,11 +59,11 @@ Your application instantiates and uses the I<Conversion Class>.
 
 =item 5. Instantiate an L<ETL::Load> class.
 
-=item 6. Override L</is_responsible_for( $source )>.
+=item 6. Override L</is_responsible_for( $source )> (optional).
 
-=item 7. Augment L</process_raw_data( $record )>.
+=item 7. Augment L</process_raw_data( $record )> (optional).
 
-=item 8. Augment L</process_converted_data( $record )>.
+=item 8. Augment L</process_converted_data( $record )> (optional).
 
 =head3 Extract: Input formats
 
@@ -131,7 +131,8 @@ load role. And the conversion class was a mixture of consuming roles and
 inheritance. Yuck!
 
 This design feels cleaner. Conversion classes inherit from one base and create 
-instances of input/output formats.
+instances of input/output formats. I get the same flexibility with a straighter
+inheritance tree.
 
 =head1 METHODS & ATTRIBUTES
 
@@ -148,7 +149,7 @@ encapsulates the naming convention inside of the client specific class.
 
 =cut
 
-sub is_responsible_for { 0 }
+sub is_responsible_for { 0; }
 
 
 =head3 process_raw_data( $record )
@@ -261,6 +262,12 @@ sub transform {
 
 =head2 L => Load
 
+=head3 destination
+
+I<destination> tells you where the data goes. It might contain a file path or
+a database name. You set the value only once. It may B<not> change during 
+execution. That causes all kinds of bugs.
+
 =head3 load( $record )
 
 This method saves a single record in its final destination. C<$record> is an 
@@ -274,7 +281,7 @@ the output format.
 =cut
 
 has 'output' => (
-	handles => [qw/load/],
+	handles => [qw/destination load/],
 	is      => 'rw',
 	isa     => 'ETL::Load',
 );

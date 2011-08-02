@@ -74,7 +74,6 @@ augment 'extract' => sub {
 		return $record;
 	} else {
 		$self->log->debug( '...end of file reached' );
-		$self->end_of_input( 1 );
 		return undef;
 	}
 };
@@ -117,18 +116,69 @@ has '_opened' => (
 
 =head2 Standard Methods & Attributes
 
+=head3 BUILD
+
+The constructor can automatically search the file system for matching files. 
+When calling C<new()>, set the C<pattern> attribute to a glob or regular
+expression. This method then looks for a file that matches the pattern. See the
+L</find( $pattern[, $directory )> method for more information.
+
+If you would like to search a particular directory, set the C<source> attribute
+to the directory name. B<Warning:> C<source> must be a directory name. If you
+pass a file name, L<ETL::Extract::File> opens that exact file without 
+searching. The C<source> attrbiute overrides the C<pattern> attribute.
+
+=cut
+
+sub BUILD {
+	my ($self, $parameters) = @_;
+
+	if (
+		defined( $parameters->{source} ) 
+		and -d $parameters->{source}
+		and defined( $parameters->{pattern} )
+	) {
+		$self->find( $parameters->{pattern}, $parameters->{source} );
+	} elsif (
+		not defined( $parameters->{source } )
+		and defined( $parameters->{pattern} )
+	) {
+		$self->find( $parameters->{pattern} );
+	}
+}
+
+
+=head3 find( $pattern[, $directory] )
+
+Search the file system for a single file that matches a given criteria. On 
+success, the function sets the L<source|ETL::Extract/source> attribute to the
+full path name and returns null.
+
+If the search fails, the function returns an error message.
+
+=cut
+
+sub find {
+	my ($self, $pattern, $directory) = @_;
+
+	$directory = (defined( $directory ) ? $directory : '.');
+	my @matches = File::Find::Rule->file->name( $pattern )->in( $directory );
+
+	return "More than 1 data file in $directory" if scalar( @matches ) > 1;
+	return "No data file found in $directory"    if scalar( @matches ) < 1;
+	
+	$self->source( $matches[0] );
+	return '';
+}
+
+
 =head3 headers
 
 The number of header rows. Header rows usually contain meta data - such as 
-column names. 
+column names. They are very useful for humans.
 
-L</extract()> does not recognize header rows. Headers are the first lines in a
-file. They have a I<file> scope. L</extract()> has a I<line> scope. It does not
-differentiate between a line at the beginning of the file and one from the 
-middle. They are both merely I<a line>.
-
-The child class uses this value when it opens a file. At that point, the child 
-skips header rows by calling L</extract()> discarding the return value.
+C<ETL::Extract::File> ignores header rows. It automatically skips over them. So
+L</extract()> always returns actual data.
 
 =cut
 
