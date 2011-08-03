@@ -58,7 +58,7 @@ The L</load( $record )> method puts these fields into the database.
 
 has 'fields' => (
 	default => sub { {} },
-	is      => rw,
+	is      => 'ro',
 	isa     => 'HashRef[Str]',
 );
 
@@ -104,16 +104,16 @@ augment 'load' => sub {
 
 	for (my $index = 0; $index < scalar( @names ); $index++) {
 		my $field = $names[$index];
-		$sth->bind_param( 
+		$query->bind_param( 
 			$index + 1, 
-			$record->fields->{$name}, 
+			$record->fields->{$field}, 
 			$self->fields->{$field}
 		);
 	}
-	$sth->execute;
+	$query->execute;
 	
-	return ($sth->err ? $sth->errstr : '');
-}
+	return ($query->err ? $query->errstr : '');
+};
 
 
 =head3 log
@@ -137,7 +137,7 @@ rows. L<load( $record )> automatically generates this value on its first use.
 
 has 'query' => (
 	is  => 'rw',
-	isa => 'DBI',
+	isa => 'DBI::st',
 );
 
 

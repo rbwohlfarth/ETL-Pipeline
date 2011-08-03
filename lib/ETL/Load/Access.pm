@@ -28,7 +28,7 @@ automatically generates a DBI connection string.
 
 =cut
 
-augument 'connect' => sub {
+augment 'connect' => sub {
 	my ($self) = @_;
 	return 'dbi:ODBC:driver=microsoft access driver (*.mdb, *.accdb);dbq='
 		. $self->destination;
