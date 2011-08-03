@@ -9,6 +9,14 @@ ETL::Extract::ToMemory - Load support files into memory for merging
 Sometimes we receive data in two separate files. This class loads the extra 
 file into memory so that we can merge the data together.
 
+C<ETL::Extract::ToMemory> only handles raw data. It does not transform or load
+any information. Your conversion class will access 
+L<ETL::Extract::ToMemory/records> from L<ETL/process_raw_data( $record )>. 
+L<ETL/process_raw_data( $record )> merges fields from 
+L<ETL::Extract::ToMemory/records> into the L<data element|ETL::Record/raw> of 
+C<$record>. The transform and load processes then perform their magic on
+C<$record>.
+
 =head2 Why memory instead of a database?
 
 A database would work like this... Load the data into its own table. Then
@@ -51,7 +59,14 @@ An L<ETL::Extract> object for accessing the file. This object physically
 reads the file. This lets L<ETL::Extract::ToMemory> work with many input 
 formats.
 
-I<parser> is required by the constructor.
+Your application instantiates the appropriate L<ETL::Extract> class and passes
+it to the C<ETL::Extract::ToMemory> constructor:
+
+ my $mem = ETL::Extract::ToMemory->new( 
+     parser => ETL::Extract::File::CSV->new(
+         source => 'abc.csv'
+     )
+ );
 
 =cut
 
@@ -126,14 +141,6 @@ sub slurp {
 
 	# Only load the file once.
 	return $self if $self->parser->end_of_input;
-
-	# Skip the header records...
-	if ($self->parser->meta->has_attribute( 'headers' )) {
-		for (my $count = 0; $count < $self->parser->headers; $count++) {
-			$self->parser->extract;
-			return $self if $self->parser->end_of_input;
-		}
-	}
 
 	# Load all of the data records...
 	my $count = 0;

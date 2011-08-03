@@ -16,6 +16,7 @@ use Moose;
 extends 'ETL::Load';
 
 use DBI;
+use String::Util qw/hascontent/;
 
 
 =head1 METHODS & ATTRIBUTES
@@ -25,12 +26,19 @@ use DBI;
 This method makes a connection with the database. It assumes the 
 L<ETL::Load/destination> attribute holds a database connection string.
 
+If you are creating a child class, you can 
+L<augment|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method and
+generate a connection string. This lets child classes use more appropriate
+values in L<ETL::Load/destination>.
+
 =cut
 
 sub connect {
 	my ($self) = @_;
 
-	my $db = $self->destination;
+	my $db = inner();
+	   $db = $self->destination unless hascontent( $db );
+
 	my $handle = DBI->connect( $db, '', '', {AutoCommit => 1} );
 	$self->log->logdie( "Error connecting with '$db'" ) unless defined $handle;
 
@@ -50,15 +58,15 @@ The L</load( $record )> method puts these fields into the database.
 
 has 'fields' => (
 	default => sub { {} },
-	is      => rw,
+	is      => 'ro',
 	isa     => 'HashRef[Str]',
 );
 
 
 =head3 load( $record )
 
-This method saves a L<ETL::Record> into MS Access. It returns null for success
-or an error message.
+This method adds an L<ETL::Record> into the SQL database. It returns null for 
+success or an error message.
 
 =cut
 
@@ -86,7 +94,7 @@ augment 'load' => sub {
 			. join( ', ', @values )
 			. ')'
 		) );
-		$self->log->logdie( 'Query failed for \'' . $self->destination . '\'' )
+		$self->log->logdie( "Query failed for '" . $self->destination . "'" )
 			unless defined $self->query;
 	}
 
@@ -96,16 +104,16 @@ augment 'load' => sub {
 
 	for (my $index = 0; $index < scalar( @names ); $index++) {
 		my $field = $names[$index];
-		$sth->bind_param( 
+		$query->bind_param( 
 			$index + 1, 
-			$record->fields->{$name}, 
+			$record->fields->{$field}, 
 			$self->fields->{$field}
 		);
 	}
-	$sth->execute;
+	$query->execute;
 	
-	return ($sth->err ? $sth->errstr : '');
-}
+	return ($query->err ? $query->errstr : '');
+};
 
 
 =head3 log
@@ -129,7 +137,7 @@ rows. L<load( $record )> automatically generates this value on its first use.
 
 has 'query' => (
 	is  => 'rw',
-	isa => 'DBI',
+	isa => 'DBI::st',
 );
 
 
