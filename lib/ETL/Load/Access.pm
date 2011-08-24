@@ -23,8 +23,8 @@ use String::Util qw/hascontent/;
 
 =head3 augment connect()
 
-Your application sets this attribute to the MS Access file path. The class
-automatically generates a DBI connection string.
+Your application sets the L<ETL::Load/destination> attribute to the MS Access 
+file path. This method automatically generates a DBI connection string.
 
 =cut
 
