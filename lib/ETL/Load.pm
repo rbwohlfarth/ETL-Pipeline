@@ -2,68 +2,103 @@
 
 =head1 NAME
 
-ETL::Load - Base class for ETL output destinations
+ETL::Load - Role for ETL data destinations
 
 =head1 DESCRIPTION
 
-This class defines the Application Programming Interface (API) for all ETL
-output destinations. The API allows applications to interact with the 
-destination without worrying about its specific format (file, database, etc.).
+ETL stands for I<Extract>, I<Transform>, I<Load>. The ETL pattern executes
+data conversions or uploads. It moves data from one system to another. The
+ETL family of classes facilitate these data transfers using Perl.
 
-The I<load> part of the process validates the output and then moves the data 
-from L<ETL::Record/fields> into a data store.
+This role defines the Application Programming Interface (API) for both the
+I<Transform> and I<Load> parts of the process.
+
+The I<Load> API defines all ETL destinations. A data destination controls
+where your data goes to. This role defines the methods common to every
+destination. These methods work regardless of the data format - CSV file,
+spreadsheet, database, etc.
+
+=head2 Why is the transform stuff in here?
+
+The transform process doesn't really change. Yes, the field names change. The
+actual algorithm doesn't. That means that every ETL script has the exact same
+transformation process. Including it as part of I<Load> cust down on the
+number of modules an ETL script must C<use>.
+
+In my mind, I<Transform> has more in common with I<Load> than I<Extract>.
+Extra transformation commands typically have some relation to the destination
+format.
 
 =cut
 
 package ETL::Load;
-use Moose;
+use Moose::Role;
+
+
+=head1 COMMANDS
+
+Commands are exported into the C<main::> namespace to be called in your ETL
+scripts.
+
+=head3 load
+
+This command configures data destination and begins the ETL process. This
+command kicks off the data conversion. It should be the last statement in your
+ETL script.
+
+This command accepts a hash of setup values. The contents of that hash are
+defined by the subclass.
+
+=cut
+
+requires 'load';
+
+
+=head3 transform
+
+Copy data from the L<ETL::Extract/record|input record> into the
+L</record|output record>. This command accepts a hash. The keys name
+L<ETL::Extract/record|input fields>. The values name L</record|output fields>.
+
+=cut
+
+sub transform {
+}
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override in Child Classes
+The ETL classes access these methods and attributes. An ETL script would
+never call these directly. If you're writing a new data destination, then you
+must implement this interface.
 
-=head3 load( $record )
+=head3 record
 
-This method saves the L<ETL::Record> into permanent storage such as a database 
-or file. The child class 
-L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<load>. The 
-child class returns null for success, or an error message.
-
-=cut
-
-sub load { 
-	my ($self, $record) = @_;
-	return ($record->is_valid ? inner() : $record->error); 
-}
-
-
-=head2 Standard Methods & Attributes
-
-=head3 destination
-
-I<destination> tells you where the data goes. It might contain a file path or
-a database name. You set the value only once. It may B<not> change during 
-execution. That causes all kinds of bugs.
+This hash reference stores the data record that goes to the destination.
 
 =cut
 
-has 'destination' => (
+has 'record' => (
 	is  => 'rw',
-	isa => 'Str',
+	isa => 'Hashref',
 );
 
 
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>
+L<ETL::Extract>
+
+=head1 AUTHOR
+
+Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2010  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
-Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+This module is distributed under the same terms as Perl itself.
 
 =cut
 
 no Moose;
-__PACKAGE__->meta->make_immutable;
+
+# Required by Perl to load the module.
+1;

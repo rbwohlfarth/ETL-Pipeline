@@ -2,124 +2,100 @@
 
 =head1 NAME
 
-ETL::Extract - Base class for ETL input sources
+ETL::Extract - Role for ETL input sources
 
 =head1 DESCRIPTION
 
-This class defines the Application Programming Interface (API) for all ETL
-input sources. The API allows applications to interact with the source without
-worrying about its specific format (CSV file, spreadsheet, database, etc.).
+ETL stands for I<Extract>, I<Transform>, I<Load>. The ETL pattern executes
+data conversions or uploads. It moves data from one system to another. The
+ETL family of classes facilitate these data transfers using Perl.
+
+This role defines the Application Programming Interface (API) for all ETL
+input sources. An input source controls where your data comes from. This role
+defines the methods common to every input source. These methods work
+regardless of the data format - CSV file, spreadsheet, database, etc.
 
 =cut
 
 package ETL::Extract;
-use Moose;
+use Moose::Role;
+
+
+=head1 COMMANDS
+
+Commands are exported into the C<main::> namespace to be called in your ETL
+scripts.
+
+=head3 extract
+
+This command configures the input source. It accepts a hash of setup values.
+The contents of that hash are defined by the subclass.
+
+=cut
+
+requires 'extract';
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Override in Child Classes
+The ETL classes access these methods and attributes. An ETL script would
+never call these directly. If you're writing a new input source, then you
+must implement this interface.
 
-=head3 extract()
+=head3 next_record
 
-This method returns the next record from input. The child class 
-L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> C<extract>. The 
-child class returns one of two values:
-
-=over
-
-=item An L<ETL::Record> object.
-
-=item C<undef> for the end of the input.
-
-=back
-
-The child class should set the L</position> attribute to something that makes
-sense for its format.
+Loads the next record from the input source into the L</record> hash. This
+method is automatically called by L<ETL::Load/load>.
 
 =cut
 
-sub extract { 
-	my ($self) = @_;
-
-	# If we reached the end of the input, then I want to return undef. This
-	# effectively stops reading and prevents errors from the source.
-	if ($self->end_of_input) { return undef; }
-	else {
-		my $record = inner();
-		if (defined $record) { return $record; }
-		else {
-			$self->end_of_input( 1 );
-			return undef;
-		}
-	}
-}
+requires 'next_record';
 
 
-=head2 Standard Methods & Attributes
+=head3 record_number
 
-=head3 end_of_input
-
-I<end_of_input> indicates when we reach the end of the input data. It holds
-a boolean flag: B<true> = no more data.
-
-I<extract> uses this flag. When the flag becomes true, I<extract> returns
-the C<undef> value.
+This attribute identifies the last record loaded by L</next_record>. It is for
+informational purposes only. Changing this value does not actually skip
+records. The count always starts with B<1>, making it equivalent to the
+number of records loaded.
 
 =cut
 
-has 'end_of_input' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Bool',
-);
-
-
-=head3 position
-
-I<position> identifies the last record loaded by L<extract()>. You will find
-this useful for error messages.
-
-The exact value depends on the input type. For example, a text file might have
-the line number. A spreadsheet would keep the row number. A database records
-the primary key.
-
-B<WARNING:> Changing I<position> has no effect on the actual position. You 
-cannot use it to skip records.
-
-=cut
-
-has 'position' => (
+has 'record_number' => (
 	default => '0',
 	is      => 'rw',
-	isa     => 'Str',
+	isa     => 'Int',
 );
 
 
-=head3 source
+=head3 record
 
-I<source> tells you where the data comes from. It might contain a file path,
-or a database name. You set the value only once. It may B<not> change during 
-execution. That causes all kinds of bugs.
+This hash reference stores the last data record as read from the input source.
+The structure of this hash is defined by the subclass.
 
 =cut
 
-has 'source' => (
+has 'record' => (
 	is  => 'rw',
-	isa => 'Str',
+	isa => 'Hashref',
 );
 
 
 =head1 SEE ALSO
 
-L<ETL>, L<ETL::Record>
+L<ETL::Load>
+
+=head1 AUTHOR
+
+Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
-Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+This module is distributed under the same terms as Perl itself.
 
 =cut
 
 no Moose;
-__PACKAGE__->meta->make_immutable;
+
+# Required by Perl to load the module.
+1;
