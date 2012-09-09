@@ -2,12 +2,20 @@
 
 =head1 NAME
 
-ETL - Extract-Transform-Load pattern for converting data
+Data::ETL - Extract-Transform-Load pattern for converting data
+
+=SYNOPSIS
+
+  use Data::ETL;
+
+  extract_using 'Excel', in_folder => qr|/PineHill/|, like => qr/\.xlsx?$/;
+  transform A => 'Name', B => 'Address', C => 'Birthday';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
 
 =cut
 
-package ETL;
-use Moose;
+package Data::ETL;
 
 
 =head1 DESCRIPTION
@@ -32,336 +40,147 @@ The isolation lets us:
 
 =head2 How does the ETL module work?
 
-The C<ETL> module works in layers. 
+B<Data::ETL> provides commands as a front end to various data related classes.
+The classes do the actual work. The commands let you write a little script
+without having to master all of the minute details yourself.
 
- +-------------------+
- | Input file format |------------------+-------------+
- +-------------------+ Conversion Class | Application |
- | Output format     |------------------+-------------+
- +-------------------+
+The L</SYNOPSIS> gives a pretty accurate example. You configure the input
+file, translate file fields into database fields, then save the data to the
+database. The L</load_into> performs all of the validation.
 
-A I<Conversion Class> inherits from C<ETL>. It defines an input format and an 
-output format. C<ETL> is format agnostic - abstract if you will. The 
-I<Conversion Class> pulls together real, tangilble, formats that physically 
-move around the data.
+B<Data::ETL> does it work using helper classes. These classes all fall under
+the naming convention I<Data::ETL::Extract::*> or I<Data::ETL::Load::*>.
+Notice that L</extract_using> and L<load_into> take a format name as their
+first parameter? In our example, L</extract_using> loads the helper class
+I<Data::ETL::Extract::Excel>. And L</load_into> writes the records using the
+helper class I<Data::ETL::Load::Access>. B<Data::ETL> automatically prepends
+the I<Data::ETL::Extract> or I<Data::ETL::Load>.
 
-Your application instantiates and uses the I<Conversion Class>.
+B<Data::ETL> provides a few generic I<Data::ETL::Extract::*> classes. These
+classes work for any file based input - regardless of content. If you receive
+your data through files, then these classes will work for you.
 
-=head2 How does one create a conversion class?
+Most times, your organization writes its own I<Data::ETL::Load::*> class. This
+class performs any specialized tasks such as validation or conversion. The
+I<Data::ETL::Load::*> classes are tied closely with your internal data format.
 
-=over
+=head2 How do I use the ETL module?
 
-=item 1. Inherit from I<ETL>.
+First, you write an ETL script. Your script looks much like the L</SYNOPSIS>.
+You execute the ETL script like any other Perl program. That's it. The ETL
+script reads data in and sends it back out.
 
-=item 2. Define a L<BUILD|Moose::Manual::Construction/BUILD> method.
+An ETL script must have at least one of each of the four commands:
+L</extract_using>, L</transform>, L</load_into>, and L</run>. Techinically, an
+ETL script is just a Perl script. You may use any Perl commands or modules.
 
-=item 3. Instantiate an L<ETL::Extract> class.
+=head1 COMMANDS
 
-=item 5. Instantiate an L<ETL::Load> class.
+=head3 extract_using
 
-=item 6. Override L</is_responsible_for( $source )> (optional).
+This command configures the input source. You may only have one input source
+in an ETL script.
 
-=item 7. Augment L</process_raw_data( $record )> (optional).
+The first parameter is the name of the input format. C<extract_using>
+automatically adds the B<Data::ETL::Extract> to the start of the class name.
 
-=item 8. Augment L</process_converted_data( $record )> (optional).
-
-=head3 Extract: Input formats
-
-An input format reads individual records. The data can come from all kinds of
-different sources - CSV file, Excel spreadsheet, or an Access database. For 
-example, the L<ETL::Extract::File::Excel::2003> class extracts data one row
-at a time from an Excel spreadsheet.
-
-Each conversion class has exactly one input format. The input format returns
-an L<ETL::Record> object.
-
-=head3 Transform: Mappings
-
-C<ETL> maps fields using a Perl hash. The keys represent output fields. The 
-values identify input fields. Let's look at an example...
-
- %mapping = {
-   Name => 'A',
-   Date => 'B',
-   Age  => 'C',
- };
-
-This mapping moves data from column A into into the I<Name> field. Data from 
-column B goes into the I<Date> field. And column C populates the I<Age> field.
-
-The keys are your B<output> field names. Read the example as saying 
-I<fill the Name field from column A>.
-
-=head3 Load: Output formats
-
-An output format writes individual records to a data store. The data can go
-into all kinds of different stores - CSV file or SQL database. You pass it an
-L<ETL::Record> with the data fields. And the output format writes it.
-
-Each conversion class has exactly one output format.
-
-=head2 How does the application use a conversion class?
-
-The L<ETL> class sets up a data pipeline. Each record travels the pipeline from
-start to finish:
-
- extract -> process_raw_data -> transform -> process_converted_data -> load
-
-The most basic application simply kicks off the pipeline, like this...
-
-  use ETL::Example;
-  my $etl = ETL::Example->new( source => $input_file );
-  $etl->run;
-
-The I<ETL::Example> class handles all of the details about opening the input 
-file, connecting to the output database, and validating the information. It 
-fits into our diagram this way...
-
- +-------------------+
- | ETL::Extract      |------------------+-------------+
- +-------------------+ ETL::Example     | Sample code |
- | ETL::Load         |------------------+-------------+
- +-------------------+
-
-=head2 Why not use Moose roles?
-
-The original design C<ETL> used three distinct roles: extract, transform, and 
-load. The input formats consumed the extract role. Output formats consumed the
-load role. And the conversion class was a mixture of consuming roles and 
-inheritance. Yuck!
-
-This design feels cleaner. Conversion classes inherit from one base and create 
-instances of input/output formats. I get the same flexibility with a straighter
-inheritance tree.
-
-=head1 METHODS & ATTRIBUTES
-
-=head2 Override in Child Classes
-
-=head3 is_responsible_for( $source )
-
-This class method returns a boolean value. B<True> indicates that this class
-handles data from the given source. B<False> means that it does not.
-
-The ETL process assumes that we have a repeatable and consistent process. 
-Client A follows a different naming convention than client B. This method
-encapsulates the naming convention inside of the client specific class.
+After the format class, you may pass in a hash of attributes for the format
+class. C<extract_using> passes the rest of the parameters directly to the
+input source class.
 
 =cut
 
-sub is_responsible_for { 0; }
+my $extract;
 
+sub extract_using {
+	my $class      = shift @_;
+	my %attributes = @_;
 
-=head3 process_raw_data( $record )
-
-The ETL pipeline calls this method after L</extract()> and before 
-L</transform( $record )>. It allows the child class to manipulate the raw
-data before transformation.
-
-Unless absolutely necessary, you should do your formatting and validation in
-the L</process_converted_data( $record )> method. The input format can be very
-specific - hindering code re-use.
-
-The child class 
-L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
-
-=cut
-
-sub process_raw_data {
-	my ($self, $record) = @_;
-	inner() if $record->is_valid;
+	$class = "Data::ETL::Extract::$class"
+		unless $class =~ m/^Data::ETL::Extract/;
+	$extract = eval "$class->new(\%attributes)";
 }
 
 
-=head3 process_converted_data( $record )
+=head3 transform
 
-The ETL pipeline calls this method after L</transform( $record )> and before 
-L</load( $record )>. It allows the child class to manipulate fields before 
-writing them to the data store.
-
-This is where client specific formatting and validation occurs. If you find an
-error, set the L<ETL::Record/error> attribute.
-
-The child class 
-L<augments|Moose::Manual::MethodModifiers/INNER AND AUGMENT> this method.
+This command configures the mapping from input field names to output field
+names. It accepts a hash as its only parameter. The keys are input field
+names. The values are output field names. L</run> copies data from
+L<Data::ETL::Extract/record> into L<Data::ETL::Load/record> using the mapping
+from that hash.
 
 =cut
 
-sub process_converted_data {
-	my ($self, $record) = @_;
-	inner() if $record->is_valid;
+my %mapping;
+
+sub transform { $mapping{keys @_} = values @_; }
+
+
+=head3 load_into
+
+This command configures the data destination. The first parameter names the
+L<Data::ETL::Load> class. C<load_into> automatically adds the
+B<Data::ETL::Load> to the beginning of the class name.
+
+After the format class, you may pass in a hash of attributes for the data
+destination class. C<extract_using> passes the rest of the parameters directly
+to the input source class.
+
+=cut
+
+my $load;
+
+sub load_into {
+	my $class      = shift @_;
+	my %attributes = @_;
+
+	$class = "Data::ETL::Load::$class" unless $class =~ m/^Data::ETL::Load/;
+	$load = eval "$class->new(\%attributes)";
 }
 
 
-=head2 E => Extract
+=head3 run
 
-=head3 extract()
-
-This method reads a single input record - just like the name implies. Records
-are objects of the type L<ETL::Record>.
-
-The method returns C<undef> at the end of the data.
-
-=head3 input
-
-This attribute holds an L<ETL::Extract> object. The L<ETL::Extract> object 
-defines the input format.
-
-=head3 source
-
-I<source> tells you where the data comes from. It might contain a file path,
-or a database name. The source should B<not> change during execution. That 
-causes all kinds of bugs.
-
-=cut
-
-has 'input' => (
-	handles => [qw/extract source/],
-	is      => 'rw',
-	isa     => 'ETL::Extract',
-);
-
-
-=head2 T => Transform
-
-=head3 mapping
-
-Stores a hash linking the output fields to the input fields. This is the heart
-of the conversion process.
-
-Key the hash with the output field name. The conversion process pulls data
-from the input source. This is what you do manually - look at the fields you 
-need, then see which input fields correspond.
-
-=cut
-
-has 'mapping' => (
-	is  => 'rw',
-	isa => 'HashRef[Str]',
-);
-
-
-=head3 transform( $record )
-
-Transformation maps the input data to the output fields. In pure data terms,
-it converts L<ETL::Record/raw> into L<ETL::Record/fields>.
-
-=cut
-
-sub transform {
-	my ($self, $record) = @_;
-
-	if ($record->is_valid) {
-		my $mapping = $self->mapping;
-		while (my ($to, $from) = each %$mapping) {
-			$record->fields->{$to} = $record->raw->{$from} if defined $from;
-		}
-	}
-}
-
-
-=head2 L => Load
-
-=head3 destination
-
-I<destination> tells you where the data goes. It might contain a file path or
-a database name. You set the value only once. It may B<not> change during 
-execution. That causes all kinds of bugs.
-
-=head3 load( $record )
-
-This method saves a single record in its final destination. C<$record> is an 
-L<ETL::Record> object.
-
-=head3 output
-
-This attribute holds an L<ETL::Load> object. The L<ETL::Load> object defines 
-the output format.
-
-=cut
-
-has 'output' => (
-	handles => [qw/destination load/],
-	is      => 'rw',
-	isa     => 'ETL::Load',
-);
-
-
-=head2 Pipeline
-
-=head3 log
-
-This attrbiute provides an access point into the L<Log::Log4perl> logging
-system. C<ETL> logs all warning and error messages. Users can run the 
-application, and I do not need to ask them for error messages. The log file
-always has a copy.
-
-=cut
-
-with 'MooseX::Log::Log4perl';
-
-
-=head3 progress
-
-The ETL pipeline calls this subroutine after it extracts each record. This is a
-callback for displaying progress. L<ETL> sends one parameter: the number of 
-records read from the file.
-
-This attribute is optional.
-
-=cut
-
-has 'progress' => (
-	is  => 'rw',
-	isa => 'CodeRef',
-);
-
-
-=head3 run()
-
-This method executes an ETL pipeline. It starts the whole thing going.
-
-What if the child class needs to load an auxillary file? Use 
-L<Moose's|Moose::Manual> L<before|Moose::Manual::MethodModifiers> modifier.
+This command kicks off the entire data conversion process. It takes no
+parameters. All of the setup is done by the other commands. This should be
+the last command in your ETL script.
 
 =cut
 
 sub run {
-	my ($self) = @_;
-	
-	# Check for fatal errors.
-	$self->log->logdie( 'The input format is not defined' ) 
-		unless defined $self->input;
-	$self->log->logdie( 'The output format is not defined' ) 
-		unless defined $self->output;
-	
-	# Process each record, in order.
-	my $count = 0;
-	while (my $record = $self->extract) {
-		# Let the application display a progress indicator.
-		$count++;
-		$self->progress->( $count ) if defined $self->progress;
-		
-		# Execute the ETL pipeline on the data record.
-		$self->process_raw_data( $record );
-		$self->transform( $record );
-		$self->process_converted_data( $record );
-		$self->load( $record );
+	die 'Please add an "extract_using" command to your script'
+		unless defined $extract;
+	die 'Please add a "load_into" command to your script'
+		unless defined $load;
+	die 'Please add a "transform" command to your script'
+		unless scalar %mapping;
+
+	while ($extract->next_record) {
+		my $in  = $extract->record;
+		my $out = $load->record;
+
+		$out = {};
+		$out->{$mapping{$_}} = $in->{$_} foreach (keys %mapping);
+
+		$load->write;
 	}
 }
 
 
 =head1 SEE ALSO
 
-L<ETL::Extract>, L<ETL::Load>, L<ETL::Record>, L<ETL::Transform>, 
-L<Log::Log4perl>
+L<Data::ETL::Extract>, L<Data::ETL::Load>
+
+=head1 AUTHOR
+
+Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2011  The Center for Patient and Professional Advocacy, Vanderbilt University Medical Center
-Contact Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+This module is licensed under the same terms as Perl itself.
 
 =cut
 
-no Moose;
-__PACKAGE__->meta->make_immutable;
+# Required for Perl to load the module.
+1;
