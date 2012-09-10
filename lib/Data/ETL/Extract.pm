@@ -2,7 +2,17 @@
 
 =head1 NAME
 
-ETL::Extract - Role for ETL input sources
+Data::ETL::Extract - Role for ETL input sources
+
+=head1 SYNOPSIS
+
+  use Moose;
+  with 'Data::ETL::Extract';
+
+  sub next_record {
+    # Add code to read your data here
+    ...
+  }
 
 =head1 DESCRIPTION
 
@@ -15,37 +25,33 @@ input sources. An input source controls where your data comes from. This role
 defines the methods common to every input source. These methods work
 regardless of the data format - CSV file, spreadsheet, database, etc.
 
+Every input source class B<must> implement this role. The L<Data::ETL/run>
+command calls these methods as part of the ETL process. Most ETL scripts
+never access them directly.
+
+=head2 Why use a role instead of inheritance?
+
+Roles let you force the child class to implement certain methods. Plus a role
+lets me create other generic types without having a convuluted inheritance
+tree.
+
 =cut
 
 package ETL::Extract;
 use Moose::Role;
 
 
-=head1 COMMANDS
-
-Commands are exported into the C<main::> namespace to be called in your ETL
-scripts.
-
-=head3 extract
-
-This command configures the input source. It accepts a hash of setup values.
-The contents of that hash are defined by the subclass.
-
-=cut
-
-requires 'extract';
-
-
 =head1 METHODS & ATTRIBUTES
-
-The ETL classes access these methods and attributes. An ETL script would
-never call these directly. If you're writing a new input source, then you
-must implement this interface.
 
 =head3 next_record
 
 Loads the next record from the input source into the L</record> hash. This
-method is automatically called by L<ETL::Load/load>.
+method is automatically called by L<Data::ETL/run>. It takes no parameters.
+
+The function returns the number of records processed. It is conceivable that
+a format skips empty records. Count those in the return value. A value of one
+or more indicates success. A value of zero means that there are no more
+records.
 
 =cut
 
@@ -59,6 +65,9 @@ informational purposes only. Changing this value does not actually skip
 records. The count always starts with B<1>, making it equivalent to the
 number of records loaded.
 
+The role automatically increments this value after every call to
+L</next_record>.
+
 =cut
 
 has 'record_number' => (
@@ -66,6 +75,13 @@ has 'record_number' => (
 	is      => 'rw',
 	isa     => 'Int',
 );
+
+around 'next_record' => sub {
+	my ($original, $self, @arguments) = @_;
+	my $count = $original->( @arguments );
+	$self->record_number( $self->record_number + $count );
+	return $count;
+};
 
 
 =head3 record
@@ -81,9 +97,39 @@ has 'record' => (
 );
 
 
+=head3 setup
+
+This method prepares the input source. Use it to open files, make database
+connections, or anything else you need before reading the first record.
+L<Data::ETL> calls this method just before the process starts.
+
+Why not do this in the constructor? Child classes may want to modify the
+behaviour. By having a specific method, you can use all of the usual Moose
+method modifiers.
+
+=cut
+
+requires 'setup';
+
+
+=head3 finished
+
+This method shuts down the input source. Use it to close files, disconnect
+from the database, or anything else you need after reading the last record.
+L<Data::ETL> calls this method at the end of the process.
+
+Why not do this in the destructor? Child classes may want to modify the
+behaviour. By having a specific method, you can use all of the usual Moose
+method modifiers.
+
+=cut
+
+requires 'finished';
+
+
 =head1 SEE ALSO
 
-L<ETL::Load>
+L<Data::ETL>
 
 =head1 AUTHOR
 
@@ -91,7 +137,10 @@ Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-This module is distributed under the same terms as Perl itself.
+Copyright 2012  Robert Wohlfarth
+
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut
 

@@ -149,12 +149,23 @@ the last command in your ETL script.
 =cut
 
 sub run {
+	# Make sure everything is configured correctly. Rather than crashing, I
+	# want to give the developer a more informative error message.
 	die 'Please add an "extract_using" command to your script'
 		unless defined $extract;
 	die 'Please add a "load_into" command to your script'
 		unless defined $load;
 	die 'Please add a "transform" command to your script'
 		unless scalar %mapping;
+
+	die ref( $extract ) . ' does not implement the Data::ETL::Extract role'
+		unless $extract->does( 'Data::ETL::Extract' );
+	die ref( $load ) . ' does not implement the Data::ETL::Load role'
+		unless $extract->does( 'Data::ETL::Load' );
+
+	# The actual ETL process...
+	$extract->setup;
+	$load->setup;
 
 	while ($extract->next_record) {
 		my $in  = $extract->record;
@@ -165,6 +176,9 @@ sub run {
 
 		$load->write;
 	}
+
+	$extract->finished;
+	$load->finished;
 }
 
 
@@ -178,7 +192,10 @@ Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-This module is licensed under the same terms as Perl itself.
+Copyright 2012  Robert Wohlfarth
+
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut
 
