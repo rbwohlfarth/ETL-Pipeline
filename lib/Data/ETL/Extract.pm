@@ -79,9 +79,25 @@ has 'record_number' => (
 around 'next_record' => sub {
 	my ($original, $self, @arguments) = @_;
 	my $count = $original->( @arguments );
-	$self->record_number( $self->record_number + $count );
+	$self->record_number_add( $count );
 	return $count;
 };
+
+
+=head3 record_number_add
+
+Add a number to the current record number. I do this often enough to warrant
+this convenience method. The code only checks that the result is an integer
+greater than zero.
+
+=cut
+
+sub record_number_add {
+	my ($self, $amount) = @_;
+	$self->record_number( $self->record_number + $amount );
+	$self->record_number( 0 ) if $self->record_number < 0;
+	return $self->record_number;
+}
 
 
 =head3 record
