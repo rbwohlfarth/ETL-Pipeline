@@ -165,16 +165,16 @@ sub run {
 
 	# The actual ETL process...
 	$extract->setup;
-	$load->setup;
+	$load->setup( $extract );
 
 	while ($extract->next_record) {
 		my $in  = $extract->record;
-		my $out = $load->record;
+		my $out = {}
 
-		$out = {};
 		$out->{$mapping{$_}} = $in->{$_} foreach (keys %mapping);
 
-		$load->write;
+		$load->record( $out );
+		$load->write_record;
 	}
 
 	$extract->finished;

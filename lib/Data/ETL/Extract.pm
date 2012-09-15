@@ -37,7 +37,7 @@ tree.
 
 =cut
 
-package ETL::Extract;
+package Data::ETL::Extract;
 use Moose::Role;
 
 
@@ -145,7 +145,7 @@ requires 'finished';
 
 =head1 SEE ALSO
 
-L<Data::ETL>
+L<Data::ETL>, L<Data::ETL::Load>
 
 =head1 AUTHOR
 
