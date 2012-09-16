@@ -140,6 +140,22 @@ sub load_into {
 }
 
 
+=head3 set
+
+This command sets hard coded output fields. It accepts a hash as its only
+parameter. The keys are output field names. The values are, well, the
+corresponding values that you want in that field.
+
+If the same field shows up in both L</transform> and L</set>, the
+L</transform> value is used. Data from the input source overrides constants.
+
+=cut
+
+my %constants;
+
+sub set { $constants{keys @_} = values @_; }
+
+
 =head3 run
 
 This command kicks off the entire data conversion process. It takes no
@@ -171,6 +187,7 @@ sub run {
 		my $in  = $extract->record;
 		my $out = {}
 
+		%$out = %constants;
 		$out->{$mapping{$_}} = $in->{$_} foreach (keys %mapping);
 
 		$load->record( $out );
