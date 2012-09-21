@@ -1,12 +1,12 @@
-use Log::Log4perl qw/:easy/;
 use Test::More;
 
-# Prevent bogus warning messages in the tests.
-Log::Log4perl->easy_init( $ERROR );
+BEGIN { use_ok( 'Data::ETL' ); }
+require_ok( 'Data::ETL' );
 
-
-BEGIN { use_ok( 'ETL' ); }
-require_ok( 'ETL' );
-
+ok( defined &extract_using, 'extract_using command exported' );
+ok( defined &transform    , 'transform command exported'     );
+ok( defined &set          , 'set command exported'           );
+ok( defined &load_into    , 'load_into command exported'     );
+ok( defined &run          , 'run command exported'           );
 
 done_testing();

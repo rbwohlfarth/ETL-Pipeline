@@ -1,52 +1,90 @@
-use Log::Log4perl qw/:easy/;
 use Test::More;
 
-# Prevent bogus warning messages in the tests.
-Log::Log4perl->easy_init( $ERROR );
+BEGIN { use_ok( 'Data::ETL::Extract::DelimitedText' ); }
+require_ok( 'Data::ETL::Extract::DelimitedText' );
 
-
-BEGIN { use_ok( 'ETL::Extract::File::DelimitedText' ); }
-require_ok( 'ETL::Extract::File::DelimitedText' );
-
-my $file = new_ok( 'ETL::Extract::File::DelimitedText' => [
-	source => 't/DelimitedText.txt',
+# Without a header row...
+my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+	path => 't/DelimitedText.txt',
 ] );
+$file->setup;
+is( $file->record_number, 0, 'Positioned at beginning of file' );
 
-is( $file->end_of_input, 0, 'Not at the end_of_input()' );
-is( $file->position    , 0, 'position() at first record' );
+ok( $file->next_record, 'First record loaded' );
+ok( defined $file->record, 'First row has data' );
+is( $file->record_number, 1, 'Counter incremented after first record' );
 
-my $record = $file->extract;
-isa_ok( $record, 'ETL::Record', 'extract() return value' );
+my @keys = sort keys( %{$file->record} );
+is( scalar( @keys ), 4        , 'Four columns in first row'  );
+is( $keys[0]       , 1        , 'Found field 1 in first row' );
+is( $keys[1]       , 2        , 'Found field 2 in first row' );
+is( $keys[2]       , 3        , 'Found field 3 in first row' );
+is( $keys[3]       , 4        , 'Found field 4 in first row' );
+is( $record->{1}   , 'Header1', 'Found Header1'              );
+is( $record->{2}   , 'Header2', 'Found Header2'              );
+is( $record->{3}   , 'Header3', 'Found Header3'              );
+is( $record->{4}   , 'Header4', 'Found Header4'              );
 
-my @keys = sort keys( %{$record->raw} );
-is( scalar( @keys )  , 5       , 'Five columns of data'        );
-is( $keys[0]         , 1       , '$record->raw->{1}'           );
-is( $keys[1]         , 2       , '$record->raw->{2}'           );
-is( $keys[2]         , 3       , '$record->raw->{3}'           );
-is( $keys[3]         , 4       , '$record->raw->{4}'           );
-is( $keys[4]         , 5       , '$record->raw->{5}'           );
-is( $file->position  , 1       , 'position == row number'      );
-is( $record->raw->{1}, 'Field1', '$record->raw->{1} == Field1' );
-is( $record->raw->{2}, 'Field2', '$record->raw->{2} == Field2' );
-is( $record->raw->{3}, 'Field3', '$record->raw->{3} == Field3' );
-is( $record->raw->{4}, 'Field4', '$record->raw->{4} == Field4' );
-is( $record->raw->{5}, 'Field5', '$record->raw->{5} == Field5' );
+ok( $file->next_record, 'Second record loaded' );
+ok( defined $file->record, 'Second row has data' );
+is( $file->record_number, 2, 'Counter incremented after second record' );
 
-$record = $file->extract;
-is( $file->extract, undef, 'No record at the end of file' );
-ok( $file->end_of_input, 'End of input flag set' );
+ok( $file->next_record, 'Third record loaded' );
+ok( defined $file->record, 'Third row has data' );
+is( $file->record_number, 3, 'Counter incremented after third record' );
 
-$file = new_ok( 'ETL::Extract::File::DelimitedText' => [
-	headers => 1,
-	source    => 't/DelimitedText.txt',
+my @keys = sort keys( %{$file->record} );
+is( scalar( @keys ), 5        , 'Five columns in third row'  );
+is( $keys[0]       , 1        , 'Found field 1 in third row' );
+is( $keys[1]       , 2        , 'Found field 2 in third row' );
+is( $keys[2]       , 3        , 'Found field 3 in third row' );
+is( $keys[3]       , 4        , 'Found field 4 in third row' );
+is( $keys[4]       , 5        , 'Found field 5 in third row' );
+is( $record->{1}   , 'Field6', 'Found Field6'                );
+is( $record->{2}   , 'Field7', 'Found Field7'                );
+is( $record->{3}   , 'Field8', 'Found Field8'                );
+is( $record->{4}   , 'Field9', 'Found Field9'                );
+is( $record->{5}   , 'Field0', 'Found Field0'                );
+
+$file->finished;
+
+
+# With a header row...
+my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+	path    => 't/DelimitedText.txt',
+	headers => {
+		qr/head(er)?1/i => 'first' ,
+		qr/2/i          => 'second',
+		qr/he.*3/i      => 'third' ,
+		qr/4/i          => 'fourth',
+		qr/5/i          => 'fifth' ,
+	},
 ] );
-$record = $file->extract;
-is( $file->position  , 2       , 'header row skipped'          );
-is( $record->raw->{1}, 'Field6', '$record->raw->{1} == Field6' );
-is( $record->raw->{2}, 'Field7', '$record->raw->{2} == Field7' );
-is( $record->raw->{3}, 'Field8', '$record->raw->{3} == Field8' );
-is( $record->raw->{4}, 'Field9', '$record->raw->{4} == Field9' );
-is( $record->raw->{5}, 'Field0', '$record->raw->{5} == Field0' );
+$file->setup;
+is( $file->record_number, 1, 'Positioned at first data row' );
+
+ok( $file->next_record, 'First record loaded' );
+ok( defined $file->record, 'First row has data' );
+is( $file->record_number, 2, 'Record count incremented after first record' );
+
+my @keys = sort keys( %{$file->record} );
+is( scalar( @keys )  , 5       , 'Five columns in first row'  );
+is( $keys[0]         , 1       , 'Found field 1 in first row' );
+is( $keys[1]         , 2       , 'Found field 2 in first row' );
+is( $keys[2]         , 3       , 'Found field 3 in first row' );
+is( $keys[3]         , 4       , 'Found field 4 in first row' );
+is( $keys[4]         , 5       , 'Found field 5 in first row' );
+is( $record->{1     }, 'Field1', 'Found Field1'               );
+is( $record->{2     }, 'Field2', 'Found Field2'               );
+is( $record->{3     }, 'Field3', 'Found Field3'               );
+is( $record->{4     }, 'Field4', 'Found Field4'               );
+is( $record->{5     }, 'Field5', 'Found Field5'               );
+is( $record->{first }, 'Field1', 'Found Field1 by name'       );
+is( $record->{second}, 'Field2', 'Found Field2 by name'       );
+is( $record->{third }, 'Field3', 'Found Field3 by name'       );
+is( $record->{fourth}, 'Field4', 'Found Field4 by name'       );
+
+ok( not exists $record->{fifth}, 'No header for fifth field' );
 
 
 done_testing();
