@@ -55,8 +55,8 @@ sub next_record {
 	my $last_row  = $self->worksheet->{'MaxRow'};
 	return 0 if $self->position >= $last_row;
 
-	# Copy the entire row into a list. This makes it easier to build the raw
-	# data value.
+	# Fields are named by the column letter and the field names that matched
+	# the headers.
 	my $not_empty = 0;
 	foreach my $column (@{$self->columns}) {
 		my $cell  = $self->worksheet->{Cells}[$self->position][$column];
@@ -122,7 +122,9 @@ sub setup {
 	# Convert the column numbers into their letter designations.
 	my $first_column = $self->worksheet->{'MinCol'};
 	my $last_column  = $self->worksheet->{'MaxCol'};
-	foreach my $column ($first_column .. $last_column) {
+	$self->columns( [$first_column .. $last_column] );
+
+	foreach my $column (@{$self->columns}) {
 		my $name = convert_column_number_into_letters( $column );
 		$self->names->{$column} = [$name];
 	}
@@ -132,13 +134,16 @@ sub setup {
 	$self->record_number_add( $self->skip );
 	if (defined( $self->headers ) and $self->next_record) {
 		my %headers = %{$self->headers};
-		foreach my $number (keys %{$self->names}) {
-			my $letter = $self->names ->{$number}[0];
-			my $text   = $self->record->{$letter}   ;
+		while (my ($number, $names) = each %{$self->names}) {
+			my $letter = $names->[0];
+			my $text   = $self->record->{$letter};
 			if (hascontent( $text )) {
+				# I used "foreach" instead of "each" so that I could quit the
+				# loop when I find the first match. "each" remembers where you
+				# are and would start the next loop in the wrong place.
 				foreach my $pattern (keys %headers) {
 					if ($text ~~ $pattern) {
-						push( @{$self->names->{$number}}, $headers{$pattern} );
+						push @$names, $headers{$pattern};
 						delete $headers{$pattern};
 						last;
 					}
