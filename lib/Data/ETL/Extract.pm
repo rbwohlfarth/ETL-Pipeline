@@ -78,7 +78,7 @@ has 'record_number' => (
 
 around 'next_record' => sub {
 	my ($original, $self, @arguments) = @_;
-	my $count = $original->( @arguments );
+	my $count = $original->( $self, @arguments );
 	$self->record_number_add( $count );
 	return $count;
 };
@@ -109,7 +109,7 @@ The structure of this hash is defined by the subclass.
 
 has 'record' => (
 	is  => 'rw',
-	isa => 'Hashref',
+	isa => 'HashRef[Str]',
 );
 
 

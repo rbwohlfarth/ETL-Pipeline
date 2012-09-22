@@ -50,25 +50,25 @@ A B<0> means that we reached the end of the data.
 
 sub next_record {
 	my ($self) = @_;
+	my $row = $self->record_number;
 
 	# Stop processing once we reach the last record.
 	my $last_row  = $self->worksheet->{'MaxRow'};
-	return 0 if $self->position >= $last_row;
+	return 0 if $row > $last_row;
 
-	# Fields are named by the column letter and the field names that matched
-	# the headers.
+	my %record;
 	my $not_empty = 0;
 	foreach my $column (@{$self->columns}) {
-		my $cell  = $self->worksheet->{Cells}[$self->position][$column];
+		my $cell  = $self->worksheet->{Cells}[$row][$column];
 		my $value = defined( $cell ) ? $cell->value : '';
 
-		$self->record->{$_} = $value foreach (@{$self->names->{$column}});
-
+		$record{$column} = $value;
 		$not_empty = 1 if hascontent( $value );
 	}
+	$self->record( \%record );
 
 	return ($self->stop_on_blank ? $not_empty : 1);
-};
+}
 
 
 =head3 setup
@@ -125,75 +125,13 @@ sub setup {
 	$self->columns( [$first_column .. $last_column] );
 
 	foreach my $column (@{$self->columns}) {
-		my $name = convert_column_number_into_letters( $column );
-		$self->names->{$column} = [$name];
+		my $name = $self->convert_column_number_into_letters( $column );
+		$self->add_name( $name, $column );
 	}
 
-	# Deal with the header row.
+	# Start on the first row as defined by the spread sheet.
 	$self->record_number( $self->worksheet->{'MinRow'} );
-	$self->record_number_add( $self->skip );
-	if (defined( $self->headers ) and $self->next_record) {
-		my %headers = %{$self->headers};
-		while (my ($number, $names) = each %{$self->names}) {
-			my $letter = $names->[0];
-			my $text   = $self->record->{$letter};
-			if (hascontent( $text )) {
-				# I used "foreach" instead of "each" so that I could quit the
-				# loop when I find the first match. "each" remembers where you
-				# are and would start the next loop in the wrong place.
-				foreach my $pattern (keys %headers) {
-					if ($text ~~ $pattern) {
-						push @$names, $headers{$pattern};
-						delete $headers{$pattern};
-						last;
-					}
-				}
-			}
-		}
-	}
 }
-
-
-=head3 headers
-
-This hash matches the column headers with standardized field names. In an
-ideal world, the column headings would be the same between runs. We all know
-the world isn't ideal. I<My ID> becomes I<MyID>, then I<MyId>, followed next
-time by I<My Identifier>.
-
-The keys to this hash are regular expressions. The L</setup> code finds the
-first regular expression that matches a column header. When L</next_record>
-reads the data, it uses the corresponding value as the field name. This way,
-when the column header changes slightly, your code still gets the right data.
-
-You should make sure that each regular expression matches only one column.
-
-=cut
-
-has 'headers' => (
-	is  => 'rw',
-	isa => 'HashRef[Str]',
-);
-
-
-=head3 skip
-
-The number of rows to skip before the data starts. Some reporting software
-adds page headers before the data. This setting jumps over those rows.
-
-The attribute defaults to zero (do not skip rows). If your column headers
-are in the first row of the spread sheet, then you want this set to zero.
-
-B<Warning:> Do not skip over column headers. Use the L</headers> attribute
-instead.
-
-=cut
-
-has 'skip' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Int',
-);
 
 
 =head3 stop_on_blank
@@ -237,8 +175,6 @@ identify columns by their letter designation.
 sub convert_column_number_into_letters {
 	my ($self, $column_number) = @_;
 
-	if
-
 	# Just keep adding letters as we cycle through the alphabet.
 	my $name = '';
 	while ($column_number > 25) {
@@ -255,24 +191,6 @@ sub convert_column_number_into_letters {
 
 	return $name;
 }
-
-
-=head3 names
-
-A hash that maps column numbers to column names. When reading a record, the
-code uses the name as a key for L<Data::ETL::Extract/record>. The I<transform>
-phase then works with the field names instead of unwieldy column numbers.
-
-Each column can have more than one name. We use both the column letter and the
-header row as names.
-
-=cut
-
-has 'names' => (
-	default => sub { {} },
-	is      => 'ro',
-	isa     => 'HashRef[ArrayRef[Str]]',
-);
 
 
 =head3 columns

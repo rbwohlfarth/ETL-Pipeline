@@ -7,10 +7,10 @@ name 'Data-ETL';
 license 'perl';
 all_from 'lib/Data/ETL.pm';
 
-requires 'DBI';
 requires 'File::Find::Rule';
 requires 'Moose';
 requires 'Moose::Role';
+requires 'Regexp::Common';
 requires 'Spreadsheet::ParseExcel';
 requires 'Spreadsheet::XLSX';
 requires 'String::Util';

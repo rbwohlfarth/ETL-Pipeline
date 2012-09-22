@@ -17,6 +17,12 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 
 package Data::ETL;
 
+use 5.14.0;
+use Exporter qw/import/;
+
+
+our @EXPORT = qw/extract_using transform set load_into run/;
+
 
 =head1 DESCRIPTION
 
@@ -185,7 +191,7 @@ sub run {
 
 	while ($extract->next_record) {
 		my $in  = $extract->record;
-		my $out = {}
+		my $out = {};
 
 		%$out = %constants;
 		$out->{$mapping{$_}} = $in->{$_} foreach (keys %mapping);
