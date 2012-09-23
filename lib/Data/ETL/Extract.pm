@@ -109,7 +109,7 @@ The structure of this hash is defined by the subclass.
 
 has 'record' => (
 	is  => 'rw',
-	isa => 'HashRef[Str]',
+	isa => 'HashRef[Maybe[Str]]',
 );
 
 

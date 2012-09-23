@@ -104,7 +104,7 @@ sub extract_using {
 
 	$class = "Data::ETL::Extract::$class"
 		unless $class =~ m/^Data::ETL::Extract/;
-	$extract = eval "$class->new(\%attributes)";
+	$extract = eval "use $class; $class->new(\%attributes)";
 }
 
 
@@ -120,7 +120,10 @@ from that hash.
 
 my %mapping;
 
-sub transform { $mapping{keys @_} = values @_; }
+sub transform {
+	my %add = @_;
+	@mapping{keys %add} = values %add;
+}
 
 
 =head3 load_into
@@ -142,7 +145,7 @@ sub load_into {
 	my %attributes = @_;
 
 	$class = "Data::ETL::Load::$class" unless $class =~ m/^Data::ETL::Load/;
-	$load = eval "$class->new(\%attributes)";
+	$load = eval "use $class; $class->new(\%attributes)";
 }
 
 
@@ -159,7 +162,10 @@ L</transform> value is used. Data from the input source overrides constants.
 
 my %constants;
 
-sub set { $constants{keys @_} = values @_; }
+sub set {
+	my %add = @_;
+	@constants{keys %add} = values %add;
+}
 
 
 =head3 run
@@ -183,7 +189,7 @@ sub run {
 	die ref( $extract ) . ' does not implement the Data::ETL::Extract role'
 		unless $extract->does( 'Data::ETL::Extract' );
 	die ref( $load ) . ' does not implement the Data::ETL::Load role'
-		unless $extract->does( 'Data::ETL::Load' );
+		unless $load->does( 'Data::ETL::Load' );
 
 	# The actual ETL process...
 	$extract->setup;
@@ -191,10 +197,11 @@ sub run {
 
 	while ($extract->next_record) {
 		my $in  = $extract->record;
-		my $out = {};
 
-		%$out = %constants;
-		$out->{$mapping{$_}} = $in->{$_} foreach (keys %mapping);
+		my $out = {%constants};
+		while (my ($from, $to) = each %mapping) {
+			$out->{$to} = $in->{$from};
+		}
 
 		$load->record( $out );
 		$load->write_record;

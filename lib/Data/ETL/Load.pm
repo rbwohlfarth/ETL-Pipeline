@@ -74,7 +74,7 @@ has 'record_number' => (
 
 around 'write_record' => sub {
 	my ($original, $self, @arguments) = @_;
-	my $count = $original->( @arguments );
+	my $count = $original->( $self, @arguments );
 	$self->record_number_add( $count );
 	return $count;
 };
@@ -105,7 +105,7 @@ hash is defined by the subclass.
 
 has 'record' => (
 	is  => 'rw',
-	isa => 'Hashref',
+	isa => 'HashRef[Maybe[Str]]',
 );
 
 
