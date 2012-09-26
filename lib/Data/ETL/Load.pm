@@ -46,7 +46,8 @@ use Moose::Role;
 =head3 write_record
 
 Saves the contents of the L</record> hash to storage. This method is
-automatically called by L<Data::ETL/run>. It takes no parameters.
+automatically called by L<Data::ETL/run>. It takes one parameter - the current
+record number.
 
 The function returns the number of records created. If there is an error, then
 return B<0> (nothing saved). Otherwise return a B<1> (the number created).

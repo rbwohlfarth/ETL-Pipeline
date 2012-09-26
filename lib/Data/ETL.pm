@@ -204,7 +204,7 @@ sub run {
 		}
 
 		$load->record( $out );
-		$load->write_record;
+		$load->write_record( $extract->record_number );
 	}
 
 	$extract->finished;
