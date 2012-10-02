@@ -62,7 +62,30 @@ sub write_record {
 
 	my %record = %{$self->record};
 	push @storage, \%record;
+	$self->record( {} );
 }
+
+
+=head3 set
+
+Add a single field to the current record.
+
+=cut
+
+sub set { $_[0]->record->{$_[1]} = $_[2]; }
+
+
+=head3 record
+
+This hash reference stores the next data record to save.
+
+=cut
+
+has 'record' => (
+	default => sub { {} },
+	is      => 'rw',
+	isa     => 'HashRef[Maybe[Str]]',
+);
 
 
 =head3 setup

@@ -196,14 +196,14 @@ sub run {
 	$load->setup( $extract );
 
 	while ($extract->next_record) {
-		my $in  = $extract->record;
-
-		my $out = {%constants};
-		while (my ($from, $to) = each %mapping) {
-			$out->{$to} = $in->{$from};
+		while (my ($field, $value) = each %constants) {
+			$load->set( $field, $value );
 		}
 
-		$load->record( $out );
+		while (my ($from, $to) = each %mapping) {
+			$load->set( $to, $extract->get( $from ) );
+		}
+
 		$load->write_record( $extract->record_number );
 	}
 

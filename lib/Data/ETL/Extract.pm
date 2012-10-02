@@ -100,17 +100,20 @@ sub record_number_add {
 }
 
 
-=head3 record
+=head3 get
 
-This hash reference stores the last data record as read from the input source.
-The structure of this hash is defined by the subclass.
+Return the value of a single field. The only parameter is a field name. Since
+the child class implements the actual storage, the I<field name> can really
+be anything. For example, and XML file might accept an XPath.
+
+The return value is the data that came from the file.
+
+The L<Data::ETL/transform> process calls this method for each input field that
+was mapped to the data destination.
 
 =cut
 
-has 'record' => (
-	is  => 'rw',
-	isa => 'HashRef[Maybe[Str]]',
-);
+requires 'get';
 
 
 =head3 setup

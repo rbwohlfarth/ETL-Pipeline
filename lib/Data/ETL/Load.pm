@@ -43,6 +43,28 @@ use Moose::Role;
 
 =head1 METHODS & ATTRIBUTES
 
+=head3 set
+
+Set the value of a single field in the intermediate storage. L</write_record>
+takes these values and saves them to their final destination.
+
+B<set> accepts two parameters:
+
+=over
+
+=item 1. The field destination name.
+
+=item 2. The value for that field.
+
+=back
+
+There is no return value.
+
+=cut
+
+requires 'set';
+
+
 =head3 write_record
 
 Saves the contents of the L</record> hash to storage. This method is
@@ -95,19 +117,6 @@ sub record_number_add {
 	$self->record_number( 0 ) if $self->record_number < 0;
 	return $self->record_number;
 }
-
-
-=head3 record
-
-This hash reference stores the next data record to save. The structure of this
-hash is defined by the subclass.
-
-=cut
-
-has 'record' => (
-	is  => 'rw',
-	isa => 'HashRef[Maybe[Str]]',
-);
 
 
 =head3 setup

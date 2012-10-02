@@ -71,6 +71,16 @@ sub next_record {
 }
 
 
+=head3 get
+
+Return the value of a field from the current record. The only parameter is a
+field name. You can use either the column letter or the field name.
+
+=cut
+
+sub get { $_[0]->record->{$_[1]}; }
+
+
 =head3 setup
 
 This method configures the input source. In this object, that means creating
@@ -163,6 +173,18 @@ sub finished {}
 
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
+
+=head3 record
+
+This hash holds the record loaded from the file.
+
+=cut
+
+has 'record' => (
+	is  => 'rw',
+	isa => 'HashRef[Maybe[Str]]',
+);
+
 
 =head3 convert_column_number_into_letters
 
