@@ -9,7 +9,8 @@ Data::ETL - Extract-Transform-Load pattern for converting data
   use Data::ETL;
 
   extract_using 'Excel', in_folder => qr|/PineHill/|, like => qr/\.xlsx?$/;
-  transform A => 'Name', B => 'Address', C => 'Birthday';
+  transform_as Name => 'A', Address => 'B', Birthday => 'C';
+  set Client => 1, Type => 'Person';
   load_into 'Access', path => 'C:\ETL\review.accdb';
   run;
 
@@ -21,7 +22,8 @@ use 5.14.0;
 use Exporter qw/import/;
 
 
-our @EXPORT = qw/extract_using transform set load_into run/;
+our @EXPORT  = qw/extract_using transform_as set load_into run/;
+our $VERSION = '1.00';
 
 
 =head1 DESCRIPTION
@@ -77,7 +79,7 @@ You execute the ETL script like any other Perl program. That's it. The ETL
 script reads data in and sends it back out.
 
 An ETL script must have at least one of each of the four commands:
-L</extract_using>, L</transform>, L</load_into>, and L</run>. Techinically, an
+L</extract_using>, L</transform>, L</load_into>, and L</run>. Technically, an
 ETL script is just a Perl script. You may use any Perl commands or modules.
 
 =head1 COMMANDS
@@ -87,7 +89,8 @@ ETL script is just a Perl script. You may use any Perl commands or modules.
 This command configures the input source. You may only have one input source
 in an ETL script.
 
-The first parameter is the name of the input format. C<extract_using>
+The first parameter is the name of the input format. The format is a Perl
+module under the L<Data::ETL::Extract> namespace. C<extract_using> 
 automatically adds the B<Data::ETL::Extract> to the start of the class name.
 
 After the format class, you may pass in a hash of attributes for the format
@@ -108,19 +111,26 @@ sub extract_using {
 }
 
 
-=head3 transform
+=head3 transform_as
 
-This command configures the mapping from input field names to output field
-names. It accepts a hash as its only parameter. The keys are input field
-names. The values are output field names. L</run> copies data from
-L<Data::ETL::Extract/record> into L<Data::ETL::Load/record> using the mapping
-from that hash.
+This command configures the transformation process. It copies data from input
+fields to a corresponding output field. 
+
+This method accepts a hash as its only parameter. The keys are output field
+names. The values are input field names or code references. For field names, 
+L</run> simply copies the data from the input field to the output field.
+
+With a code reference, L</run> executes the code and stores the return value
+as the output field. L</run> sets C<$_> to the current L<Data::ETL::Extract> 
+object. You can access the raw data using L<Data::ETL::Extract/get>, like this:
+
+  transform_as Name => sub { $_->get( 'A' ) // $_->get( 'B' ) };
 
 =cut
 
 my %mapping;
 
-sub transform {
+sub transform_as {
 	my %add = @_;
 	@mapping{keys %add} = values %add;
 }
@@ -128,12 +138,14 @@ sub transform {
 
 =head3 load_into
 
-This command configures the data destination. The first parameter names the
-L<Data::ETL::Load> class. C<load_into> automatically adds the
-B<Data::ETL::Load> to the beginning of the class name.
+This command configures the data destination. Data destinations are Perl
+modules under the L<Data::ETL::Load> namespace.
+
+The first parameter names the data destination class. C<load_into> 
+automatically adds the B<Data::ETL::Load> to the beginning of the class name.
 
 After the format class, you may pass in a hash of attributes for the data
-destination class. C<extract_using> passes the rest of the parameters directly
+destination class. C<load_into> passes the rest of the parameters directly
 to the input source class.
 
 =cut
@@ -157,6 +169,11 @@ corresponding values that you want in that field.
 
 If the same field shows up in both L</transform> and L</set>, the
 L</transform> value is used. Data from the input source overrides constants.
+
+You can also pass a code reference as the value. In this case, L</run> executes
+the code and stores the return value as the output field. L</run> sets C<$_> to
+the current L<Data::ETL::Load> object. You may find it useful for grabbing 
+information out of your database.
 
 =cut
 
@@ -197,11 +214,16 @@ sub run {
 
 	while ($extract->next_record) {
 		while (my ($field, $value) = each %constants) {
+			$value = _code( $value, $load ) if ref( $value ) eq 'CODE';
 			$load->set( $field, $value );
 		}
 
-		while (my ($from, $to) = each %mapping) {
-			$load->set( $to, $extract->get( $from ) );
+		while (my ($to, $from) = each %mapping) {
+			if (ref( $from ) eq 'CODE') {
+				$load->set( $to, _code( $from, $extract ) );
+			} else {
+				$load->set( $to, $extract->get( $from ) );
+			}
 		}
 
 		$load->write_record( $extract->record_number );
@@ -209,6 +231,18 @@ sub run {
 
 	$extract->finished;
 	$load->finished;
+}
+
+
+#----------------------------------------------------------------------
+# Internal functions...
+
+# Executes a code reference, passing an object as "$_".
+sub _code {
+	my ($code, $object) = @_;
+	local $_;
+	$_ = $object;
+	$code->();
 }
 
 

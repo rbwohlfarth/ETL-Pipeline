@@ -30,8 +30,9 @@ would not normally use it directly.
 package Data::ETL::Extract::Excel;
 use Moose;
 
-with 'Data::ETL::Extract';
+with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract::File';
+with 'Data::ETL::Extract';
 
 use Spreadsheet::ParseExcel;
 use Spreadsheet::XLSX;
@@ -40,11 +41,34 @@ use String::Util qw/hascontent/;
 
 =head1 METHODS & ATTRIBUTES
 
+=head2 Set with the L<Data::ETL/extract_using> command
+
+See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more 
+attributes.
+
+=head3 stop_on_blank
+
+By default, we stop processing records at the first blank row. Some folks send
+trailer information. And a blank row always comes before the trailer.
+
+To change that, set this attribute to B<0>.
+
+=cut
+
+has 'stop_on_blank' => (
+	default => 1,
+	is      => 'rw',
+	isa     => 'Bool',
+);
+
+
+=head2 Automatically called from L<Data::ETL/run>
+
 =head3 next_record
 
 Read one record from the spreadsheet and populates
-L<Data::ETL::Extract/record>. The method returns the number of records loaded.
-A B<0> means that we reached the end of the data.
+L<Data::ETL::Extract::AsHash/record>. The method returns the number of records 
+loaded. A B<0> means that we reached the end of the data.
 
 =cut
 
@@ -71,16 +95,6 @@ sub next_record {
 }
 
 
-=head3 get
-
-Return the value of a field from the current record. The only parameter is a
-field name. You can use either the column letter or the field name.
-
-=cut
-
-sub get { $_[0]->record->{$_[1]}; }
-
-
 =head3 setup
 
 This method configures the input source. In this object, that means creating
@@ -105,10 +119,11 @@ Excel 2003. And B<XLSX> means an Excel 2007 file.
 
 The Excel parsers use column numbers. Excel uses letters instead. For
 consistency, the I<transform> process also uses letters. This code sets up
-the L</names> hash for that purpose.
+the L<Data::ETL::Extract::AsHash/names> hash for that purpose.
 
 I also name the fields based on the header row. You can identify data by the
-field name or by the column name. See L</headers> for more information.
+field name or by the column name. See L<Data::ETL::Extract::AsHash/headers> for
+more information.
 
 =cut
 
@@ -144,22 +159,6 @@ sub setup {
 }
 
 
-=head3 stop_on_blank
-
-By default, we stop processing records at the first blank row. Some folks send
-trailer information. And a blank row always comes before the trailer.
-
-To change that, set this attribute to B<0>.
-
-=cut
-
-has 'stop_on_blank' => (
-	default => 1,
-	is      => 'rw',
-	isa     => 'Bool',
-);
-
-
 =head3 finished
 
 This method shuts down the input source. In our case, it does nothing.
@@ -173,18 +172,6 @@ sub finished {}
 
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
-
-=head3 record
-
-This hash holds the record loaded from the file.
-
-=cut
-
-has 'record' => (
-	is  => 'rw',
-	isa => 'HashRef[Maybe[Str]]',
-);
-
 
 =head3 convert_column_number_into_letters
 

@@ -43,6 +43,10 @@ use Moose::Role;
 
 =head1 METHODS & ATTRIBUTES
 
+B<Note:> This role defines no attributes that can are set with the 
+L<Data::ETL/load_into> command. Everything is done in the implementing
+classes.
+
 =head3 set
 
 Set the value of a single field in the intermediate storage. L</write_record>

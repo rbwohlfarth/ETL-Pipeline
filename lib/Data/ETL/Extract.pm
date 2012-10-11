@@ -43,6 +43,37 @@ use Moose::Role;
 
 =head1 METHODS & ATTRIBUTES
 
+=head2 Set with the L<Data::ETL/extract_using> command
+
+=head3 skip
+
+The number of rows to skip before the headers or data. Some reporting software
+adds page headers. This setting jumps over those rows.
+
+The attribute defaults to zero (do not skip rows). If your column headers
+are in the first row, then you want this set to zero.
+
+L</setup> automatically skips over these rows after it opens the file. Any
+C<after> method modifiers are pointing at the first row.
+
+=cut
+
+has 'skip' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Int',
+);
+
+around 'setup' => sub {
+	my ($original, $self, @arguments) = @_;
+
+	$original->( $self, @arguments );
+	$self->next_record foreach (1 .. $self->skip);
+};
+
+
+=head2 Automatically called from L<Data::ETL/run>
+
 =head3 next_record
 
 Loads the next record from the input source into the L</record> hash. This
@@ -56,48 +87,6 @@ records.
 =cut
 
 requires 'next_record';
-
-
-=head3 record_number
-
-This attribute identifies the last record loaded by L</next_record>. It is for
-informational purposes only. Changing this value does not actually skip
-records. The count always starts with B<1>, making it equivalent to the
-number of records loaded.
-
-The role automatically increments this value after every call to
-L</next_record>.
-
-=cut
-
-has 'record_number' => (
-	default => '0',
-	is      => 'rw',
-	isa     => 'Int',
-);
-
-around 'next_record' => sub {
-	my ($original, $self, @arguments) = @_;
-	my $count = $original->( $self, @arguments );
-	$self->record_number_add( $count );
-	return $count;
-};
-
-
-=head3 record_number_add
-
-Add a number to the current record number. I do this often enough to warrant
-this convenience method. The code only checks that the result is an integer
-greater than zero.
-
-=cut
-
-sub record_number_add {
-	my ($self, $amount) = @_;
-	$self->record_number( $self->record_number + $amount );
-	$self->record_number( 0 ) if $self->record_number < 0;
-	return $self->record_number;
-}
 
 
 =head3 get
@@ -144,6 +133,50 @@ method modifiers.
 =cut
 
 requires 'finished';
+
+
+=head2 Other Methods & Attributes
+
+=head3 record_number
+
+This attribute identifies the last record loaded by L</next_record>. It is for
+informational purposes only. Changing this value does not actually skip
+records. The count always starts with B<1>, making it equivalent to the
+number of records loaded.
+
+The role automatically increments this value after every call to
+L</next_record>.
+
+=cut
+
+has 'record_number' => (
+	default => '0',
+	is      => 'rw',
+	isa     => 'Int',
+);
+
+around 'next_record' => sub {
+	my ($original, $self, @arguments) = @_;
+	my $count = $original->( $self, @arguments );
+	$self->record_number_add( $count );
+	return $count;
+};
+
+
+=head3 record_number_add
+
+Add a number to the current record number. I do this often enough to warrant
+this convenience method. The code only checks that the result is an integer
+greater than zero.
+
+=cut
+
+sub record_number_add {
+	my ($self, $amount) = @_;
+	$self->record_number( $self->record_number + $amount );
+	$self->record_number( 0 ) if $self->record_number < 0;
+	return $self->record_number;
+}
 
 
 =head1 SEE ALSO

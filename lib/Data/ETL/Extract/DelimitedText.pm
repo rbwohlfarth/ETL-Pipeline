@@ -34,13 +34,17 @@ would not normally use it directly.
 package Data::ETL::Extract::DelimitedText;
 use Moose;
 
-with 'Data::ETL::Extract';
-with 'Data::ETL::Extract::File';
-
 use Text::CSV;
 
 
 =head1 METHODS & ATTRIBUTES
+
+=head2 Set with the L<Data::ETL/extract_using> command
+
+See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list 
+of attributes.
+
+=head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
 
@@ -65,22 +69,13 @@ sub next_record {
 }
 
 
-=head3 get
-
-Return the value of a field from the current record. The only parameter is a
-field name. You can use either the column letter or the field name.
-
-=cut
-
-sub get { $_[0]->record->{$_[1]}; }
-
-
 =head3 setup
 
 This method configures the input source. In this object, that means opening
 the file and looking for a header record. If the file has a header row, then
 I name the fields based on the header row. You can identify data by the
-field name or by the column name. See L</headers> for more information.
+field name or by the column name. See L<Data::ETL::Extract::AsHash/headers> 
+for more information.
 
 =cut
 
@@ -112,18 +107,6 @@ sub finished { close shift->file; }
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
 
-=head3 record
-
-This hash holds the record loaded from the file.
-
-=cut
-
-has 'record' => (
-	is  => 'rw',
-	isa => 'HashRef[Maybe[Str]]',
-);
-
-
 =head3 csv
 
 The L<Text::CSV> object for doing the actual parsing work. Using the module
@@ -153,8 +136,15 @@ has 'file' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::File>,
-L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>,
+L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
+
+=cut
+
+with 'Data::ETL::Extract::AsHash';
+with 'Data::ETL::Extract::File';
+with 'Data::ETL::Extract';
+
 
 =head1 AUTHOR
 
