@@ -117,8 +117,9 @@ This hash holds the record loaded from the input source.
 =cut
 
 has 'record' => (
-	is  => 'rw',
-	isa => 'HashRef[Maybe[Str]]',
+	default => sub { {} },
+	is      => 'rw',
+	isa     => 'HashRef[Maybe[Str]]',
 );
 
 

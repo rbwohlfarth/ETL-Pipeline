@@ -11,6 +11,8 @@ my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		qr/5/i          => 'fifth' ,
 	},
 ] );
+is( ref( $file->record ), 'HASH', 'Avoid undef if no data' );
+
 $file->setup;
 is( $file->record_number, 1, 'Positioned at first data row' );
 
