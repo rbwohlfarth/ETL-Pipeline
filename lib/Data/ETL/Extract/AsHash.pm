@@ -162,6 +162,8 @@ the logic for handling names.
 It accepts two parameters: the field name and the field number. It assigns the
 name to the number.
 
+This method maintains both the L</names> and L</numbers> attributes.
+
 =cut
 
 sub add_name {
@@ -175,7 +177,29 @@ sub add_name {
 	}
 
 	push @$list, $name;
+	
+	# Maintain the cross reference of field names to numbers. My helper
+	# functions need this to accept field names or numbers and still work. I
+	# add the numbers too so that everything just works. I don't need any 
+	# special logic to see if it's a field number or name.
+	$self->numbers->{$index} = $index;
+	$self->numbers->{$name } = $index;
 }
+
+
+=head3 numbers
+
+This hash converts a field name into the corresponding field number. This
+allows my helper functions to accept field names or numbers. L</add_name>
+automatically maintains this hash.
+
+=cut
+
+has 'numbers' => (
+	default => sub{ {} },
+	is      => 'ro',
+	isa     => 'HashRef[Int]',
+);
 
 
 =head1 SEE ALSO
