@@ -30,6 +30,9 @@ use Moose::Role;
 use File::Find::Rule;
 
 
+our $VERSION = '1.00';
+
+
 =head2 Identifying the input file
 
 B<Data::ETL::Extract::File> offers two ways to identify the specific input

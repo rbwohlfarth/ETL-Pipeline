@@ -41,6 +41,9 @@ package Data::ETL::Load;
 use Moose::Role;
 
 
+our $VERSION = '1.00';
+
+
 =head1 METHODS & ATTRIBUTES
 
 B<Note:> This role defines no attributes that can are set with the 

@@ -39,6 +39,9 @@ use Spreadsheet::XLSX;
 use String::Util qw/hascontent/;
 
 
+our $VERSION = '1.00';
+
+
 =head1 METHODS & ATTRIBUTES
 
 =head2 Set with the L<Data::ETL/extract_using> command

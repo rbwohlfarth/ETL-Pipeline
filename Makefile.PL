@@ -7,6 +7,7 @@ name 'Data-ETL';
 license 'perl';
 all_from 'lib/Data/ETL.pm';
 
+requires 'Exporter';
 requires 'File::Find::Rule';
 requires 'Moose';
 requires 'Moose::Role';

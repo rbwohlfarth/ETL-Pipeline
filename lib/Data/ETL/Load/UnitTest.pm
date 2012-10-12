@@ -30,6 +30,9 @@ use Moose;
 with 'Data::ETL::Load';
 
 
+our $VERSION = '1.00';
+
+
 =head1 METHODS & ATTRIBUTES
 
 =head3 storage
