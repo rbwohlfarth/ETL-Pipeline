@@ -28,10 +28,6 @@ package Data::ETL::Extract::File;
 use Moose::Role;
 
 use File::Find::Rule;
-use Regexp::Common;
-use String::Util qw/hascontent/;
-
-with 'Data::ETL::Extract::AsHash';
 
 
 =head2 Identifying the input file

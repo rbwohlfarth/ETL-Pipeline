@@ -1,8 +1,6 @@
 use Test::More;
 use Data::ETL::Extract::DelimitedText;
 
-our $CLUCK = 1;
-
 my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 	path    => 't/DelimitedText.txt',
 	headers => {
