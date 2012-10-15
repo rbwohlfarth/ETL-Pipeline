@@ -47,6 +47,35 @@ our $VERSION = '1.00';
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list 
 of attributes.
 
+=head3 speerator
+
+The single character that seperates fields. L<Text::CSV> only supports a single
+character. It defaults to a comma.
+
+=cut
+
+has 'seperator' => (
+	default => ',',
+	is      => 'ro',
+	isa     => 'Str',
+);
+
+
+=head3 whitespace
+
+A boolean flag indicating if L<Text::CSV> removes extra whitespace. A I<true>
+value trims extra whitespace around the comma. The default value is I<true>. 
+You really should change it only if it causes a problem.
+
+=cut
+
+has 'whitespace' => (
+	default => 1,
+	is      => 'ro',
+	isa     => 'Bool',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -115,14 +144,25 @@ them for the module maintainers.
 The L<Text::CSV> object for doing the actual parsing work. Using the module
 lets me build on the bug fixes and hard learned lessons of others.
 
+This object handles a comma between fields, handles quoted fields, and trims 
+whitespace.
+
 =cut
 
 has 'csv' => (
-	default => sub { Text::CSV->new; },
+	builder => '_build_csv',
 	is      => 'ro',
 	isa     => 'Text::CSV',
-	handles => {seperator => 'sep_char'},
+	lazy    => 1,
 );
+
+sub _build_csv {
+	my $self = shift;
+	Text::CSV->new( {
+		allow_whitespace => $self->whitespace,
+		sep_char         => $self->seperator,
+	} );
+}
 
 
 =head3 file

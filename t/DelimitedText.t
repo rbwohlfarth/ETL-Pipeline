@@ -24,7 +24,7 @@ subtest 'Second record' => sub {
 	ok( defined $file->record, 'Record has data' );
 };
 subtest 'Third record' => sub {
-	ok( $file->next_record, 'Record loaded' );
+	ok( $file->next_record, 'Whitespace allowed' );
 	ok( defined $file->record, 'Record has data' );
 
 	my @keys = keys %{$file->record};
