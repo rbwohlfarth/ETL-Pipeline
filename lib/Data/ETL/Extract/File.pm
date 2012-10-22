@@ -65,6 +65,7 @@ before 'setup' => sub {
 		if (defined $self->folder_name) {
 			foreach my $folder (File::Find::Rule
 				->directory
+				->maxdepth( 1 )
 				->name( $self->folder_name )
 				->in( $self->root )
 			) {
@@ -112,8 +113,11 @@ has 'path' => (
 
 =head3 root
 
-When searching for an input file, start in this directory. It defaults to the
-current directory.
+When searching for an input file, only search inside this directory. The code
+does not search subdirectories. Data directories can be quite large. And a
+fully recursive search could take a very long time.
+
+B<root> defaults to the current directory.
 
 =cut
 
