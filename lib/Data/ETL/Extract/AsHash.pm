@@ -27,6 +27,7 @@ L<Data::ETL::Extract> to remain flexible enough for the remaining 10%.
 package Data::ETL::Extract::AsHash;
 use Moose::Role;
 
+use 5.14.0;
 use Regexp::Common;
 use String::Util qw/hascontent/;
 
@@ -76,7 +77,9 @@ after 'setup' => sub {
 		my %headers = %{$self->headers};
 
 		while (my ($field, $text) = each %{$self->record}) {
-			if (hascontent( $text )) {
+			# Only map field numbers. The mapping uses a list, with the field
+			# number as an index. Strings just generate Perl warnings.
+			if ($RE{num}{int}->matches( $field ) and hascontent( $text )) {
 				# I used "foreach" to break out of the loop early. "each"
 				# remembers its position and would start the next loop skipping
 				# over some of the patterns.
