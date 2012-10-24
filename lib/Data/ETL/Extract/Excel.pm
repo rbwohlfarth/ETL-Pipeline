@@ -76,7 +76,7 @@ loaded. A B<0> means that we reached the end of the data.
 =cut
 
 sub next_record {
-	my ($self) = @_;
+	my ($self, $skip) = @_;
 	my $row = $self->record_number;
 
 	# Stop processing once we reach the last record.
@@ -94,7 +94,7 @@ sub next_record {
 	}
 	$self->record( \%record );
 
-	return ($self->stop_on_blank ? $not_empty : 1);
+	return ((not $skip and $self->stop_on_blank) ? $not_empty : 1);
 }
 
 
