@@ -8,7 +8,7 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 
   use Data::ETL;
 
-  extract_using 'Excel', in_folder => qr|/PineHill/|, like => qr/\.xlsx?$/;
+  extract_using 'Excel', folder_name => qr|/Pine/|, file_name => qr/\.xlsx?$/;
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
   load_into 'Access', path => 'C:\ETL\review.accdb';
@@ -189,7 +189,28 @@ sub set {
 
 This command kicks off the entire data conversion process. It takes no
 parameters. All of the setup is done by the other commands. This should be
-the last command in your ETL script.
+the last command in your ETL script. And 90% of the time, it will be.
+
+There are rare cases when the input data spans multiple files. B<Data::ETL>
+supports processing multiple files inside one ETL script. For example...
+
+  use Data::ETL;
+  
+  # The first file has demographic details.
+  extract_using 'Excel', path => 'C:\Pine\Details.xlsx';
+  transform_as Name => 'A', Address => 'B', Birthday => 'C';
+  set Client => 1, Type => 'Person';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+  
+  # The second file holds the Notes for the details that we loaded above.
+  extract_using 'Excel', path => 'C:\Pine\Notes.xlsx';
+  transform_as Name => 'A', Text => 'B';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+When B<run> finishes, it wipes out the settings. Simply tack the second ETL
+script onto the end of the first.
 
 =cut
 
@@ -231,6 +252,15 @@ sub run {
 
 	$extract->finished;
 	$load->finished;
+	
+	# Automatically clear out the settings. This leaves the ETL script in a
+	# known state. Otherwise, you would have to know the inner workings of the
+	# objects to determine the state. This way, you always know that you must
+	# start over to re-run the script.
+	%constants = ();
+	$extract   = undef;
+	$load      = undef;
+	%mapping   = ();
 }
 
 

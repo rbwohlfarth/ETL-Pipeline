@@ -100,7 +100,7 @@ subtest 'XLS format' => sub {
 subtest 'Skip blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 		path => 't/Excel2007-Skip.xlsx',
-		skip => 2,
+		skip => 1,
 	] );
 	$file->setup;
 

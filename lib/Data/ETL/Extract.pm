@@ -75,6 +75,26 @@ around 'setup' => sub {
 };
 
 
+=head3 stop_when
+
+The ETL process stops reading records if this subroutine returns a true value.
+Reporting software sometimes puts footer information at the bottom. You can 
+use this subroutine to look for those footers and stop processing the file.
+
+This subroutine receives one parameter - the L<Data::ETL::Extract> object. You
+can access the current record using the L</get> method.
+
+By default, the ETL process reads B<all> records in the file.
+
+=cut
+
+has 'stop_when' => (
+	default => sub { sub { 0 } },
+	is      => 'rw',
+	isa     => 'CodeRef',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -164,6 +184,10 @@ has 'record_number' => (
 around 'next_record' => sub {
 	my ($original, $self, @arguments) = @_;
 	my $count = $original->( $self, @arguments );
+	
+	# 0 = stop processing this file.
+	$count = 0 if $self->stop_when->( $self );
+	
 	$self->record_number_add( $count );
 	return $count;
 };

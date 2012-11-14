@@ -4,7 +4,7 @@ BEGIN { use_ok( 'Data::ETL' ); }
 require_ok( 'Data::ETL' );
 
 ok( defined &extract_using, 'extract_using command exported' );
-ok( defined &transform_as , 'transform_as command exported'     );
+ok( defined &transform_as , 'transform_as command exported'  );
 ok( defined &set          , 'set command exported'           );
 ok( defined &load_into    , 'load_into command exported'     );
 ok( defined &run          , 'run command exported'           );
@@ -36,6 +36,13 @@ subtest 'Sample ETL script' => sub {
 		is( $record->{trois   }, 'Field3'        , 'Found Field3'   );
 		is( $record->{constant}, 'String literal', 'Found constant' );
 	};
+};
+
+subtest '"run" command clears the settings' => sub {
+	is( scalar( keys %ETL::constants ), 0    , 'Cleared ETL::constants' );
+	is( scalar( keys %ETL::mapping   ), 0    , 'Cleared ETL::mapping'   );
+	is( $ETL::extract                 , undef, 'Cleared ETL::extract'   );
+	is( $ETL::load                    , undef, 'Cleared ETL::load'      );
 };
 
 done_testing();

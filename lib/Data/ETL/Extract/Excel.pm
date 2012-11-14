@@ -49,22 +49,6 @@ our $VERSION = '1.00';
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more 
 attributes.
 
-=head3 stop_on_blank
-
-By default, we stop processing records at the first blank row. Some folks send
-trailer information. And a blank row always comes before the trailer.
-
-To change that, set this attribute to B<0>.
-
-=cut
-
-has 'stop_on_blank' => (
-	default => 1,
-	is      => 'rw',
-	isa     => 'Bool',
-);
-
-
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -77,24 +61,30 @@ loaded. A B<0> means that we reached the end of the data.
 
 sub next_record {
 	my ($self, $skip) = @_;
+
+	my $count = 0;
+	my $empty = 1;
 	my $row = $self->record_number;
+	my $last_row = $self->worksheet->{'MaxRow'};
 
-	# Stop processing once we reach the last record.
-	my $last_row  = $self->worksheet->{'MaxRow'};
-	return 0 if $row > $last_row;
+	# Skip blank rows, but don't loop forever.
+	while ($row <= $last_row and $empty) {
+		my %record;
+		foreach my $column (@{$self->columns}) {
+			my $cell  = $self->worksheet->{Cells}[$row][$column];
+			my $value = defined( $cell ) ? $cell->value : '';
 
-	my %record;
-	my $not_empty = 0;
-	foreach my $column (@{$self->columns}) {
-		my $cell  = $self->worksheet->{Cells}[$row][$column];
-		my $value = defined( $cell ) ? $cell->value : '';
-
-		$record{$column} = $value;
-		$not_empty = 1 if hascontent( $value );
+			$record{$column} = $value;
+			$empty = 0 if hascontent( $value );
+		}
+		$self->record( \%record );
+		
+		$count++;
+		$row++;
 	}
-	$self->record( \%record );
 
-	return ((not $skip and $self->stop_on_blank) ? $not_empty : 1);
+	# Ignore blank rows on the end.
+	return ($empty ? 0 : $count);
 }
 
 
