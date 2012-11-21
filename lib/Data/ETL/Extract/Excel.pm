@@ -7,7 +7,7 @@ Data::ETL::Extract::Excel - Input source for Microsoft Excel spreadsheets
 =head1 SYNOPSIS
 
   use ETL;
-  extract_using 'Excel', root => 'C:\Data', file_name => qr/\.xls(x|m)?$/;
+  extract_from 'Excel', root => 'C:\Data', file_name => qr/\.xls(x|m)?$/;
   transform A => ExternalID, Name => PatientName;
   load_into 'Access';
   run;
@@ -22,7 +22,7 @@ data for your target (I<Transform>), and store the result (I<Load>).
 This class defines an ETL input source that reads Microsoft Excel spreadsheets.
 It supports both the I<xls> and I<xlsx> formats.
 
-You use this class by naming it in the L<Data::ETL/extract_using> call. You
+You use this class by naming it in the L<Data::ETL/extract_from> call. You
 would not normally use it directly.
 
 =cut
@@ -44,7 +44,7 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Set with the L<Data::ETL/extract_using> command
+=head2 Set with the L<Data::ETL/extract_from> command
 
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more 
 attributes.

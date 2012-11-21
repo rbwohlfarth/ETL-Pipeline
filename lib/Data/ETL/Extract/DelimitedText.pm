@@ -7,7 +7,7 @@ Data::ETL::Extract::DelimitedText - Input source for CSV files
 =head1 SYNOPSIS
 
   use ETL;
-  extract_using 'DelimitedText', root => 'C:\Data', file_name => qr/\.csv$/;
+  extract_from 'DelimitedText', root => 'C:\Data', file_name => qr/\.csv$/;
   transform 1 => ExternalID, Name => PatientName;
   load_into 'Access';
   run;
@@ -26,7 +26,7 @@ supported by the L<Text::CSV> module.
 L<Text::CSV> automatically handles delimiters inside of quote marks. So your
 data can have embedded commas.
 
-You use this class by naming it in the L<Data::ETL/extract_using> call. You
+You use this class by naming it in the L<Data::ETL/extract_from> call. You
 would not normally use it directly.
 
 =cut
@@ -42,7 +42,7 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Set with the L<Data::ETL/extract_using> command
+=head2 Set with the L<Data::ETL/extract_from> command
 
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list 
 of attributes.

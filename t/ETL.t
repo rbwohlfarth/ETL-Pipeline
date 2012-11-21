@@ -3,15 +3,15 @@ use Test::More;
 BEGIN { use_ok( 'Data::ETL' ); }
 require_ok( 'Data::ETL' );
 
-ok( defined &extract_using, 'extract_using command exported' );
-ok( defined &transform_as , 'transform_as command exported'  );
-ok( defined &set          , 'set command exported'           );
-ok( defined &load_into    , 'load_into command exported'     );
-ok( defined &run          , 'run command exported'           );
+ok( defined &extract_from, 'extract_from command exported' );
+ok( defined &transform_as, 'transform_as command exported'  );
+ok( defined &set         , 'set command exported'           );
+ok( defined &load_into   , 'load_into command exported'     );
+ok( defined &run         , 'run command exported'           );
 
 use Data::ETL::Load::UnitTest;
 subtest 'Sample ETL script' => sub {
-	extract_using 'DelimitedText', path => 't/DelimitedText.txt';
+	extract_from 'DelimitedText', path => 't/DelimitedText.txt';
 	set constant => 'String literal';
 	transform_as un => 0, deux => 1, trois => 2;
 	load_into 'UnitTest';

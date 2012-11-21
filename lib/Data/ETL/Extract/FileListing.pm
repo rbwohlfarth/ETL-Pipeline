@@ -7,7 +7,7 @@ Data::ETL::Extract::FileListing - Process a list of files as an input source
 =head1 SYNOPSIS
 
   use ETL;
-  extract_using 'FileListing', root => 'C:\Data', top_level => qr/Client_/;
+  extract_from 'FileListing', root => 'C:\Data', top_level => qr/Client_/;
   transform FileName => 'File', FullPath => 'Path';
   load_into 'Access';
   run;
@@ -23,7 +23,7 @@ This class defines an ETL input source that for directory contents. It
 recursively returns the files underneath a specific directory, one at a time.
 I use it for attaching external files to database records.
 
-You use this class by naming it in the L<Data::ETL/extract_using> call. You
+You use this class by naming it in the L<Data::ETL/extract_from> call. You
 would not normally use it directly.
 
 =cut
@@ -40,7 +40,7 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Set with the L<Data::ETL/extract_using> command
+=head2 Set with the L<Data::ETL/extract_from> command
 
 =head3 name
 

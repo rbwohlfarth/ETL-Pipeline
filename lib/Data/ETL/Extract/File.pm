@@ -94,7 +94,7 @@ sub _find_file {
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Set with the L<Data::ETL/extract_using> command
+=head2 Set with the L<Data::ETL/extract_from> command
 
 =head3 path
 

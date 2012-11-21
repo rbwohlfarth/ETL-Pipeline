@@ -8,7 +8,7 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 
   use Data::ETL;
 
-  extract_using 'Excel', folder_name => qr|/Pine/|, file_name => qr/\.xlsx?$/;
+  extract_from 'Excel', folder_name => qr|/Pine/|, file_name => qr/\.xlsx?$/;
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
   load_into 'Access', path => 'C:\ETL\review.accdb';
@@ -22,7 +22,7 @@ use 5.14.0;
 use Exporter qw/import/;
 
 
-our @EXPORT  = qw/extract_using transform_as set load_into run/;
+our @EXPORT  = qw/extract_from transform_as set load_into run/;
 our $VERSION = '1.00';
 
 
@@ -58,8 +58,8 @@ database. The L</load_into> performs all of the validation.
 
 B<Data::ETL> does it work using helper classes. These classes all fall under
 the naming convention I<Data::ETL::Extract::*> or I<Data::ETL::Load::*>.
-Notice that L</extract_using> and L<load_into> take a format name as their
-first parameter? In our example, L</extract_using> loads the helper class
+Notice that L</extract_from> and L<load_into> take a format name as their
+first parameter? In our example, L</extract_from> loads the helper class
 I<Data::ETL::Extract::Excel>. And L</load_into> writes the records using the
 helper class I<Data::ETL::Load::Access>. B<Data::ETL> automatically prepends
 the I<Data::ETL::Extract> or I<Data::ETL::Load>.
@@ -79,29 +79,29 @@ You execute the ETL script like any other Perl program. That's it. The ETL
 script reads data in and sends it back out.
 
 An ETL script must have at least one of each of the four commands:
-L</extract_using>, L</transform>, L</load_into>, and L</run>. Technically, an
+L</extract_from>, L</transform>, L</load_into>, and L</run>. Technically, an
 ETL script is just a Perl script. You may use any Perl commands or modules.
 
 =head1 COMMANDS
 
-=head3 extract_using
+=head3 extract_from
 
-This command configures the input source. You may only have one input source
-in an ETL script.
+This command configures the input source. The ETL script reads data from this
+source.
 
 The first parameter is the name of the input format. The format is a Perl
-module under the L<Data::ETL::Extract> namespace. C<extract_using> 
+module under the L<Data::ETL::Extract> namespace. C<extract_from> 
 automatically adds the B<Data::ETL::Extract> to the start of the class name.
 
 After the format class, you may pass in a hash of attributes for the format
-class. C<extract_using> passes the rest of the parameters directly to the
-input source class.
+class. C<extract_from> passes the rest of the parameters directly to the input 
+source class.
 
 =cut
 
 my $extract;
 
-sub extract_using {
+sub extract_from {
 	my $class      = shift @_;
 	my %attributes = @_;
 
@@ -197,14 +197,14 @@ supports processing multiple files inside one ETL script. For example...
   use Data::ETL;
   
   # The first file has demographic details.
-  extract_using 'Excel', path => 'C:\Pine\Details.xlsx';
+  extract_from 'Excel', path => 'C:\Pine\Details.xlsx';
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
   load_into 'Access', path => 'C:\ETL\review.accdb';
   run;
   
   # The second file holds the Notes for the details that we loaded above.
-  extract_using 'Excel', path => 'C:\Pine\Notes.xlsx';
+  extract_from 'Excel', path => 'C:\Pine\Notes.xlsx';
   transform_as Name => 'A', Text => 'B';
   load_into 'Access', path => 'C:\ETL\review.accdb';
   run;
