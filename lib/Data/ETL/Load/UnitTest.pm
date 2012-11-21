@@ -27,8 +27,6 @@ I took a lot of shortcuts.
 package Data::ETL::Load::UnitTest;
 use Moose;
 
-with 'Data::ETL::Load';
-
 
 our $VERSION = '1.00';
 
@@ -60,35 +58,18 @@ return B<0> (nothing saved). Otherwise return a B<1> (the number created).
 
 =cut
 
-sub write_record {
-	my $self = shift;
-
-	my %record = %{$self->record};
-	push @storage, \%record;
-	$self->record( {} );
-}
+sub write_record { push @storage, shift->record; }
 
 
-=head3 set
+=head3 new_record
 
-Add a single field to the current record.
+The L<Data::ETL::Load::AsHash> role requires this function. In thsi case, it 
+resets to an empty hash. This test class has no defined record structure. So 
+there are no default values.
 
 =cut
 
-sub set { $_[0]->record->{$_[1]} = $_[2]; }
-
-
-=head3 record
-
-This hash reference stores the next data record to save.
-
-=cut
-
-has 'record' => (
-	default => sub { {} },
-	is      => 'rw',
-	isa     => 'HashRef[Maybe[Str]]',
-);
+sub new_record { {} }
 
 
 =head3 setup
@@ -114,7 +95,13 @@ sub finished {}
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Load>
+L<Data::ETL>, L<Data::ETL::Load>, L<Data::ETL::AsHash>
+
+=cut
+
+with 'Data::ETL::Load::AsHash';
+with 'Data::ETL::Load';
+
 
 =head1 AUTHOR
 
