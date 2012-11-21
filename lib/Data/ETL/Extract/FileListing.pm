@@ -119,9 +119,10 @@ sub next_record {
 		my (undef, $directory, $file) = splitpath( $path );
 		
 		my %record;
-		$record{Directory} = catpath( $self->path, $directory, '' );
+		$record{Directory} = catdir( $self->path, $directory );
 		$record{Extension} = pop [split /\./, $file];
 		$record{File}      = $file;
+		$record{Inside}    = $directory;
 		$record{Path}      = catdir( $self->path, $path );
 		$record{Relative}  = $path;
 		

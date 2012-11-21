@@ -16,6 +16,7 @@ subtest 'Dynamic folder search' => sub {
 		ok( defined $file->record, 'Record has data' );
 		is  ( $file->record->{Extension}, 'txt'                              , 'Extension'     );
 		like( $file->record->{File     }, qr/^Test\s\d\.txt$/                , 'File name'     );
+		is  ( $file->record->{Inside   }, ''                                 , 'Inside folder' );
 		like( $file->record->{Path     }, qr|^t\\FileListing\\Test\s\d\.txt$|, 'Full path'     );
 		like( $file->record->{Relative }, qr|^Test\s\d\.txt$|                , 'Relative path' );
 	};
