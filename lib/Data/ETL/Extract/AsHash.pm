@@ -92,8 +92,7 @@ followed next time by I<My Identifier>. Regular expressions provide a robust
 matching language that handles these variants.
 
 L</get> code finds the first column that matches the regular expression. You 
-should make sure that each regular expression matches only one column. Each
-column may be matched by only one regular expression. 
+should make sure that each regular expression matches only one column.
 
 =cut
 
@@ -102,10 +101,9 @@ sub get {
 	
 	# Find the field whose header matches this regular expression.
 	if (ref( $field ) eq 'Regexp' and not exists $self->alias->{$field}) {
-		foreach my $text (keys %{$self->_headers}) {
+		foreach my $text (keys %{$self->headers}) {
 			if ($text =~ m/$field/) {
-				$self->alias->{$field} = $self->_headers->{$text};
-				delete $self->_headers->{$text};
+				$self->alias->{$field} = $self->headers->{$text};
 				last;
 			}
 		}
@@ -150,12 +148,7 @@ has 'alias' => (
 );
 
 
-=head2 Internal Attributes and Methods
-
-You should never use these items. They can change at any moment. I documented
-them for the module maintainers.
-
-=head3 _headers
+=head3 headers
 
 The L</get> method accepts regular expressions instead of field names. It then
 searches for the column whose header text matches the expression. This hash
@@ -163,7 +156,7 @@ stores the header text to search later in L</get>.
 
 =cut
 
-has '_headers' => (
+has 'headers' => (
 	default => sub { {} },
 	is      => 'ro',
 	isa     => 'HashRef[Str]',
