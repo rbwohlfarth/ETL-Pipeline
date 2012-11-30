@@ -93,7 +93,39 @@ Read one record from the file and populate L<Data::ETL::Extract/record>. The
 method returns the number of records loaded. A B<0> means that we reached the
 end of the file.
 
-C<next_record> uses the field number as the name. Field numbers start at B<0>.
+L</next_record> returns these fields:
+
+=over
+
+=item Extension
+
+The file extension, without a leading period.
+
+=item File
+
+The file name with the extension. No directory information.
+
+=item Folder
+
+The full directory where this file resides.
+
+=item Inside
+
+The relative directory name where this file resides. These are the directories
+below L</path> where the file resides. You can use this to re-create the
+directory structure.
+
+=item Path
+
+The complete path name of the file (directory, name, and extension). You can 
+use this to access the file contents.
+
+=item Relative
+
+The relative path name of the file. This is the part that comes after the
+L</path>.
+
+=back
 
 =cut
 
