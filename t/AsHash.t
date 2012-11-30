@@ -2,7 +2,6 @@ use Test::More;
 use Data::ETL::Extract::DelimitedText;
 
 my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
-	path    => 't/DelimitedText.txt',
 	headers => {
 		qr/head(er)?1/i => 'first' ,
 		qr/2/i          => 'second',
@@ -10,6 +9,8 @@ my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		qr/4/i          => 'fourth',
 		qr/5/i          => 'fifth' ,
 	},
+	path        => 't/DelimitedText.txt',
+	root_folder => 't',
 ] );
 is( ref( $file->record ), 'HASH', 'Avoid undef if no data' );
 

@@ -5,7 +5,8 @@ require_ok( 'Data::ETL::Extract::Excel' );
 
 subtest 'XLSX format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		path => 't/Excel2007.xlsx',
+		path        => 't/Excel2007.xlsx',
+		root_folder => 't',
 	] );
 	$file->setup;
 
@@ -52,7 +53,8 @@ subtest 'XLSX format' => sub {
 
 subtest 'XLS format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		path => 't/Excel2003.xls',
+		path        => 't/Excel2003.xls',
+		root_folder => 't',
 	] );
 	$file->setup;
 
@@ -99,8 +101,9 @@ subtest 'XLS format' => sub {
 
 subtest 'Skip blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		path => 't/Excel2007-Skip.xlsx',
-		skip => 1,
+		path        => 't/Excel2007-Skip.xlsx',
+		root_folder => 't',
+		skip        => 1,
 	] );
 	$file->setup;
 

@@ -5,9 +5,9 @@ require_ok( 'Data::ETL::Extract::FileListing' );
 
 subtest 'Dynamic folder search' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
-		folder => qr/FileListing/,
-		name   => qr/Test\s\d\.txt$/,
-		root   => 't'
+		files_in    => qr/FileListing/,
+		find_file   => qr/Test\s\d\.txt$/,
+		root_folder => 't'
 	] );
 	$file->setup;
 
@@ -33,7 +33,10 @@ subtest 'Dynamic folder search' => sub {
 };
 
 subtest 'Hard coded search path' => sub {
-	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [path => 't/FileListing'] );
+	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
+		path        => 't/FileListing',
+		root_folder => 't',
+	] );
 	$file->setup;
 	subtest 'First match' => sub {
 		ok( $file->next_record, 'Record loaded' );

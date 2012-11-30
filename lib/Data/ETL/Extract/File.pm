@@ -27,6 +27,7 @@ standard interface for your ETL scripts.
 package Data::ETL::Extract::File;
 use Moose::Role;
 
+use 5.14.0;
 use File::Find::Rule;
 
 
@@ -51,10 +52,12 @@ L</path> attribute. If you set L</path>, B<Data::ETL::Extract::File> ignores
 the search attributes.
 
 Option 2 is useful when you drop the files in the same location, but the exact
-file name changes from time to time. B<Data::ETL::Extract::File> searches the
-file system looking for the first file that matches a regular expression.
-Using the attributes, you can narrow down the search to a particular
-subdirectory.
+file or folder name changes. B<Data::ETL::Extract::File> searches the file 
+system looking for the first file that matches a regular expression.
+
+B<Data::ETL::Extract::File> implements the L<Data::ETL::Extract::InFolder> 
+role. You may use the search attributes from B<Data::ETL::Extract::File> to
+dynamically find the folder with your data file.
 
 =cut
 
@@ -62,34 +65,14 @@ before 'setup' => sub {
 	my $self = shift;
 
 	unless (defined $self->path) {
-		if (defined $self->folder_name) {
-			foreach my $folder (File::Find::Rule
-				->directory
-				->maxdepth( 1 )
-				->name( $self->folder_name )
-				->in( $self->root )
-			) {
-				$self->_find_file( $folder );
-				last if defined $self->path;
-			}
-		} else {
-			$self->_find_file( $self->root );
-		}
+		my $search = File::Find::Rule->new;
+		$search->file;
+		$search->name( $self->find_file ) if defined $self->find_file;
+		$self->path( shift [$search->in( $self->root_folder )] );
 	}
 
 	die "Could not find a matching file" unless defined $self->path;
 };
-
-sub _find_file {
-	my ($self, $root) = @_;
-
-	my $search = File::Find::Rule->new;
-	$search->file;
-	$search->name( $self->file_name ) if defined $self->file_name;
-
-	my @files = $search->in( $root );
-	$self->path( shift @files );
-}
 
 
 =head1 METHODS & ATTRIBUTES
@@ -111,36 +94,6 @@ has 'path' => (
 );
 
 
-=head3 root
-
-When searching for an input file, only search inside this directory. The code
-does not search subdirectories. Data directories can be quite large. And a
-fully recursive search could take a very long time.
-
-B<root> defaults to the current directory.
-
-=cut
-
-has 'root' => (
-	default => '.',
-	is      => 'rw',
-	isa     => 'Str',
-);
-
-
-=head3 folder_name
-
-This attribute holds a regular expression. The search first looks for a
-directory that matches, then it looks for the file inside of that directory.
-
-=cut
-
-has 'folder_name' => (
-	is  => 'rw',
-	isa => 'Maybe[RegexpRef]',
-);
-
-
 =head3 file_name
 
 This attribute also holds a regular expression. The search finds the first
@@ -148,7 +101,7 @@ file that matches it.
 
 =cut
 
-has 'file_name' => (
+has 'find_file' => (
 	is  => 'rw',
 	isa => 'Maybe[RegexpRef]',
 );
@@ -156,7 +109,14 @@ has 'file_name' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::InFolder>
+
+=cut
+
+# This must come AFTER the "before setup" in this module. That way it runs 
+# first and sets the root folder.
+with 'Data::ETL::Extract::InFolder';
+
 
 =head1 AUTHOR
 

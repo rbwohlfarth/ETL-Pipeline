@@ -7,7 +7,8 @@ Data::ETL::Extract::FileListing - Process a list of files as an input source
 =head1 SYNOPSIS
 
   use ETL;
-  extract_from 'FileListing', root => 'C:\Data', top_level => qr/Client_/;
+  extract_from 'FileListing', find_file => qr/\.pdf/i, search_in => 'C:\Data', 
+    find_folder => qr/Client_/, files_in => qr/files/;
   transform FileName => 'File', FullPath => 'Path';
   load_into 'Access';
   run;
@@ -42,43 +43,28 @@ our $VERSION = '1.00';
 
 =head2 Set with the L<Data::ETL/extract_from> command
 
-=head3 name
+=head3 files_in
+
+If the files come bundled with other data, they often have their own subfolder.
+This regular expression tells B<Data::ETL::Extract::FileListing> to only list
+files in the first matching subfolder.
+
+=cut
+
+has 'files_in' => (
+	is  => 'rw',
+	isa => 'Maybe[RegexpRef]',
+);
+
+
+=head3 find_file
 
 Filter the file list using this regular expression. By default, 
 B<Data::ETL::Extract::FileListing> returns every file in the folder.
 
 =cut
 
-has 'name' => (
-	is  => 'rw',
-	isa => 'Maybe[RegexpRef]',
-);
-
-
-=head3 root
-
-When searching for the L</top_level> folder, only search inside this directory. 
-
-B<root> defaults to the current directory.
-
-=cut
-
-has 'root' => (
-	default => '.',
-	is      => 'rw',
-	isa     => 'Str',
-);
-
-
-=head3 folder
-
-B<Data::ETL::Extract::FileListing> looks for the first folder matching this 
-regular expression under the L</root> directory. It recursively returns the 
-files underneath the matching directory.
-
-=cut
-
-has 'folder' => (
+has 'find_file' => (
 	is  => 'rw',
 	isa => 'Maybe[RegexpRef]',
 );
@@ -87,7 +73,9 @@ has 'folder' => (
 =head3 path
 
 The full path name of the directory to list. Setting this attribute bypasses
-the search for L</root> and L</folder>.
+the L<Data::ETL::Extract::InFolder/search_in|search_in>, 
+L<Data::ETL::Extract::InFolder/find_folder|find_folder>, and 
+L</files_in> attributes.
 
 =cut
 
@@ -119,12 +107,12 @@ sub next_record {
 		my (undef, $directory, $file) = splitpath( $path );
 		
 		my %record;
-		$record{Directory} = catdir( $self->path, $directory );
 		$record{Extension} = pop [split /\./, $file];
-		$record{File}      = $file;
-		$record{Inside}    = $directory;
-		$record{Path}      = catdir( $self->path, $path );
-		$record{Relative}  = $path;
+		$record{File     } = $file;
+		$record{Folder   } = catdir( $self->path, $directory );
+		$record{Inside   } = $directory;
+		$record{Path     } = catdir( $self->path, $path );
+		$record{Relative } = $path;
 		
 		$self->record( \%record );
 		return 1;
@@ -146,19 +134,19 @@ sub setup {
 	my ($self) = @_;
 
 	unless (defined $self->path) {
-		if (defined $self->folder) {
+		if (defined $self->files_in) {
 			$self->path( shift [File::Find::Rule
 				->directory()
-				->name( $self->folder )
-				->in( $self->root )
+				->name( $self->files_in )
+				->in( $self->root_folder )
 			] );
-		} else { $self->path( $self->root ); }
+		} else { $self->path( $self->root_folder ); }
 	}
 
-	die "Could not find a matching directory" unless defined $self->path;
+	die "Could not find a matching folder" unless defined $self->path;
 	
 	my $rule = File::Find::Rule->file()->relative();
-	$rule->name( $self->name ) if defined $self->name;
+	$rule->name( $self->find_file ) if defined $self->find_file;
 	$self->add_matches( $rule->in( $self->path ) );
 }
 
@@ -199,10 +187,12 @@ has 'matches' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::InFolder>,
+L<Data::ETL::Extract::AsHash>
 
 =cut
 
+with 'Data::ETL::Extract::InFolder';
 with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract';
 

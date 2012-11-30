@@ -3,7 +3,8 @@ use Data::ETL::Extract::DelimitedText;
 
 subtest 'Increment record counter' => sub {
 	my $file = Data::ETL::Extract::DelimitedText->new( 
-		path => 't/DelimitedText.txt',
+		path        => 't/DelimitedText.txt',
+		root_folder => 't',
 	);
 	$file->setup;
 	is( $file->record_number, 0, 'Positioned at beginning of file' );
@@ -14,8 +15,9 @@ subtest 'Increment record counter' => sub {
 
 subtest 'Skip leading rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
-		path => 't/DelimitedText.txt',
-		skip => 2,
+		path        => 't/DelimitedText.txt',
+		root_folder => 't',
+		skip        => 2,
 	] );
 	$file->setup;
 	is( $file->record_number, 2, 'Skipped two rows' );
@@ -23,8 +25,9 @@ subtest 'Skip leading rows' => sub {
 
 subtest 'Stop processing' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
-		path      => 't/DelimitedText.txt',
-		stop_when => sub { shift->get( 0 ) eq 'Field1' },
+		path        => 't/DelimitedText.txt',
+		root_folder => 't',
+		stop_when   => sub { shift->get( 0 ) eq 'Field1' },
 	] );
 	$file->setup;
 
