@@ -1,5 +1,5 @@
-use Test::More;
 use Data::ETL::Extract::DelimitedText;
+use Test::More;
 
 $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 	find_file   => qr/\.txt$/i,

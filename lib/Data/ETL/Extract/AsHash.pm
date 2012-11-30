@@ -39,61 +39,32 @@ our $VERSION = '1.00';
 
 =head2 Set with the L<Data::ETL/extract_from> command
 
-=head3 headers
+=head3 has_header_row
 
-Files often include a header row. Some places are good about putting the data 
-in the same order. Others move it around every so often. Headers allow you to 
+Files can include a header row. Some places are good about putting the data in
+the same order. Others move it around every so often. Headers allow you to 
 find the data regardless of the actual order of fields.
 
-This hash matches field headers with standardized field names. Headers are
-always the first record - just before the data. The I<transform> process
-can access the data using known field names instead of the column numbers.
+A B<true> value means that this file contains a header row. The data begins
+on the first row after the header.
 
-It's also possible that the header names change between files. I<My ID> becomes
-I<MyID>, then I<MyId>, followed next time by I<My Identifier>. So C<headers>
-expects regular expressions as keys. The L</setup> code finds the first regular
-expression that matches a column header. When L</next_record> reads the data,
-it uses the corresponding value as the field name. This way, when the column
-header changes slightly, your code still gets the right data.
-
-You should make sure that each regular expression matches only one column.
-
-Why is this here and not L<Data::ETL::Extract::File>? Because using headers as
-column names requires having a hash as the storage structure. And it doesn't
-really depend on having a file as the input source.
+A B<false> value means that the data starts right here in the first record. 
+There are no headers. This is the default.
 
 =cut
 
-has 'headers' => (
-	is  => 'rw',
-	isa => 'HashRef[Str]',
+has 'has_header_row' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Bool',
 );
 
 after 'setup' => sub {
 	my $self = shift;
 
-	if (defined( $self->headers ) and $self->next_record) {
-		# Copy the headers so that I can remove them as I match them.
-		my %headers = %{$self->headers};
-
+	if ($self->has_header_row and $self->next_record) {
 		while (my ($field, $text) = each %{$self->record}) {
-			# Only map field numbers. The mapping uses a list, with the field
-			# number as an index. Strings just generate Perl warnings.
-			if ($RE{num}{int}->matches( $field ) and hascontent( $text )) {
-				# I used "foreach" to break out of the loop early. "each"
-				# remembers its position and would start the next loop skipping
-				# over some of the patterns.
-				foreach my $pattern (keys %headers) {
-					if ($text =~ m/$pattern/) {
-						$self->add_name( $headers{$pattern}, $field );
-						delete $headers{$pattern};
-						last;
-					}
-				}
-
-				# Quit looking when we run out of field names.
-				last unless scalar( %headers );
-			}
+			$self->_headers->{$text} = $field;
 		}
 	}
 };
@@ -103,12 +74,48 @@ after 'setup' => sub {
 
 =head3 get
 
-Return the value of a field from the current record. The only parameter is a
-field name.
+Return the value of a field from the current record. It accepts a field name
+or regular expression as the only parameter. 
+
+If you pass in a field name, the code returns the data from that field. If you
+pass in a regular expression, the code looks for the column whose header text
+matches that expression.
+
+This means that your L<Data::ETL/transform_as> commands can use regular 
+expressions on the right hand side (as input fields). And the file based input 
+source automatically finds the correct data column. You do not have to 
+manually map the regular expressions with field names.
+
+Why not use the column headers as field names? It's quite likely that the 
+header names change between files. I<My ID> becomes I<MyID>, then I<MyId>, 
+followed next time by I<My Identifier>. Regular expressions provide a robust
+matching language that handles these variants.
+
+L</get> code finds the first column that matches the regular expression. You 
+should make sure that each regular expression matches only one column. Each
+column may be matched by only one regular expression. 
 
 =cut
 
-sub get { $_[0]->record->{$_[1]}; }
+sub get { 
+	my ($self, $field) = @_;
+	
+	# Find the field whose header matches this regular expression.
+	if (ref( $field ) eq 'Regexp' and not exists $self->alias->{$field}) {
+		foreach my $text (keys %{$self->_headers}) {
+			if ($text =~ m/$field/) {
+				$self->alias->{$field} = $self->_headers->{$text};
+				delete $self->_headers->{$text};
+				last;
+			}
+		}
+	}
+
+	# If no headers match, we end up returning "undef". Regular field names
+	# work automatically.
+	$field = $self->alias->{$field} if defined $self->alias->{$field};
+	return $self->record->{$field}; 
+}
 
 
 =head2 Used by the implementing class
@@ -126,86 +133,40 @@ has 'record' => (
 );
 
 
-=head3 names
+=head3 alias
 
-This list maps field numbers to names. When reading a record, the code uses the
-name as a key for L<Data::ETL::Extract/record>. The I<transform> phase then
-works with the field names instead of unwieldy numbers.
+This hash maps an alias name with the underlying field name. If the L</get>
+method finds a field name in this hash, it returns the value from the 
+corresponding column.
 
-Each column can have more than one name.
+One column can have more than one name - or none at all.
 
 =cut
 
-has 'names' => (
-	default => sub { [] },
+has 'alias' => (
+	default => sub { {} },
 	is      => 'ro',
-	isa     => 'ArrayRef[ArrayRef[Str]]',
+	isa     => 'HashRef[Str]',
 );
 
-after 'next_record' => sub {
-	my $self = shift;
 
-	if (scalar @{$self->names}) {
-		# Build a local hash so that I don't affect the loops by adding fields.
-		my %add;
-		while (my ($field, $value) = each %{$self->record}) {
-			if ($RE{num}{int}->matches( $field )) {
-				my $names = $self->names->[$field];
-				if (defined $names) { $add{$_} = $value foreach (@$names); }
-			}
-		}
+=head2 Internal Attributes and Methods
 
-		# Merge the named fields in with the rest.
-		@{$self->record}{keys %add} = values %add;
-	}
-};
+You should never use these items. They can change at any moment. I documented
+them for the module maintainers.
 
+=head3 _headers
 
-=head3 add_name
-
-This method adds a name for a given field. This convenience method centralizes
-the logic for handling names.
-
-It accepts two parameters: the field name and the field number. It assigns the
-name to the number.
-
-This method maintains both the L</names> and L</numbers> attributes.
+The L</get> method accepts regular expressions instead of field names. It then
+searches for the column whose header text matches the expression. This hash
+stores the header text to search later in L</get>.
 
 =cut
 
-sub add_name {
-	my ($self, $name, $index) = @_;
-	my $list = $self->names->[$index];
-
-	# Add a new list reference if we don't have a name for this field yet.
-	unless (defined $list) {
-		$list = [];
-		$self->names->[$index] = $list;
-	}
-
-	push @$list, $name;
-	
-	# Maintain the cross reference of field names to numbers. My helper
-	# functions need this to accept field names or numbers and still work. I
-	# add the numbers too so that everything just works. I don't need any 
-	# special logic to see if it's a field number or name.
-	$self->numbers->{$index} = $index;
-	$self->numbers->{$name } = $index;
-}
-
-
-=head3 numbers
-
-This hash converts a field name into the corresponding field number. This
-allows my helper functions to accept field names or numbers. L</add_name>
-automatically maintains this hash.
-
-=cut
-
-has 'numbers' => (
-	default => sub{ {} },
+has '_headers' => (
+	default => sub { {} },
 	is      => 'ro',
-	isa     => 'HashRef[Int]',
+	isa     => 'HashRef[Str]',
 );
 
 

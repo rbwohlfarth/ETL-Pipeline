@@ -14,18 +14,18 @@ subtest 'Dynamic folder search' => sub {
 	subtest 'First match' => sub {
 		ok( $file->next_record, 'Record loaded' );
 		ok( defined $file->record, 'Record has data' );
-		is  ( $file->record->{Extension}, 'txt'                              , 'Extension'     );
-		like( $file->record->{File     }, qr/^Test\s\d\.txt$/                , 'File name'     );
-		is  ( $file->record->{Inside   }, ''                                 , 'Inside folder' );
-		like( $file->record->{Path     }, qr|^t\\FileListing\\Test\s\d\.txt$|, 'Full path'     );
-		like( $file->record->{Relative }, qr|^Test\s\d\.txt$|                , 'Relative path' );
+		is  ( $file->get( 'Extension' ), 'txt'                              , 'Extension'     );
+		like( $file->get( 'File'      ), qr/^Test\s\d\.txt$/                , 'File name'     );
+		is  ( $file->get( 'Inside'    ), ''                                 , 'Inside folder' );
+		like( $file->get( 'Path'      ), qr|^t\\FileListing\\Test\s\d\.txt$|, 'Full path'     );
+		like( $file->get( 'Relative'  ), qr|^Test\s\d\.txt$|                , 'Relative path' );
 	};
 
 	my $first = $file->record->{File};
 	subtest 'Second match' => sub {
 		ok( $file->next_record, 'Record loaded' );
 		ok( defined $file->record, 'Record has data' );
-		isnt( $file->record->{File}, $first, 'Different file' );
+		isnt( $file->get( 'File' ), $first, 'Different file' );
 	};
 
 	is( $file->next_record, 0, 'No more matches' );

@@ -49,6 +49,18 @@ our $VERSION = '1.00';
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more 
 attributes.
 
+=head3 has_header_row
+
+Most spread sheets contains a header row that names the columns. By default,
+this class assumes that the first row are column headers. Set this attribute 
+to B<false> if that's not the case. Otherwise you will lose the first row of
+data.
+
+=cut
+
+has '+has_header_row' => (default => 1);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -94,7 +106,7 @@ This method configures the input source. In this object, that means creating
 the Excel parsing object and attaching it to the file.
 
 C<setup> runs once per file. I put extra logic in here to speed up
-L</next_record>. This method does 3 main things...
+L</next_record>. This method does 2 main things...
 
 =over
 
@@ -102,21 +114,15 @@ L</next_record>. This method does 3 main things...
 
 =item 2. Convert column numbers into letter designations.
 
-=item 3. And process the header row.
-
 =back
 
 Different classes parse different versions of the Excel file format. This
 method matches the class to the file type by the extension. B<XLS> means
 Excel 2003. And B<XLSX> means an Excel 2007 file.
 
-The Excel parsers use column numbers. Excel uses letters instead. For
-consistency, the I<transform> process also uses letters. This code sets up
-the L<Data::ETL::Extract::AsHash/names> hash for that purpose.
-
-I also name the fields based on the header row. You can identify data by the
-field name or by the column name. See L<Data::ETL::Extract::AsHash/headers> for
-more information.
+The Excel parsers use column numbers. The setup automatically aliases the 
+column letters to the numbers. Your L<Data::ETL/transform_as> command can
+then use the column letters - making it more human readable.
 
 =cut
 
@@ -140,12 +146,9 @@ sub setup {
 	# Convert the column numbers into their letter designations.
 	my $first_column = $self->worksheet->{'MinCol'};
 	my $last_column  = $self->worksheet->{'MaxCol'};
+	
 	$self->columns( [$first_column .. $last_column] );
-
-	foreach my $column (@{$self->columns}) {
-		my $name = $self->convert_column_number_into_letters( $column );
-		$self->add_name( $name, $column );
-	}
+	$self->alias->{$self->letter_for( $_ )} = $_ foreach (@{$self->columns});
 
 	# Start on the first row as defined by the spread sheet.
 	$self->record_number( $self->worksheet->{'MinRow'} );
@@ -166,7 +169,7 @@ sub finished {}
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
 
-=head3 convert_column_number_into_letters
+=head3 letter_for
 
 This little method translates a column number into the letters that you see
 in MS Excel. Computers like numbers. People like letters. This class lets you
@@ -174,7 +177,7 @@ identify columns by their letter designation.
 
 =cut
 
-sub convert_column_number_into_letters {
+sub letter_for {
 	my ($self, $column_number) = @_;
 
 	# Just keep adding letters as we cycle through the alphabet.
@@ -225,8 +228,8 @@ has 'worksheet' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::File>,
-L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>, 
+L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
 
 =head1 AUTHOR
 
