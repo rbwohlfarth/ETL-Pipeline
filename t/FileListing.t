@@ -54,4 +54,28 @@ subtest 'Hard coded search path' => sub {
 	$file->finished;
 };
 
+subtest 'Depth controls' => sub {
+	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
+		max_depth   => 2,
+		min_depth   => 2,
+		path        => 't',
+		root_folder => 't',
+	] );
+	$file->setup;
+	subtest 'First match' => sub {
+		ok( $file->next_record, 'Record loaded' );
+		ok( defined $file->record, 'Record has data' );
+	};
+	subtest 'Second match' => sub {
+		ok( $file->next_record, 'Record loaded' );
+		ok( defined $file->record, 'Record has data' );
+	};
+	subtest 'Third match' => sub {
+		ok( $file->next_record, 'Record loaded' );
+		ok( defined $file->record, 'Record has data' );
+	};
+	is( $file->next_record, 0, 'No more matches' );
+	$file->finished;
+};
+
 done_testing();

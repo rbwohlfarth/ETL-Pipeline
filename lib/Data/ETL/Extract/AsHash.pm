@@ -64,7 +64,7 @@ after 'setup' => sub {
 
 	if ($self->has_header_row and $self->next_record) {
 		while (my ($field, $text) = each %{$self->record}) {
-			$self->_headers->{$text} = $field;
+			$self->headers->{$text} = $field;
 		}
 	}
 };

@@ -85,6 +85,34 @@ has 'path' => (
 );
 
 
+=head3 min_depth
+
+Only return files at least this level deep underneath L</path>. The default is
+to return all files under L</path>, regardless of their depth. A value of B<2>
+only returns files inside of a subdirectory.
+
+=cut
+
+has 'min_depth' => (
+	is  => 'rw',
+	isa => 'Maybe[Int]',
+);
+
+
+=head3 max_depth
+
+Only return files this level or higher, underneath L</path>. The default is
+to return all files under L</path>, regardless of their depth. A value of B<1>
+only returns files in L</path>.
+
+=cut
+
+has 'max_depth' => (
+	is  => 'rw',
+	isa => 'Maybe[Int]',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -179,6 +207,8 @@ sub setup {
 	
 	my $rule = File::Find::Rule->file()->relative();
 	$rule->name( $self->find_file ) if defined $self->find_file;
+	$rule->mindepth( $self->min_depth ) if defined $self->min_depth;
+	$rule->maxdepth( $self->max_depth ) if defined $self->max_depth;
 	$self->add_matches( $rule->in( $self->path ) );
 }
 
