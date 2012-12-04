@@ -8,10 +8,10 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 
   use Data::ETL;
 
-  extract_from 'Excel', folder_name => qr|/Pine/|, file_name => qr/\.xlsx?$/;
+  extract_from 'Excel', find_file => qr/\.xlsx?$/;
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
-  load_into 'Access', path => 'C:\ETL\review.accdb';
+  load_into 'Access', file => 'review.accdb';
   run;
 
 =cut
@@ -107,7 +107,7 @@ sub extract_from {
 
 	$class = "Data::ETL::Extract::$class"
 		unless $class =~ m/^Data::ETL::Extract/;
-	$extract = eval "use $class; $class->new(\%attributes)";
+	$extract = eval "use $class; $class->new( \%attributes )";
 }
 
 
@@ -157,7 +157,7 @@ sub load_into {
 	my %attributes = @_;
 
 	$class = "Data::ETL::Load::$class" unless $class =~ m/^Data::ETL::Load/;
-	$load = eval "use $class; $class->new(\%attributes)";
+	$load = eval "use $class; $class->new( \%attributes )";
 }
 
 
