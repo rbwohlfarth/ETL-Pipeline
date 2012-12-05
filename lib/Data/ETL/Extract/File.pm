@@ -52,12 +52,9 @@ L</path> attribute. If you set L</path>, B<Data::ETL::Extract::File> ignores
 the search attributes.
 
 Option 2 is useful when you drop the files in the same location, but the exact
-file or folder name changes. B<Data::ETL::Extract::File> searches the file 
-system looking for the first file that matches a regular expression.
-
-B<Data::ETL::Extract::File> implements the L<Data::ETL::Extract::InFolder> 
-role. You may use the search attributes from B<Data::ETL::Extract::File> to
-dynamically find the folder with your data file.
+file or folder name changes. B<Data::ETL::Extract::File> searches 
+L<Data::ETL/WorkingFolder> for the first file that matches the regular 
+expression in the L</find_file> attribute.
 
 =cut
 
@@ -68,7 +65,7 @@ before 'setup' => sub {
 		my $search = File::Find::Rule->new;
 		$search->file;
 		$search->name( $self->find_file ) if defined $self->find_file;
-		$self->path( shift [$search->in( $self->root_folder )] );
+		$self->path( shift [$search->in( $Data::ETL::WorkingFolder )] );
 	}
 
 	die "Could not find a matching file" unless defined $self->path;
@@ -109,14 +106,7 @@ has 'find_file' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::InFolder>
-
-=cut
-
-# This must come AFTER the "before setup" in this module. That way it runs 
-# first and sets the root folder.
-with 'Data::ETL::Extract::InFolder';
-
+L<Data::ETL>, L<Data::ETL::Extract>
 
 =head1 AUTHOR
 

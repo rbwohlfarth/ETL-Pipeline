@@ -7,7 +7,8 @@ Data::ETL::Extract::Excel - Input source for Microsoft Excel spreadsheets
 =head1 SYNOPSIS
 
   use ETL;
-  extract_from 'Excel', root => 'C:\Data', file_name => qr/\.xls(x|m)?$/;
+  working_folder 'C:\Data';
+  extract_from 'Excel', find_file => qr/\.xls(x|m)?$/;
   transform A => ExternalID, Name => PatientName;
   load_into 'Access';
   run;

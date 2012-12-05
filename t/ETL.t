@@ -3,15 +3,16 @@ use Test::More;
 BEGIN { use_ok( 'Data::ETL' ); }
 require_ok( 'Data::ETL' );
 
-ok( defined &extract_from, 'extract_from command exported' );
-ok( defined &transform_as, 'transform_as command exported'  );
-ok( defined &set         , 'set command exported'           );
-ok( defined &load_into   , 'load_into command exported'     );
-ok( defined &run         , 'run command exported'           );
+ok( defined &extract_from  , 'extract_from command exported'   );
+ok( defined &transform_as  , 'transform_as command exported'   );
+ok( defined &set           , 'set command exported'            );
+ok( defined &load_into     , 'load_into command exported'      );
+ok( defined &run           , 'run command exported'            );
+ok( defined &working_folder, 'working_folder command exported' );
 
 use Data::ETL::Load::UnitTest;
 subtest 'Sample ETL script' => sub {
-	extract_from 'DelimitedText', path => 't/DelimitedText.txt', root_folder => 't';
+	extract_from 'DelimitedText', path => 't/DelimitedText.txt';
 	set constant => 'String literal';
 	transform_as un => 0, deux => 1, trois => 2;
 	load_into 'UnitTest';
@@ -43,6 +44,17 @@ subtest '"run" command clears the settings' => sub {
 	is( scalar( keys %ETL::mapping   ), 0    , 'Cleared ETL::mapping'   );
 	is( $ETL::extract                 , undef, 'Cleared ETL::extract'   );
 	is( $ETL::load                    , undef, 'Cleared ETL::load'      );
+};
+
+subtest '"working_folder" command' => sub {
+	working_folder 't';
+	is( $Data::ETL::WorkingFolder, 't', 'Fixed root' );
+
+	working_folder search_in => 't', find_folder => qr|^FileListing$|i;
+	is( $Data::ETL::WorkingFolder, 't/FileListing', 'Search for a subfolder' );
+
+	working_folder find_folder => qr|^t$|i;
+	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );
 };
 
 done_testing();

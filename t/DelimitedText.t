@@ -4,8 +4,7 @@ BEGIN { use_ok( 'Data::ETL::Extract::DelimitedText' ); }
 require_ok( 'Data::ETL::Extract::DelimitedText' );
 
 my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
-	path        => 't/DelimitedText.txt',
-	root_folder => 't',
+	path => 't/DelimitedText.txt',
 ] );
 $file->setup;
 

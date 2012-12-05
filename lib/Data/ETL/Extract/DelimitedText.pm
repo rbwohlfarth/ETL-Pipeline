@@ -7,7 +7,8 @@ Data::ETL::Extract::DelimitedText - Input source for CSV files
 =head1 SYNOPSIS
 
   use ETL;
-  extract_from 'DelimitedText', root => 'C:\Data', file_name => qr/\.csv$/;
+  working_folder 'C:\Data';
+  extract_from 'DelimitedText', find_file => qr/\.csv$/;
   transform 1 => ExternalID, Name => PatientName;
   load_into 'Access';
   run;

@@ -1,4 +1,7 @@
+use Data::ETL;
 use Test::More;
+
+working_folder 't';
 
 BEGIN { use_ok( 'Data::ETL::Extract::FileListing' ); }
 require_ok( 'Data::ETL::Extract::FileListing' );
@@ -7,7 +10,6 @@ subtest 'Dynamic folder search' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
 		files_in    => qr/FileListing/,
 		find_file   => qr/Test\s\d\.txt$/,
-		root_folder => 't'
 	] );
 	$file->setup;
 
@@ -34,8 +36,7 @@ subtest 'Dynamic folder search' => sub {
 
 subtest 'Hard coded search path' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
-		path        => 't/FileListing',
-		root_folder => 't',
+		path => 't/FileListing',
 	] );
 	$file->setup;
 	subtest 'First match' => sub {
@@ -56,10 +57,9 @@ subtest 'Hard coded search path' => sub {
 
 subtest 'Depth controls' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
-		max_depth   => 2,
-		min_depth   => 2,
-		path        => 't',
-		root_folder => 't',
+		max_depth => 2,
+		min_depth => 2,
+		path      => 't',
 	] );
 	$file->setup;
 	subtest 'First match' => sub {

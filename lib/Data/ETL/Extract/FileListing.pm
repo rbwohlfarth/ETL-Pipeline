@@ -7,8 +7,8 @@ Data::ETL::Extract::FileListing - Process a list of files as an input source
 =head1 SYNOPSIS
 
   use ETL;
-  extract_from 'FileListing', find_file => qr/\.pdf/i, search_in => 'C:\Data', 
-    find_folder => qr/Client_/, files_in => qr/files/;
+  working_folder search_in => 'C:\Data', find_folder => qr/Client_/;
+  extract_from 'FileListing', find_file => qr/\.pdf/i, files_in => qr/files/;
   transform FileName => 'File', FullPath => 'Path';
   load_into 'Access';
   run;
@@ -198,9 +198,9 @@ sub setup {
 			$self->path( shift [File::Find::Rule
 				->directory()
 				->name( $self->files_in )
-				->in( $self->root_folder )
+				->in( $Data::ETL::WorkingFolder )
 			] );
-		} else { $self->path( $self->root_folder ); }
+		} else { $self->path( $Data::ETL::WorkingFolder ); }
 	}
 
 	die "Could not find a matching folder" unless defined $self->path;
@@ -249,12 +249,10 @@ has 'matches' => (
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::InFolder>,
-L<Data::ETL::Extract::AsHash>
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>
 
 =cut
 
-with 'Data::ETL::Extract::InFolder';
 with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract';
 

@@ -1,11 +1,10 @@
-use Test::More;
 use Data::ETL::Extract::DelimitedText;
+use Test::More;
 
 subtest 'Without header row' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_header_row => 0,
 		path           => 't/DelimitedText.txt',
-		root_folder    => 't',
 	] );
 	$file->setup;
 
@@ -31,7 +30,6 @@ subtest 'With header row' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_header_row => 1,
 		path           => 't/DelimitedText.txt',
-		root_folder    => 't',
 	] );
 	$file->setup;
 

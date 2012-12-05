@@ -5,7 +5,7 @@ require_ok( 'Data::ETL' );
 
 use Data::ETL::Load::UnitTest;
 
-extract_from 'DelimitedText', path => 't/DelimitedText.txt', root_folder => 't';
+extract_from 'DelimitedText', path => 't/DelimitedText.txt';
 set constant => sub { 'String literal' };
 transform_as un => sub { $_->get( 0 ) };
 load_into 'UnitTest';

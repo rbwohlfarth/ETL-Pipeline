@@ -8,6 +8,7 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 
   use Data::ETL;
 
+  working_folder search_in => 'C:\Data', find_folder => qr/Pine/;
   extract_from 'Excel', find_file => qr/\.xlsx?$/;
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
@@ -20,9 +21,10 @@ package Data::ETL;
 
 use 5.14.0;
 use Exporter qw/import/;
+use String::Util qw/hascontent/;
 
 
-our @EXPORT  = qw/extract_from transform_as set load_into run/;
+our @EXPORT  = qw/extract_from transform_as set load_into run working_folder/;
 our $VERSION = '1.00';
 
 
@@ -264,10 +266,95 @@ sub run {
 }
 
 
-#----------------------------------------------------------------------
-# Internal functions...
+=head3 working_folder
 
-# Executes a code reference, passing an object as "$_".
+Sets a working folder where the ETL script stores all of its files. The
+L<Data::ETL::Extract> classes find their input files under this folder. And
+the L<Data::ETL::Load> classes put any files into this folder.
+
+I originally had each input source and data destination search for its own
+folder. It was possible that two parts of the same ETL script would use 
+different folders. This command prevents that from ever happening.
+
+B<working_folder> supports two ways of identifying the directory. In the first
+way, you pass a single parameter - the path name of the working directory. 
+Nothing special happens.
+
+In the second way, you pass a hash of search criteria. B<working_folder> 
+looks through the file system for the first folder that matches the criteria.
+B<working_folder> accepts these criteria...
+
+=over
+
+=item search_in
+
+When searching, only look inside this folder. The code does not search 
+subdirectories. Data directories can be quite large. And a fully recursive 
+search could take a very long time.
+
+=item find_folder
+
+The search looks for a folder underneath I<search_in> whose name matches this 
+regular expression. 
+
+=back
+
+Developers: this command sets the L</WorkingFolder> variable.
+
+=cut
+
+sub working_folder {
+	if (scalar( @_ ) < 2) {
+		$Data::ETL::WorkingFolder = shift;
+	} else {
+		my %criteria = @_;
+		
+		# A blank causes errors in File::Find::Rule.
+		$criteria{search_in} = '.' unless hascontent( $criteria{search_in} );
+		
+		if (defined $criteria{find_folder}) {
+			$Data::ETL::WorkingFolder = shift [
+				File::Find::Rule
+				->directory
+				->maxdepth( 1 )
+				->name( $criteria{find_folder} )
+				->in( $criteria{search_in} )
+			];
+		} else { $Data::ETL::WorkingFolder = $criteria{search_in}; }
+	}
+
+	die "Could not find a working folder" 
+		unless defined $Data::ETL::WorkingFolder;
+}
+
+
+=head1 INTERNAL USE
+
+These variables and subroutines may be used by L<Data::ETL::Extract> and
+L<Data::ETL::Load> classes. An ETL script should never access these. I 
+documented them for other developers creating L<Data::ETL::Extract> and 
+L<Data::ETL::Load>.
+
+=head3 WorkingFolder
+
+This scalar variable contains the path set by the L</working_folder> command.
+Your L<Data::ETL::Extract> and L<Data::ETL::Load> classes will find their data
+files in this directory.
+
+The default value is the current directory.
+
+=cut
+
+my $WorkingFolder = '.';
+
+
+=head3 _code
+
+This subroutine executes a code reference, passing an object as C<$_>. It is
+called by the L</transform_as> code. 
+
+=cut
+
 sub _code {
 	my ($code, $object) = @_;
 	local $_;
