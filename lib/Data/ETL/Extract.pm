@@ -101,9 +101,9 @@ has 'stop_when' => (
 
 Loads the next record from the input source into the L</record> hash. This
 method is automatically called by L<Data::ETL/run>. It takes one optional
-parameter: a boolean flag. If B<true>, then this is being called from 
-L</setup> to skip over rows. If B<false> or C<undef>, then B<next_record> was
-called by L<Data::ETL/run>.
+parameter: a boolean flag. A B<true> value says to load exactly one record,
+regardless of any logic. The code is skipping these records and requires an
+exact count. B<False> says to load the record normally.
 
 The function returns the number of records processed. It is conceivable that
 a format skips empty records. Count those in the return value. A value of one

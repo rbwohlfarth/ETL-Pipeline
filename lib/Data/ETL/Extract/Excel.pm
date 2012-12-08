@@ -28,6 +28,10 @@ would not normally use it directly.
 
 =cut
 
+use 5.14.0;
+use strict;
+use warnings;
+
 package Data::ETL::Extract::Excel;
 use Moose;
 
@@ -73,7 +77,7 @@ loaded. A B<0> means that we reached the end of the data.
 =cut
 
 sub next_record {
-	my ($self, $skip) = @_;
+	my ($self, $return_blank) = @_;
 
 	my $count = 0;
 	my $empty = 1;
@@ -94,6 +98,10 @@ sub next_record {
 		
 		$count++;
 		$row++;
+		
+		# When skipping over rows, the calling code expects that we loaded 
+		# exactly one record, even if it's blank.
+		$empty = 0 if $return_blank;
 	}
 
 	# Ignore blank rows on the end.

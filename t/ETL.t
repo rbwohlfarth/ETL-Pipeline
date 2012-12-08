@@ -12,6 +12,7 @@ ok( defined &working_folder, 'working_folder command exported' );
 
 use Data::ETL::Load::UnitTest;
 subtest 'Sample ETL script' => sub {
+	working_folder 't';
 	extract_from 'DelimitedText', path => 't/DelimitedText.txt';
 	set constant => 'String literal';
 	transform_as un => 0, deux => 1, trois => 2;

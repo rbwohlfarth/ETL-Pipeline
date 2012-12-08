@@ -220,11 +220,14 @@ script onto the end of the first.
 sub run {
 	# Make sure everything is configured correctly. Rather than crashing, I
 	# want to give the developer a more informative error message.
-	die 'Please add an "extract_using" command to your script'
+	die 'Could not find the data folder in "working_folder"' 
+		unless defined $Data::ETL::WorkingFolder;
+		
+	die 'Please add an "extract_from" command to your script'
 		unless defined $extract;
 	die 'Please add a "load_into" command to your script'
 		unless defined $load;
-	die 'Please add a "transform" command to your script'
+	die 'Please add a "transform_as" command to your script'
 		unless scalar %mapping;
 
 	die ref( $extract ) . ' does not implement the Data::ETL::Extract role'
@@ -323,9 +326,6 @@ sub working_folder {
 			];
 		} else { $Data::ETL::WorkingFolder = $criteria{search_in}; }
 	}
-
-	die "Could not find a working folder" 
-		unless defined $Data::ETL::WorkingFolder;
 }
 
 

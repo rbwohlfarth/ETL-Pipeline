@@ -90,7 +90,7 @@ C<next_record> uses the field number as the name. Field numbers start at B<0>.
 =cut
 
 sub next_record {
-	my ($self) = @_;
+	my ($self, $max_records) = @_;
 
 	my $fields = $self->csv->getline( $self->file );
 	if (defined $fields) {

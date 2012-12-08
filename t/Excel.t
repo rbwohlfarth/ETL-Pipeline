@@ -104,4 +104,19 @@ subtest 'Skip blank rows' => sub {
 	$file->finished;
 };
 
+subtest 'Skip page header ending with blank rows' => sub {
+	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+		has_header_row => 0,
+		path           => 't/Excel2007-Skip.xlsx',
+		skip           => 2,
+	] );
+	$file->setup;
+
+	ok( $file->next_record, 'Record loaded' );
+	ok( defined $file->record, 'Record has data' );
+	is( $file->get( 'A' ), 'Header1', 'First data row' );
+
+	$file->finished;
+};
+
 done_testing();
