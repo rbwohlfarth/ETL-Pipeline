@@ -173,12 +173,19 @@ number of records loaded.
 The role automatically increments this value after every call to
 L</next_record>.
 
+=head3 add_records
+
+This method increments L</record_number> by the given number. It accepts an
+integer as its only parameters.
+
 =cut
 
 has 'record_number' => (
 	default => '0',
+	handles => {add_records => 'add'},
 	is      => 'rw',
 	isa     => 'Int',
+	traits  => [qw/Number/],
 );
 
 around 'next_record' => sub {
@@ -188,25 +195,9 @@ around 'next_record' => sub {
 	# 0 = stop processing this file.
 	$count = 0 if $self->stop_when->( $self );
 	
-	$self->record_number_add( $count );
+	$self->add_records( $count );
 	return $count;
 };
-
-
-=head3 record_number_add
-
-Add a number to the current record number. I do this often enough to warrant
-this convenience method. The code only checks that the result is an integer
-greater than zero.
-
-=cut
-
-sub record_number_add {
-	my ($self, $amount) = @_;
-	$self->record_number( $self->record_number + $amount );
-	$self->record_number( 0 ) if $self->record_number < 0;
-	return $self->record_number;
-}
 
 
 =head1 SEE ALSO
