@@ -256,7 +256,7 @@ sub run {
 
 		$load->write_record( $extract->record_number );
 		say( 'Finsihed record #', $extract->record_number ) 
-			if $extract->record_number % 20;
+			unless $extract->record_number % 20;
 	}
 
 	$extract->finished;
