@@ -239,6 +239,7 @@ sub run {
 	$extract->setup;
 	$load->setup( $extract );
 
+	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
 		while (my ($field, $value) = each %constants) {
 			$value = _code( $value, $load ) if ref( $value ) eq 'CODE';
@@ -254,6 +255,8 @@ sub run {
 		}
 
 		$load->write_record( $extract->record_number );
+		say( 'Finsihed record #', $extract->record_number ) 
+			if $extract->record_number % 20;
 	}
 
 	$extract->finished;
