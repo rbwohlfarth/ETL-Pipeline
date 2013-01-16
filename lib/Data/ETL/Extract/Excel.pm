@@ -39,6 +39,7 @@ with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract::File';
 with 'Data::ETL::Extract';
 
+use List::Util qw/first/;
 use Spreadsheet::ParseExcel;
 use Spreadsheet::XLSX;
 use String::Util qw/hascontent/;
@@ -66,6 +67,26 @@ data.
 has '+has_header_row' => (default => 1);
 
 
+=head3 worksheet
+
+Extract data from this specific worksheet. When set to a string, L<Data::ETL>
+pulls data from a worksheet with this exact name. L<Data::ETL> dies with an
+error if it cannot find the worksheet.
+
+When set to a regular expression reference, L<Data::ETL> finds the first 
+worksheet that matches. Regular expressions let you adjust for variations from
+file to file. L<Data::ETL> dies with an error if no sheets match.
+
+By default, L<Data::ETL> takes data from the first worksheet in the file.
+
+=cut
+
+has 'worksheet' => (
+	is  => 'rw',
+	isa => 'Maybe[RegexpRef|Str]',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -82,13 +103,13 @@ sub next_record {
 	my $count = 0;
 	my $empty = 1;
 	my $row = $self->record_number;
-	my $last_row = $self->worksheet->{'MaxRow'};
+	my $last_row = $self->tab->{'MaxRow'};
 
 	# Skip blank rows, but don't loop forever.
 	while ($row <= $last_row and $empty) {
 		my %record;
 		foreach my $column (@{$self->columns}) {
-			my $cell  = $self->worksheet->{Cells}[$row][$column];
+			my $cell  = $self->tab->{Cells}[$row][$column];
 			my $value = defined( $cell ) ? $cell->value : '';
 
 			$record{$column} = $value;
@@ -141,26 +162,26 @@ sub setup {
 	# Create the correct worksheet objects based on the file format.
 	my $path = $self->path;
 	if ($path =~ m/\.xls$/i) {
-		my $excel    = Spreadsheet::ParseExcel->new;
+		my $excel = Spreadsheet::ParseExcel->new;
 		my $workbook = $excel->parse( $path );
 		die( "Unable to open the Excel file $path" ) unless defined $workbook;
-		$self->worksheet( $workbook->worksheet( 0 ) );
+		$self->find_worksheet( $workbook );
 	} else {
-		my $excel = Spreadsheet::XLSX->new( $path );
-		$self->worksheet( shift @{$excel->{Worksheet}} );
-		die( "Unable to open the Excel file $path: " . $excel->error )
-			unless defined $self->worksheet;
+		my $workbook = Spreadsheet::XLSX->new( $path );
+		die( "Unable to open the Excel file $path: " . $workbook->error )
+			unless defined $workbook;
+		$self->find_worksheet( $workbook );
 	}
 
 	# Convert the column numbers into their letter designations.
-	my $first_column = $self->worksheet->{'MinCol'};
-	my $last_column  = $self->worksheet->{'MaxCol'};
+	my $first_column = $self->tab->{'MinCol'};
+	my $last_column  = $self->tab->{'MaxCol'};
 	
 	$self->columns( [$first_column .. $last_column] );
 	$self->alias->{$self->letter_for( $_ )} = $_ foreach (@{$self->columns});
 
 	# Start on the first row as defined by the spread sheet.
-	$self->record_number( $self->worksheet->{'MinRow'} );
+	$self->record_number( $self->tab->{'MinRow'} );
 }
 
 
@@ -221,7 +242,7 @@ has 'columns' => (
 );
 
 
-=head3 worksheet
+=head3 tab
 
 This attribute holds the current worksheet object. The Excel parsers return an
 object for the tab with our data. I hold the object here so that I can use it
@@ -229,10 +250,37 @@ to grab the data.
 
 =cut
 
-has 'worksheet' => (
+has 'tab' => (
 	is  => 'rw',
-	isa => 'Object',
+	isa => 'Spreadsheet::ParseExcel::Worksheet',
 );
+
+
+=head3 find_worksheet
+
+This method sets the L</tab> attribute based on the L</worksheet> attribute.
+It has the logic for searching the tabs until one of them matches the name
+specified in L</worksheet>.
+
+The method dies with an error if it cannot find a matching tab.
+
+=cut
+
+sub find_worksheet {
+	my ($self, $workbook) = @_;
+	
+	my $name = $self->worksheet;
+	if (hascontent( $name )) {
+		if (ref( $name ) eq 'Regexp') {
+			$self->tab( first { $_->get_name() =~ m/$name/ } 
+				$workbook->worksheets() );
+		} else { $self->tab( $workbook->worksheet( $name ) ); }
+		die "No tabs match '$name'" unless defined $self->tab;
+	} else {
+		$self->tab( $workbook->worksheet( 0 ) );
+		die 'This file has no tabs' unless defined $self->tab;
+	}
+}
 
 
 =head1 SEE ALSO

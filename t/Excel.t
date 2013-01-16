@@ -119,4 +119,70 @@ subtest 'Skip page header ending with blank rows' => sub {
 	$file->finished;
 };
 
+subtest 'Load a specific worksheet' => sub {
+	subtest 'Exact worksheet name' => sub {
+		subtest 'XLSX format' => sub {
+			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+				has_header_row => 0,
+				path           => 't/Excel2007.xlsx',
+				worksheet      => 'Sheet2',
+			] );
+			$file->setup;
+			
+			ok( $file->next_record, 'Record loaded' );
+			ok( defined $file->record, 'Record has data' );
+			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
+
+			$file->finished;
+		};
+
+		subtest 'XLS format' => sub {
+			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+				has_header_row => 0,
+				path           => 't/Excel2003.xls',
+				worksheet      => 'Sheet2',
+			] );
+			$file->setup;
+			
+			ok( $file->next_record, 'Record loaded' );
+			ok( defined $file->record, 'Record has data' );
+			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
+
+			$file->finished;
+		};
+	};
+	
+	subtest 'Regular expression worksheet name' => sub {
+		subtest 'XLSX format' => sub {
+			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+				has_header_row => 0,
+				path           => 't/Excel2007.xlsx',
+				worksheet      => qr/t2$/,
+			] );
+			$file->setup;
+			
+			ok( $file->next_record, 'Record loaded' );
+			ok( defined $file->record, 'Record has data' );
+			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
+
+			$file->finished;
+		};
+
+		subtest 'XLS format' => sub {
+			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+				has_header_row => 0,
+				path           => 't/Excel2003.xls',
+				worksheet      => qr/t2$/,
+			] );
+			$file->setup;
+			
+			ok( $file->next_record, 'Record loaded' );
+			ok( defined $file->record, 'Record has data' );
+			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
+
+			$file->finished;
+		};
+	};
+};
+
 done_testing();
