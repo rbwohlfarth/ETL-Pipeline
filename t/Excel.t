@@ -182,6 +182,16 @@ subtest 'Load a specific worksheet' => sub {
 
 			$file->finished;
 		};
+
+		subtest 'No tab found' => sub {
+			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
+				has_header_row => 0,
+				path           => 't/Excel2003.xls',
+				worksheet      => qr/t2$/,
+			] );
+			$file->tab( undef );
+			is( $file->tab, undef, 'Worksheet not defined' );
+		};
 	};
 };
 

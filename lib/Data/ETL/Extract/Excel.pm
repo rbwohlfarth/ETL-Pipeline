@@ -252,7 +252,7 @@ to grab the data.
 
 has 'tab' => (
 	is  => 'rw',
-	isa => 'Spreadsheet::ParseExcel::Worksheet',
+	isa => 'Maybe[Spreadsheet::ParseExcel::Worksheet]',
 );
 
 
