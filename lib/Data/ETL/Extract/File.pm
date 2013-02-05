@@ -68,7 +68,8 @@ before 'setup' => sub {
 		$self->path( shift [$search->in( $Data::ETL::WorkingFolder )] );
 	}
 
-	die "Could not find a matching file" unless defined $self->path;
+	die "'extract_from' could not find a matching file" 
+		unless defined $self->path;
 };
 
 
