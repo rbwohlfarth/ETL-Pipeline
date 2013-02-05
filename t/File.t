@@ -18,4 +18,7 @@ $file->setup;
 is( $file->path, 't/DelimitedText.txt', 'Fixed path' );
 $file->finished;
 
+$file->path( undef );
+pass( 'No file found' );
+
 done_testing;

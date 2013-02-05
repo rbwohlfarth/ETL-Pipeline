@@ -87,7 +87,7 @@ you set this attribute, then no search happens.
 
 has 'path' => (
 	is  => 'rw',
-	isa => 'Str',
+	isa => 'Maybe[Str]',
 );
 
 
