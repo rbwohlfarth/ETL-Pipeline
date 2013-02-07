@@ -13,6 +13,7 @@ requires 'Moose';
 requires 'Moose::Role';
 requires 'Regexp::Common';
 requires 'Spreadsheet::ParseExcel';
+requires 'Spreadsheet::ParseExcel::Utility';
 requires 'Spreadsheet::XLSX';
 requires 'String::Util';
 requires 'Text::CSV';

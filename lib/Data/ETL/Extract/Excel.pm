@@ -41,6 +41,7 @@ with 'Data::ETL::Extract';
 
 use List::Util qw/first/;
 use Spreadsheet::ParseExcel;
+use Spreadsheet::ParseExcel::Utility qw/int2col/;
 use Spreadsheet::XLSX;
 use String::Util qw/hascontent/;
 
@@ -178,7 +179,7 @@ sub setup {
 	my $last_column  = $self->tab->{'MaxCol'};
 	
 	$self->columns( [$first_column .. $last_column] );
-	$self->alias->{$self->letter_for( $_ )} = $_ foreach (@{$self->columns});
+	$self->alias->{int2col( $_ )} = $_ foreach (@{$self->columns});
 
 	# Start on the first row as defined by the spread sheet.
 	$self->record_number( $self->tab->{'MinRow'} );
@@ -198,35 +199,6 @@ sub finished {}
 
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
-
-=head3 letter_for
-
-This little method translates a column number into the letters that you see
-in MS Excel. Computers like numbers. People like letters. This class lets you
-identify columns by their letter designation.
-
-=cut
-
-sub letter_for {
-	my ($self, $column_number) = @_;
-
-	# Just keep adding letters as we cycle through the alphabet.
-	my $name = '';
-	while ($column_number > 25) {
-		my $offset = $column_number % 26;
-		my $letter = chr( ord( 'A' ) + $offset );
-		$name = "$letter$name";
-
-		$column_number = int( $column_number / 26 ) - 1;
-	}
-
-	# Add the last letter based on whatever is left.
-	my $letter = chr( ord( 'A' ) + $column_number );
-	$name = "$letter$name";
-
-	return $name;
-}
-
 
 =head3 columns
 
