@@ -4,7 +4,7 @@
 
 Data::ETL - Extract-Transform-Load pattern for converting data
 
-=SYNOPSIS
+=head1 SYNOPSIS
 
   use Data::ETL;
 
