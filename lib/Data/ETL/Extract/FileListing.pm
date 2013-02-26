@@ -73,9 +73,7 @@ has 'find_file' => (
 =head3 path
 
 The full path name of the directory to list. Setting this attribute bypasses
-the L<Data::ETL::Extract::InFolder/search_in|search_in>, 
-L<Data::ETL::Extract::InFolder/find_folder|find_folder>, and 
-L</files_in> attributes.
+the L<Data::ETL/working_folder>.
 
 =cut
 
