@@ -9,6 +9,7 @@ ok( defined &set           , 'set command exported'            );
 ok( defined &load_into     , 'load_into command exported'      );
 ok( defined &run           , 'run command exported'            );
 ok( defined &working_folder, 'working_folder command exported' );
+ok( defined &skip_if       , 'skip_if command exported'        );
 
 use Data::ETL::Load::UnitTest;
 subtest 'Sample ETL script' => sub {
@@ -19,6 +20,8 @@ subtest 'Sample ETL script' => sub {
 	load_into 'UnitTest';
 	run;
 
+	pass( 'Basic settings are okay' );
+	
 	is( scalar( @Data::ETL::Load::UnitTest::storage ), 3, 'Three records' );
 	subtest 'First record' => sub {
 		my $record = shift @Data::ETL::Load::UnitTest::storage;
@@ -41,10 +44,10 @@ subtest 'Sample ETL script' => sub {
 };
 
 subtest '"run" command clears the settings' => sub {
-	is( scalar( keys %ETL::constants ), 0    , 'Cleared ETL::constants' );
-	is( scalar( keys %ETL::mapping   ), 0    , 'Cleared ETL::mapping'   );
-	is( $ETL::extract                 , undef, 'Cleared ETL::extract'   );
-	is( $ETL::load                    , undef, 'Cleared ETL::load'      );
+	is( scalar( keys %Data::ETL::constants ), 0    , 'Cleared Data::ETL::constants' );
+	is( scalar( keys %Data::ETL::mapping   ), 0    , 'Cleared Data::ETL::mapping'   );
+	is( $Data::ETL::extract                 , undef, 'Cleared Data::ETL::extract'   );
+	is( $Data::ETL::load                    , undef, 'Cleared Data::ETL::load'      );
 };
 
 subtest '"working_folder" command' => sub {
@@ -56,6 +59,11 @@ subtest '"working_folder" command' => sub {
 
 	working_folder find_folder => qr|^t$|i;
 	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );
+};
+
+subtest '"skip_if" command' => sub {
+	skip_if sub { 1 };
+	pass( 'skip_if sets code ref' );
 };
 
 done_testing();
