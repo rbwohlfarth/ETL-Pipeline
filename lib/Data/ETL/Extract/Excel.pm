@@ -88,6 +88,22 @@ has 'worksheet' => (
 );
 
 
+=head3 password
+
+If you work with encrypted spreadsheets, set this attribute. The parser 
+decrypts the Excel file using this password.
+
+B<Warning:> Only the Excel 2003 format (XLS) supports passwords. Encrypted 
+XLSX files will fail.
+
+=cut
+
+has 'password' => (
+	is  => 'rw',
+	isa => 'Maybe[Str]',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 next_record
@@ -163,7 +179,8 @@ sub setup {
 	# Create the correct worksheet objects based on the file format.
 	my $path = $self->path;
 	if ($path =~ m/\.xls$/i) {
-		my $excel = Spreadsheet::ParseExcel->new;
+		my $excel = Spreadsheet::ParseExcel->new( 
+			Password => $self->password );
 		my $workbook = $excel->parse( $path );
 		die( "Unable to open the Excel file $path" ) unless defined $workbook;
 		$self->find_worksheet( $workbook );
