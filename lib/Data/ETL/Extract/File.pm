@@ -92,7 +92,7 @@ has 'path' => (
 );
 
 
-=head3 file_name
+=head3 find_file
 
 This attribute also holds a regular expression. The search finds the first
 file that matches it.
