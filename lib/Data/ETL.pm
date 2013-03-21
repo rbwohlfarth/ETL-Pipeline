@@ -25,7 +25,7 @@ use File::Find::Rule;
 use String::Util qw/hascontent/;
 
 
-our @EXPORT  = qw/extract_from transform_as set load_into run working_folder 
+our @EXPORT  = qw/extract_from transform_as set load_into run working_folder
 	skip_if/;
 our $VERSION = '1.00';
 
@@ -94,11 +94,11 @@ This command configures the input source. The ETL script reads data from this
 source.
 
 The first parameter is the name of the input format. The format is a Perl
-module under the L<Data::ETL::Extract> namespace. C<extract_from> 
+module under the L<Data::ETL::Extract> namespace. C<extract_from>
 automatically adds the B<Data::ETL::Extract> to the start of the class name.
 
 After the format class, you may pass in a hash of attributes for the format
-class. C<extract_from> passes the rest of the parameters directly to the input 
+class. C<extract_from> passes the rest of the parameters directly to the input
 source class.
 
 =cut
@@ -118,17 +118,36 @@ sub extract_from {
 =head3 transform_as
 
 This command configures the transformation process. It copies data from input
-fields to a corresponding output field. 
+fields to a corresponding output field.
 
-This method accepts a hash as its only parameter. The keys are output field
-names. The values are input field names or code references. For field names, 
-L</run> simply copies the data from the input field to the output field.
+This method accepts a hash as its only parameter. The keys are I<output> field
+names. The module that you name in L</load_into> defines the available fields.
+Please see that module's documentation for a list of valid output fields.
 
-With a code reference, L</run> executes the code and stores the return value
-as the output field. L</run> sets C<$_> to the current L<Data::ETL::Extract> 
-object. You can access the raw data using L<Data::ETL::Extract/get>, like this:
+The hash values name the I<input> field. B<transform_as> accepts the following
+types as input field names...
+
+=over
+
+=item Code reference
+
+L</run> executes the code and stores the return value as the output field.
+L</run> sets C<$_> to the current L<Data::ETL::Extract> object. You can access
+the raw data using L<Data::ETL::Extract/get>, like this:
 
   transform_as Name => sub { $_->get( 'A' ) // $_->get( 'B' ) };
+
+B<Note:> L</run> also passes C<$_> as the first and only  parameter. The code
+reference can obtain the L<Data::ETL::Extract> object from the parameter list
+or C<$_> - whichever suits your style.
+
+=item Everything else
+
+L</run> passes any other value directly into L<Data::ETL::Extract/get>. For
+allowed types, see the documentation of the module you named in
+L</extract_from>.
+
+=back
 
 =cut
 
@@ -145,7 +164,7 @@ sub transform_as {
 This command configures the data destination. Data destinations are Perl
 modules under the L<Data::ETL::Load> namespace.
 
-The first parameter names the data destination class. C<load_into> 
+The first parameter names the data destination class. C<load_into>
 automatically adds the B<Data::ETL::Load> to the beginning of the class name.
 
 After the format class, you may pass in a hash of attributes for the data
@@ -176,7 +195,7 @@ L</transform> value is used. Data from the input source overrides constants.
 
 You can also pass a code reference as the value. In this case, L</run> executes
 the code and stores the return value as the output field. L</run> sets C<$_> to
-the current L<Data::ETL::Load> object. You may find it useful for grabbing 
+the current L<Data::ETL::Load> object. You may find it useful for grabbing
 information out of your database.
 
 =cut
@@ -192,16 +211,16 @@ sub set {
 =head3 skip_if
 
 C<skip_if> takes a code reference and runs it for every record from the input
-source. If the subroutine returns a true value, B<Data::ETL> bypasses that 
-record. A false value loads the record into the data destination. 
+source. If the subroutine returns a true value, B<Data::ETL> bypasses that
+record. A false value loads the record into the data destination.
 
-B<Data::ETL> passes one parameter into the subroutine: the 
+B<Data::ETL> passes one parameter into the subroutine: the
 L<Data::ETL::Extract> object. Use L<Data::ETL::Extract/get> to read individual
 fields.
 
 If you do not set C<skip_if>, B<Data::ETL> processes every record.
 
-I<NOTE:> B<Data::ETL> calls your code after reading the input record and 
+I<NOTE:> B<Data::ETL> calls your code after reading the input record and
 before any L</transform_as> or L</set> commands. All you have is the raw data.
 
 =cut
@@ -210,7 +229,7 @@ my $bypass = sub { 0 };
 
 sub skip_if {
 	$bypass = shift;
-	die 'skip_if takes a code reference as its parameter' 
+	die 'skip_if takes a code reference as its parameter'
 		unless ref( $bypass ) eq 'CODE';
 }
 
@@ -225,14 +244,14 @@ There are rare cases when the input data spans multiple files. B<Data::ETL>
 supports processing multiple files inside one ETL script. For example...
 
   use Data::ETL;
-  
+
   # The first file has demographic details.
   extract_from 'Excel', path => 'C:\Pine\Details.xlsx';
   transform_as Name => 'A', Address => 'B', Birthday => 'C';
   set Client => 1, Type => 'Person';
   load_into 'Access', path => 'C:\ETL\review.accdb';
   run;
-  
+
   # The second file holds the Notes for the details that we loaded above.
   extract_from 'Excel', path => 'C:\Pine\Notes.xlsx';
   transform_as Name => 'A', Text => 'B';
@@ -247,9 +266,9 @@ script onto the end of the first.
 sub run {
 	# Make sure everything is configured correctly. Rather than crashing, I
 	# want to give the developer a more informative error message.
-	die 'Could not find the data folder in "working_folder"' 
+	die 'Could not find the data folder in "working_folder"'
 		unless defined $Data::ETL::WorkingFolder;
-		
+
 	die 'Please add an "extract_from" command to your script'
 		unless defined $extract;
 	die 'Please add a "load_into" command to your script'
@@ -269,7 +288,7 @@ sub run {
 	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
 		next if $bypass->( $extract );
-		
+
 		while (my ($field, $value) = each %constants) {
 			$value = _code( $value, $load ) if ref( $value ) eq 'CODE';
 			$load->set( $field, $value );
@@ -285,13 +304,13 @@ sub run {
 
 		$load->write_record( $extract->record_number );
 	} continue {
-		say( 'Finsihed record #', $extract->record_number ) 
+		say( 'Finsihed record #', $extract->record_number )
 			unless $extract->record_number % 20;
 	}
 
 	$extract->finished;
 	$load->finished;
-	
+
 	# Automatically clear out the settings. This leaves the ETL script in a
 	# known state. Otherwise, you would have to know the inner workings of the
 	# objects to determine the state. This way, you always know that you must
@@ -310,14 +329,14 @@ L<Data::ETL::Extract> classes find their input files under this folder. And
 the L<Data::ETL::Load> classes put any files into this folder.
 
 I originally had each input source and data destination search for its own
-folder. It was possible that two parts of the same ETL script would use 
+folder. It was possible that two parts of the same ETL script would use
 different folders. This command prevents that from ever happening.
 
 B<working_folder> supports two ways of identifying the directory. In the first
-way, you pass a single parameter - the path name of the working directory. 
+way, you pass a single parameter - the path name of the working directory.
 Nothing special happens.
 
-In the second way, you pass a hash of search criteria. B<working_folder> 
+In the second way, you pass a hash of search criteria. B<working_folder>
 looks through the file system for the first folder that matches the criteria.
 B<working_folder> accepts these criteria...
 
@@ -325,14 +344,14 @@ B<working_folder> accepts these criteria...
 
 =item search_in
 
-When searching, only look inside this folder. The code does not search 
-subdirectories. Data directories can be quite large. And a fully recursive 
+When searching, only look inside this folder. The code does not search
+subdirectories. Data directories can be quite large. And a fully recursive
 search could take a very long time.
 
 =item find_folder
 
-The search looks for a folder underneath I<search_in> whose name matches this 
-regular expression. 
+The search looks for a folder underneath I<search_in> whose name matches this
+regular expression.
 
 =back
 
@@ -345,10 +364,10 @@ sub working_folder {
 		$Data::ETL::WorkingFolder = shift;
 	} else {
 		my %criteria = @_;
-		
+
 		# A blank causes errors in File::Find::Rule.
 		$criteria{search_in} = '.' unless hascontent( $criteria{search_in} );
-		
+
 		if (defined $criteria{find_folder}) {
 			$Data::ETL::WorkingFolder = shift [
 				File::Find::Rule
@@ -365,8 +384,8 @@ sub working_folder {
 =head1 INTERNAL USE
 
 These variables and subroutines may be used by L<Data::ETL::Extract> and
-L<Data::ETL::Load> classes. An ETL script should never access these. I 
-documented them for other developers creating L<Data::ETL::Extract> and 
+L<Data::ETL::Load> classes. An ETL script should never access these. I
+documented them for other developers creating L<Data::ETL::Extract> and
 L<Data::ETL::Load>.
 
 =head3 WorkingFolder
@@ -384,8 +403,10 @@ my $WorkingFolder = '.';
 
 =head3 _code
 
-This subroutine executes a code reference, passing an object as C<$_>. It is
-called by the L</transform_as> code. 
+This subroutine executes a code reference. It is called by the
+L</transform_as> code.
+
+B<_code> passes an object as C<$_>.
 
 =cut
 
@@ -393,7 +414,7 @@ sub _code {
 	my ($code, $object) = @_;
 	local $_;
 	$_ = $object;
-	$code->();
+	$code->( $object );
 }
 
 
