@@ -83,4 +83,14 @@ subtest 'Skip report headers' => sub {
 	ok( $file->_cached, 'First data row cached' );
 };
 
+subtest 'Variable length report headers' => sub {
+	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+		path                => 't/DelimitedText.txt',
+		report_header_until => sub { $_->get( 0 ) eq 'Field6' },
+	] );
+	$file->setup;
+	is( $file->record_number, 3, 'Skipped two rows' );
+	ok( $file->_cached, 'First data row cached' );
+};
+
 done_testing;

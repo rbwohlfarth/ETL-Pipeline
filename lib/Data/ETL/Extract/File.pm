@@ -180,6 +180,8 @@ after 'setup' => sub {
 	# Ignore report headers. Always end with the column names in memory.
 	my $headers = $self->report_header_until;
 	if (ref( $headers ) eq 'CODE') {
+		local $_;
+		$_ = $self;
 		do { $self->next_record( 1 ); } until $headers->( $self );
 	} else {
 		$self->next_record( 1 ) foreach (1 .. $headers);
