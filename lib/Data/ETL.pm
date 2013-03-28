@@ -25,8 +25,7 @@ use File::Find::Rule;
 use String::Util qw/hascontent/;
 
 
-our @EXPORT  = qw/extract_from transform_as set load_into run working_folder
-	skip_if/;
+our @EXPORT  = qw/extract_from transform_as set load_into run working_folder/;
 our $VERSION = '1.00';
 
 
@@ -208,32 +207,6 @@ sub set {
 }
 
 
-=head3 skip_if
-
-C<skip_if> takes a code reference and runs it for every record from the input
-source. If the subroutine returns a true value, B<Data::ETL> bypasses that
-record. A false value loads the record into the data destination.
-
-B<Data::ETL> passes one parameter into the subroutine: the
-L<Data::ETL::Extract> object. Use L<Data::ETL::Extract/get> to read individual
-fields.
-
-If you do not set C<skip_if>, B<Data::ETL> processes every record.
-
-I<NOTE:> B<Data::ETL> calls your code after reading the input record and
-before any L</transform_as> or L</set> commands. All you have is the raw data.
-
-=cut
-
-my $bypass = sub { 0 };
-
-sub skip_if {
-	$bypass = shift;
-	die 'skip_if takes a code reference as its parameter'
-		unless ref( $bypass ) eq 'CODE';
-}
-
-
 =head3 run
 
 This command kicks off the entire data conversion process. It takes no
@@ -287,7 +260,7 @@ sub run {
 
 	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
-		next if $bypass->( $extract );
+		next if _code( $extract->bypass_if, $extract );
 
 		while (my ($field, $value) = each %constants) {
 			$value = _code( $value, $load ) if ref( $value ) eq 'CODE';
@@ -414,7 +387,7 @@ sub _code {
 	my ($code, $object) = @_;
 	local $_;
 	$_ = $object;
-	$code->( $object );
+	return $code->( $object );
 }
 
 

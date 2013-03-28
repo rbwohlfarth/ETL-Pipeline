@@ -8,8 +8,8 @@ require_ok( 'Data::ETL::Extract::FileListing' );
 
 subtest 'Dynamic folder search' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
-		files_in    => qr/FileListing/,
-		find_file   => qr/Test\s\d\.txt$/,
+		files_in  => qr/FileListing/,
+		find_file => qr/Test\s\d\.txt$/,
 	] );
 	$file->setup;
 

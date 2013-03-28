@@ -35,6 +35,10 @@ would not normally use it directly.
 package Data::ETL::Extract::DelimitedText;
 use Moose;
 
+use strict;
+use warnings;
+
+use 5.014;
 use Text::CSV;
 
 
@@ -45,36 +49,25 @@ our $VERSION = '1.00';
 
 =head2 Set with the L<Data::ETL/extract_from> command
 
-See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list 
+See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list
 of attributes.
 
-=head3 speerator
-
-The single character that seperates fields. L<Text::CSV> only supports a single
-character. It defaults to a comma.
+In addition, B<Data::ETL::Extract::DelimitedText> makes available all of the
+options for L<Text::CSV>. See L<Text::CSV> for a list.
 
 =cut
 
-has 'seperator' => (
-	default => ',',
-	is      => 'ro',
-	isa     => 'Str',
-);
+sub BUILD {
+	my $self= shift;
+	my $arguments = shift;
 
+	my %options;
+	while (my ($key, $value) = each %$arguments) {
+		$options{$key} = $value unless $self->meta->has_attribute( $key );
+	}
 
-=head3 whitespace
-
-A boolean flag indicating if L<Text::CSV> removes extra whitespace. A I<true>
-value trims extra whitespace around the comma. The default value is I<true>. 
-You really should change it only if it causes a problem.
-
-=cut
-
-has 'whitespace' => (
-	default => 1,
-	is      => 'ro',
-	isa     => 'Bool',
-);
+	$self->csv( Text::CSV->new( \%options ) );
+}
 
 
 =head2 Automatically called from L<Data::ETL/run>
@@ -107,7 +100,7 @@ sub next_record {
 This method configures the input source. In this object, that means opening
 the file and looking for a header record. If the file has a header row, then
 I name the fields based on the header row. You can identify data by the
-field name or by the column name. See L<Data::ETL::Extract::AsHash/headers> 
+field name or by the column name. See L<Data::ETL::Extract::AsHash/headers>
 for more information.
 
 =cut
@@ -145,25 +138,15 @@ them for the module maintainers.
 The L<Text::CSV> object for doing the actual parsing work. Using the module
 lets me build on the bug fixes and hard learned lessons of others.
 
-This object handles a comma between fields, handles quoted fields, and trims 
-whitespace.
+You can set the options in the L<Data::ETL/extract_from> command. The
+constructor passes them through when it creates this object.
 
 =cut
 
 has 'csv' => (
-	builder => '_build_csv',
-	is      => 'ro',
-	isa     => 'Text::CSV',
-	lazy    => 1,
+	is  => 'rw',
+	isa => 'Text::CSV',
 );
-
-sub _build_csv {
-	my $self = shift;
-	Text::CSV->new( {
-		allow_whitespace => $self->whitespace,
-		sep_char         => $self->seperator,
-	} );
-}
 
 
 =head3 file
@@ -187,7 +170,6 @@ L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
 
 with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract::File';
-with 'Data::ETL::Extract';
 
 
 =head1 AUTHOR

@@ -48,51 +48,114 @@ our $VERSION = '1.00';
 
 =head2 Set with the L<Data::ETL/extract_from> command
 
-=head3 skip
+=head3 bypass_if
 
-The number of rows to skip before the headers or data. Some reporting software
-adds page headers. This setting jumps over those rows.
+Sometimes you just get bad data. This code reference checks for those times
+and skips moves on to the next record.
 
-The attribute defaults to zero (do not skip rows). If your column headers
-are in the first row, then you want this set to zero.
+If the code returns B<true>, then L<Data::ETL/run> ignores this record and
+moves to the next one. This keeps the record count synchronized with the
+input source.
 
-L</setup> automatically skips over these rows after it opens the file. Any
-C<after> method modifiers are pointing at the first row.
+If the code returns B<false>, then L<Data::ETL/run> processes the record
+normally.
+
+B<Data::ETL/run> passes in a reference to the L<Data::ETL::Extract> object
+two ways...
+
+=over
+
+=item 1. As the one and only parameter to your code.
+
+=item 2. As C<$_>.
+
+=back
+
+By default, the L<Data::ETL/run> processes B<all> records in the file.
+
+I<Note:> The bypass does not work on any headers parsed during setup.
+L<Data::ETL/run> only executes this code against data records.
 
 =cut
 
-has 'skip' => (
-	default => 0,
+has 'bypass_if' => (
+	default => sub { sub { 0 } },
 	is      => 'rw',
-	isa     => 'Int',
+	isa     => 'CodeRef',
 );
 
-around 'setup' => sub {
-	my ($original, $self, @arguments) = @_;
 
-	$original->( $self, @arguments );
-	$self->next_record( 1 ) foreach (1 .. $self->skip);
-};
+=head3 stop_if
 
-
-=head3 stop_when
-
+Under normal circumstances, the ETL process when you reach the end of the
+input. This code reference lets you break out of the processing loop early.
 The ETL process stops reading records if this subroutine returns a true value.
-Reporting software sometimes puts footer information at the bottom. You can 
+Reporting software sometimes puts footer information at the bottom. You can
 use this subroutine to look for those footers and stop processing the file.
 
-This subroutine receives one parameter - the L<Data::ETL::Extract> object. You
-can access the current record using the L</get> method.
+B<Data::ETL::Extract> passes in a reference to itself two ways...
+
+=over
+
+=item 1. As the one and only parameter to your code.
+
+=item 2. As C<$_>.
+
+=back
 
 By default, the ETL process reads B<all> records in the file.
 
 =cut
 
-has 'stop_when' => (
+has 'stop_if' => (
 	default => sub { sub { 0 } },
 	is      => 'rw',
 	isa     => 'CodeRef',
 );
+
+around 'next_record' => sub {
+	my ($original, $self, @arguments) = @_;
+	my $count = $original->( $self, @arguments );
+
+	# 0 = stop processing this file.
+	local $_;
+	$_ = $self;
+	return ($self->stop_if->( $self ) ? 0 : $count);
+};
+
+
+=head3 debug
+
+B<Data::ETL::Extract> executes this code once for every input record -
+including report headers. Use this for tracking down data issues. The code can
+do anything.
+
+B<Data::ETL::Extract> passes in a reference to itself two ways...
+
+=over
+
+=item 1. As the one and only parameter to your code.
+
+=item 2. As C<$_>.
+
+=back
+
+=cut
+
+has 'debug' => (
+	default => sub { sub {} },
+	is      => 'rw',
+	isa     => 'CodeRef',
+);
+
+after 'next_record' => sub {
+	my $self = shift @_;
+
+	local $_;
+	$_ = $self;
+
+	$self->debug->( $self );
+};
 
 
 =head2 Automatically called from L<Data::ETL/run>
@@ -191,13 +254,21 @@ has 'record_number' => (
 around 'next_record' => sub {
 	my ($original, $self, @arguments) = @_;
 	my $count = $original->( $self, @arguments );
-	
-	# 0 = stop processing this file.
-	$count = 0 if $self->stop_when->( $self );
-	
+
 	$self->add_records( $count );
 	return $count;
 };
+
+
+=head3 set_field_names
+
+This method processes a record with field names. It is called internally, after
+L</setup>. This lets the transform stage use friendly names specific to the
+input source.
+
+=cut
+
+requires 'set_field_names';
 
 
 =head1 SEE ALSO
@@ -210,7 +281,7 @@ Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013  Robert Wohlfarth
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

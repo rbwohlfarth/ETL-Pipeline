@@ -18,8 +18,8 @@ ETL stands for I<Extract>, I<Transform>, I<Load>. The ETL pattern executes
 data conversions or uploads. It moves data from one system to another. The
 ETL family of classes facilitate these data transfers using Perl.
 
-This role provides attributes and methods for storing the input data in a hash 
-structure. This covers 90% of the use cases while allowing 
+This role provides attributes and methods for storing the input data in a hash
+structure. This covers 90% of the use cases while allowing
 L<Data::ETL::Extract> to remain flexible enough for the remaining 10%.
 
 =cut
@@ -37,68 +37,35 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-=head2 Set with the L<Data::ETL/extract_from> command
-
-=head3 has_header_row
-
-Files can include a header row. Some places are good about putting the data in
-the same order. Others move it around every so often. Headers allow you to 
-find the data regardless of the actual order of fields.
-
-A B<true> value means that this file contains a header row. The data begins
-on the first row after the header.
-
-A B<false> value means that the data starts right here in the first record. 
-There are no headers. This is the default.
-
-=cut
-
-has 'has_header_row' => (
-	default => 0,
-	is      => 'rw',
-	isa     => 'Bool',
-);
-
-after 'setup' => sub {
-	my $self = shift;
-
-	if ($self->has_header_row and $self->next_record) {
-		while (my ($field, $text) = each %{$self->record}) {
-			$self->headers->{$text} = $field;
-		}
-	}
-};
-
-
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 get
 
 Return the value of a field from the current record. It accepts a field name
-or regular expression as the only parameter. 
+or regular expression as the only parameter.
 
 If you pass in a field name, the code returns the data from that field. If you
 pass in a regular expression, the code looks for the column whose header text
 matches that expression.
 
-This means that your L<Data::ETL/transform_as> commands can use regular 
-expressions on the right hand side (as input fields). And the file based input 
-source automatically finds the correct data column. You do not have to 
+This means that your L<Data::ETL/transform_as> commands can use regular
+expressions on the right hand side (as input fields). And the file based input
+source automatically finds the correct data column. You do not have to
 manually map the regular expressions with field names.
 
-Why not use the column headers as field names? It's quite likely that the 
-header names change between files. I<My ID> becomes I<MyID>, then I<MyId>, 
+Why not use the column headers as field names? It's quite likely that the
+header names change between files. I<My ID> becomes I<MyID>, then I<MyId>,
 followed next time by I<My Identifier>. Regular expressions provide a robust
 matching language that handles these variants.
 
-L</get> code finds the first column that matches the regular expression. You 
+L</get> code finds the first column that matches the regular expression. You
 should make sure that each regular expression matches only one column.
 
 =cut
 
-sub get { 
+sub get {
 	my ($self, $field) = @_;
-	
+
 	# Find the field whose header matches this regular expression.
 	if (ref( $field ) eq 'Regexp' and not exists $self->alias->{$field}) {
 		foreach my $text (keys %{$self->headers}) {
@@ -112,7 +79,24 @@ sub get {
 	# If no headers match, we end up returning "undef". Regular field names
 	# work automatically.
 	$field = $self->alias->{$field} if defined $self->alias->{$field};
-	return $self->record->{$field}; 
+	return $self->record->{$field};
+}
+
+
+=head3 set_field_names
+
+This method processes the field names. It saves these names into the
+L</headers> hash for later reference. The L<Data::ETL::Extract> role requires
+this method.
+
+=cut
+
+sub set_field_names {
+	my $self = shift;
+
+	while (my ($field, $text) = each %{$self->record}) {
+		$self->headers->{$text} = $field;
+	}
 }
 
 
@@ -134,7 +118,7 @@ has 'record' => (
 =head3 alias
 
 This hash maps an alias name with the underlying field name. If the L</get>
-method finds a field name in this hash, it returns the value from the 
+method finds a field name in this hash, it returns the value from the
 corresponding column.
 
 One column can have more than one name - or none at all.
@@ -173,7 +157,7 @@ Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013  Robert Wohlfarth
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

@@ -37,7 +37,6 @@ use Moose;
 
 with 'Data::ETL::Extract::AsHash';
 with 'Data::ETL::Extract::File';
-with 'Data::ETL::Extract';
 
 use List::Util qw/first/;
 use Spreadsheet::ParseExcel;
@@ -53,19 +52,18 @@ our $VERSION = '1.00';
 
 =head2 Set with the L<Data::ETL/extract_from> command
 
-See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more 
+See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more
 attributes.
 
-=head3 has_header_row
+=head3 has_field_names
 
-Most spread sheets contains a header row that names the columns. By default,
-this class assumes that the first row are column headers. Set this attribute 
-to B<false> if that's not the case. Otherwise you will lose the first row of
-data.
+Most spread sheets contain a header row that names the columns. By default,
+this class assumes that the first row are column names. Set this attribute to
+B<false> if that's not the case. Otherwise you will lose the first row of data.
 
 =cut
 
-has '+has_header_row' => (default => 1);
+has '+has_field_names' => (default => 1);
 
 
 =head3 worksheet
@@ -74,7 +72,7 @@ Extract data from this specific worksheet. When set to a string, L<Data::ETL>
 pulls data from a worksheet with this exact name. L<Data::ETL> dies with an
 error if it cannot find the worksheet.
 
-When set to a regular expression reference, L<Data::ETL> finds the first 
+When set to a regular expression reference, L<Data::ETL> finds the first
 worksheet that matches. Regular expressions let you adjust for variations from
 file to file. L<Data::ETL> dies with an error if no sheets match.
 
@@ -90,10 +88,10 @@ has 'worksheet' => (
 
 =head3 password
 
-If you work with encrypted spreadsheets, set this attribute. The parser 
+If you work with encrypted spreadsheets, set this attribute. The parser
 decrypts the Excel file using this password.
 
-B<Warning:> Only the Excel 2003 format (XLS) supports passwords. Encrypted 
+B<Warning:> Only the Excel 2003 format (XLS) supports passwords. Encrypted
 XLSX files will fail.
 
 =cut
@@ -109,7 +107,7 @@ has 'password' => (
 =head3 next_record
 
 Read one record from the spreadsheet and populates
-L<Data::ETL::Extract::AsHash/record>. The method returns the number of records 
+L<Data::ETL::Extract::AsHash/record>. The method returns the number of records
 loaded. A B<0> means that we reached the end of the data.
 
 =cut
@@ -133,11 +131,11 @@ sub next_record {
 			$empty = 0 if hascontent( $value );
 		}
 		$self->record( \%record );
-		
+
 		$count++;
 		$row++;
-		
-		# When skipping over rows, the calling code expects that we loaded 
+
+		# When skipping over rows, the calling code expects that we loaded
 		# exactly one record, even if it's blank.
 		$empty = 0 if $return_blank;
 	}
@@ -167,7 +165,7 @@ Different classes parse different versions of the Excel file format. This
 method matches the class to the file type by the extension. B<XLS> means
 Excel 2003. And B<XLSX> means an Excel 2007 file.
 
-The Excel parsers use column numbers. The setup automatically aliases the 
+The Excel parsers use column numbers. The setup automatically aliases the
 column letters to the numbers. Your L<Data::ETL/transform_as> command can
 then use the column letters - making it more human readable.
 
@@ -179,7 +177,7 @@ sub setup {
 	# Create the correct worksheet objects based on the file format.
 	my $path = $self->path;
 	if ($path =~ m/\.xls$/i) {
-		my $excel = Spreadsheet::ParseExcel->new( 
+		my $excel = Spreadsheet::ParseExcel->new(
 			Password => $self->password );
 		my $workbook = $excel->parse( $path );
 		die( "Unable to open the Excel file $path" ) unless defined $workbook;
@@ -194,7 +192,7 @@ sub setup {
 	# Convert the column numbers into their letter designations.
 	my $first_column = $self->tab->{'MinCol'};
 	my $last_column  = $self->tab->{'MaxCol'};
-	
+
 	$self->columns( [$first_column .. $last_column] );
 	$self->alias->{int2col( $_ )} = $_ foreach (@{$self->columns});
 
@@ -257,11 +255,11 @@ The method dies with an error if it cannot find a matching tab.
 
 sub find_worksheet {
 	my ($self, $workbook) = @_;
-	
+
 	my $name = $self->worksheet;
 	if (hascontent( $name )) {
 		if (ref( $name ) eq 'Regexp') {
-			$self->tab( first { $_->get_name() =~ m/$name/ } 
+			$self->tab( first { $_->get_name() =~ m/$name/ }
 				$workbook->worksheets() );
 		} else { $self->tab( $workbook->worksheet( $name ) ); }
 		die "No tabs match '$name'" unless defined $self->tab;
@@ -274,7 +272,7 @@ sub find_worksheet {
 
 =head1 SEE ALSO
 
-L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>, 
+L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>,
 L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
 
 =head1 AUTHOR
@@ -283,7 +281,7 @@ Robert Wohlfarth <rbwohlfarth@gmail.com>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013  Robert Wohlfarth
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

@@ -5,8 +5,8 @@ require_ok( 'Data::ETL::Extract::Excel' );
 
 subtest 'XLSX format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		has_header_row => 0,
-		path           => 't/Excel2007.xlsx',
+		has_field_names => 0,
+		path            => 't/Excel2007.xlsx',
 	] );
 	$file->setup;
 
@@ -29,7 +29,7 @@ subtest 'XLSX format' => sub {
 		is( $file->get( 'D' ), 'Header4', 'Found Header4 by letter' );
 		is( $file->get( 'E' ), 'Header5', 'Found Header5 by letter' );
 	};
-	
+
 	subtest 'Second record' => sub {
 		ok( $file->next_record, 'Record loaded' );
 		ok( defined $file->record, 'Record has data' );
@@ -40,7 +40,7 @@ subtest 'XLSX format' => sub {
 		is( $file->get( 3 ), 'Field4', 'Found Field4' );
 		is( $file->get( 4 ), 'Field5', 'Found Field5' );
 	};
-	
+
 	is( $file->next_record, 0, 'End of file reached' );
 
 	$file->finished;
@@ -48,8 +48,8 @@ subtest 'XLSX format' => sub {
 
 subtest 'XLS format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		has_header_row => 0,
-		path           => 't/Excel2003.xls',
+		has_field_names => 0,
+		path            => 't/Excel2003.xls',
 	] );
 	$file->setup;
 
@@ -72,7 +72,7 @@ subtest 'XLS format' => sub {
 		is( $file->get( 'D' ), 'Header4', 'Found Header4 by letter' );
 		is( $file->get( 'E' ), 'Header5', 'Found Header5 by letter' );
 	};
-	
+
 	subtest 'Second record' => sub {
 		ok( $file->next_record, 'Record loaded' );
 		ok( defined $file->record, 'Record has data' );
@@ -83,7 +83,7 @@ subtest 'XLS format' => sub {
 		is( $file->get( 3 ), 'Field4', 'Found Field4' );
 		is( $file->get( 4 ), 'Field5', 'Found Field5' );
 	};
-	
+
 	is( $file->next_record, 0, 'End of file reached' );
 
 	$file->finished;
@@ -91,9 +91,9 @@ subtest 'XLS format' => sub {
 
 subtest 'Skip blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		has_header_row => 0,
-		path           => 't/Excel2007-Skip.xlsx',
-		skip           => 1,
+		has_field_names     => 0,
+		path                => 't/Excel2007-Skip.xlsx',
+		report_header_until => 1,
 	] );
 	$file->setup;
 
@@ -106,9 +106,9 @@ subtest 'Skip blank rows' => sub {
 
 subtest 'Skip page header ending with blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-		has_header_row => 0,
-		path           => 't/Excel2007-Skip.xlsx',
-		skip           => 2,
+		has_field_names     => 0,
+		path                => 't/Excel2007-Skip.xlsx',
+		report_header_until => 2,
 	] );
 	$file->setup;
 
@@ -123,12 +123,12 @@ subtest 'Load a specific worksheet' => sub {
 	subtest 'Exact worksheet name' => sub {
 		subtest 'XLSX format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-				has_header_row => 0,
-				path           => 't/Excel2007.xlsx',
-				worksheet      => 'Sheet2',
+				has_field_names => 0,
+				path            => 't/Excel2007.xlsx',
+				worksheet       => 'Sheet2',
 			] );
 			$file->setup;
-			
+
 			ok( $file->next_record, 'Record loaded' );
 			ok( defined $file->record, 'Record has data' );
 			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
@@ -138,12 +138,12 @@ subtest 'Load a specific worksheet' => sub {
 
 		subtest 'XLS format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-				has_header_row => 0,
-				path           => 't/Excel2003.xls',
-				worksheet      => 'Sheet2',
+				has_field_names => 0,
+				path            => 't/Excel2003.xls',
+				worksheet       => 'Sheet2',
 			] );
 			$file->setup;
-			
+
 			ok( $file->next_record, 'Record loaded' );
 			ok( defined $file->record, 'Record has data' );
 			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
@@ -151,16 +151,16 @@ subtest 'Load a specific worksheet' => sub {
 			$file->finished;
 		};
 	};
-	
+
 	subtest 'Regular expression worksheet name' => sub {
 		subtest 'XLSX format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-				has_header_row => 0,
-				path           => 't/Excel2007.xlsx',
-				worksheet      => qr/t2$/,
+				has_field_names => 0,
+				path            => 't/Excel2007.xlsx',
+				worksheet       => qr/t2$/,
 			] );
 			$file->setup;
-			
+
 			ok( $file->next_record, 'Record loaded' );
 			ok( defined $file->record, 'Record has data' );
 			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
@@ -170,12 +170,12 @@ subtest 'Load a specific worksheet' => sub {
 
 		subtest 'XLS format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-				has_header_row => 0,
-				path           => 't/Excel2003.xls',
-				worksheet      => qr/t2$/,
+				has_field_names => 0,
+				path            => 't/Excel2003.xls',
+				worksheet       => qr/t2$/,
 			] );
 			$file->setup;
-			
+
 			ok( $file->next_record, 'Record loaded' );
 			ok( defined $file->record, 'Record has data' );
 			is( $file->get( 'A' ), 'Sheet2', 'Data from the correct sheet' );
@@ -185,9 +185,9 @@ subtest 'Load a specific worksheet' => sub {
 
 		subtest 'No tab found' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
-				has_header_row => 0,
-				path           => 't/Excel2003.xls',
-				worksheet      => qr/t2$/,
+				has_field_names => 0,
+				path            => 't/Excel2003.xls',
+				worksheet       => qr/t2$/,
 			] );
 			$file->tab( undef );
 			is( $file->tab, undef, 'Worksheet not defined' );
