@@ -52,6 +52,14 @@ our $VERSION = '1.00';
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for a list
 of attributes.
 
+=cut
+
+with 'Data::ETL::Extract::AsHash';
+with 'Data::ETL::Extract::File';
+
+
+=pod
+
 In addition, B<Data::ETL::Extract::DelimitedText> makes available all of the
 options for L<Text::CSV>. See L<Text::CSV> for a list.
 
@@ -68,6 +76,17 @@ sub BUILD {
 
 	$self->csv( Text::CSV->new( \%options ) );
 }
+
+
+=head3 has_field_names
+
+Most CSV files contain a header row that names the columns. By default, this
+class assumes that the first row are column names. Set this attribute to
+B<false> if that's not the case. Otherwise you will lose the first row of data.
+
+=cut
+
+has '+has_field_names' => (default => 1);
 
 
 =head2 Automatically called from L<Data::ETL/run>
@@ -165,12 +184,6 @@ has 'file' => (
 
 L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>,
 L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
-
-=cut
-
-with 'Data::ETL::Extract::AsHash';
-with 'Data::ETL::Extract::File';
-
 
 =head1 AUTHOR
 

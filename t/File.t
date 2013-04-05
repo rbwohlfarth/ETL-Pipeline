@@ -75,6 +75,7 @@ subtest 'With header row' => sub {
 
 subtest 'Skip report headers' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+		has_field_names     => 0,
 		path                => 't/DelimitedText.txt',
 		report_header_until => 2,
 	] );
@@ -85,6 +86,7 @@ subtest 'Skip report headers' => sub {
 
 subtest 'Variable length report headers' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+		has_field_names     => 0,
 		path                => 't/DelimitedText.txt',
 		report_header_until => sub { $_->get( 0 ) eq 'Field6' },
 	] );

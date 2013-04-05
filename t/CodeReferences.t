@@ -14,12 +14,12 @@ run;
 
 subtest 'First record' => sub {
 	my $record = shift @Data::ETL::Load::UnitTest::storage;
-	is( $record->{un      }, 'Header1'       , 'Found Header1'  );
+	is( $record->{un      }, 'Field1'       , 'Found Field1'  );
 	is( $record->{constant}, 'String literal', 'Found constant' );
 };
 subtest 'Second record' => sub {
 	my $record = shift @Data::ETL::Load::UnitTest::storage;
-	is( $record->{un      }, 'Field1'        , 'Found Field1'   );
+	is( $record->{un      }, 'Field6'        , 'Found Field6'   );
 	is( $record->{constant}, 'String literal', 'Found constant' );
 };
 
