@@ -32,9 +32,9 @@ our $VERSION = '1.00';
 =head1 DESCRIPTION
 
 B<ETL> stands for I<Extract-Transform-Load>. You often hear this design
-pattern associated with Data Warehousing. In fact, ETL works with almost
-any type of data conversion. You read the source (I<Extract>), translate the
-data for your target (I<Transform>), and store the result (I<Load>).
+pattern associated with Data Warehousing. In fact, ETL works on almost any type
+of data conversion. You read the source (I<Extract>), translate the data for
+your target (I<Transform>), and store the result (I<Load>).
 
 By dividing a conversion into 3 steps, we isolate the input from the output.
 The isolation lets us:
@@ -53,22 +53,22 @@ The isolation lets us:
 
 B<Data::ETL> provides commands as a front end to various data related classes.
 The classes do the actual work. The commands let you write a little script
-without having to master all of the minute details yourself.
+without mastering all of the minute details yourself.
 
-The L</SYNOPSIS> gives a pretty accurate example. You configure the input
-file, translate file fields into database fields, then save the data to the
-database. The L</load_into> performs all of the validation.
+The L</SYNOPSIS> shows a pretty accurate example. You configure the input file,
+translate file fields into database fields, then save the data to the database.
+The L</load_into> command performs all of the validation.
 
-B<Data::ETL> does it work using helper classes. These classes all fall under
+B<Data::ETL> does its work using helper classes. These classes all fall under
 the naming convention I<Data::ETL::Extract::*> or I<Data::ETL::Load::*>.
-Notice that L</extract_from> and L<load_into> take a format name as their
+Did you notice that L</extract_from> and L<load_into> take a format name as the
 first parameter? In our example, L</extract_from> loads the helper class
 I<Data::ETL::Extract::Excel>. And L</load_into> writes the records using the
 helper class I<Data::ETL::Load::Access>. B<Data::ETL> automatically prepends
 the I<Data::ETL::Extract> or I<Data::ETL::Load>.
 
 B<Data::ETL> provides a few generic I<Data::ETL::Extract::*> classes. These
-classes work for any file based input - regardless of content. If you receive
+classes work for file based input - regardless of content. If you receive
 your data through files, then these classes will work for you.
 
 Most times, your organization writes its own I<Data::ETL::Load::*> class. This
@@ -397,11 +397,11 @@ L<Data::ETL::Extract>, L<Data::ETL::Load>
 
 =head1 AUTHOR
 
-Robert Wohlfarth <rbwohlfarth@gmail.com>
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

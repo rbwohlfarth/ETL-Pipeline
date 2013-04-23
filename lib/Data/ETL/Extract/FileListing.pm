@@ -20,7 +20,7 @@ pattern associated with Data Warehousing. In fact, ETL works with almost
 any type of data conversion. You read the source (I<Extract>), translate the
 data for your target (I<Transform>), and store the result (I<Load>).
 
-This class defines an ETL input source that for directory contents. It 
+This class defines an ETL input source that for directory contents. It
 recursively returns the files underneath a specific directory, one at a time.
 I use it for attaching external files to database records.
 
@@ -59,7 +59,7 @@ has 'files_in' => (
 
 =head3 find_file
 
-Filter the file list using this regular expression. By default, 
+Filter the file list using this regular expression. By default,
 B<Data::ETL::Extract::FileListing> returns every file in the folder.
 
 =cut
@@ -143,7 +143,7 @@ directory structure.
 
 =item Path
 
-The complete path name of the file (directory, name, and extension). You can 
+The complete path name of the file (directory, name, and extension). You can
 use this to access the file contents.
 
 =item Relative
@@ -163,7 +163,7 @@ sub next_record {
 	} else {
 		my $path = $self->next_match;
 		my (undef, $directory, $file) = splitpath( $path );
-		
+
 		my %record;
 		$record{Extension} = pop [split /\./, $file];
 		$record{File     } = $file;
@@ -171,7 +171,7 @@ sub next_record {
 		$record{Inside   } = $directory;
 		$record{Path     } = catdir( $self->path, $path );
 		$record{Relative } = $path;
-		
+
 		$self->record( \%record );
 		return 1;
 	}
@@ -183,7 +183,7 @@ sub next_record {
 This method configures the input source. In this object, that means opening
 the file and looking for a header record. If the file has a header row, then
 I name the fields based on the header row. You can identify data by the
-field name or by the column name. See L<Data::ETL::Extract::AsHash/headers> 
+field name or by the column name. See L<Data::ETL::Extract::AsHash/headers>
 for more information.
 
 =cut
@@ -202,7 +202,7 @@ sub setup {
 	}
 
 	die "Could not find a matching folder" unless defined $self->path;
-	
+
 	my $rule = File::Find::Rule->file()->relative();
 	$rule->name( $self->find_file ) if defined $self->find_file;
 	$rule->mindepth( $self->min_depth ) if defined $self->min_depth;
@@ -227,7 +227,7 @@ them for the module maintainers.
 
 =head3 matches
 
-The list of files underneath the specified folder. 
+The list of files underneath the specified folder.
 B<Data::ETL::Extract::FileListing> returns them one at a time.
 
 =cut
@@ -257,11 +257,11 @@ with 'Data::ETL::Extract';
 
 =head1 AUTHOR
 
-Robert Wohlfarth <rbwohlfarth@gmail.com>
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

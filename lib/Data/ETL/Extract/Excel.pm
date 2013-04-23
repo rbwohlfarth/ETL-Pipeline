@@ -277,11 +277,11 @@ L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
 
 =head1 AUTHOR
 
-Robert Wohlfarth <rbwohlfarth@gmail.com>
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2013  Robert Wohlfarth
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

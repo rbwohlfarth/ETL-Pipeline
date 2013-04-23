@@ -63,8 +63,8 @@ sub write_record { push @storage, shift->record; }
 
 =head3 new_record
 
-The L<Data::ETL::Load::AsHash> role requires this function. In thsi case, it 
-resets to an empty hash. This test class has no defined record structure. So 
+The L<Data::ETL::Load::AsHash> role requires this function. In thsi case, it
+resets to an empty hash. This test class has no defined record structure. So
 there are no default values.
 
 =cut
@@ -105,11 +105,11 @@ with 'Data::ETL::Load';
 
 =head1 AUTHOR
 
-Robert Wohlfarth <rbwohlfarth@gmail.com>
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

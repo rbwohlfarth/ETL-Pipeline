@@ -7,7 +7,7 @@ Data::ETL::Load::AsHash - Cache data as a hash for import to the destination
 =head1 SYNOPSIS
 
   with 'Data::ETL::Load::AsHash';
-  
+
   sub new_record {
       # Add you code to reset the record
       ...
@@ -22,9 +22,9 @@ ETL family of classes facilitate these data transfers using Perl.
 This role caches data in a hash structure. Your data destination class will
 write the data to the actual destination.
 
-Almost any database type destination mimics Perl's hash structure (key-value 
+Almost any database type destination mimics Perl's hash structure (key-value
 pairs). This role let you quickly implement a hash as the storage mechanism for
-your data destinations. 
+your data destinations.
 
 =cut
 
@@ -57,7 +57,7 @@ There is no return value.
 
 =cut
 
-sub set { 
+sub set {
 	my ($self, $column, $value) = @_;
 	$self->record->{$column} = $value;
 }
@@ -81,7 +81,7 @@ has 'record' => (
 
 =head3 new_record
 
-Clear the internal storage in preparation for a new record. Your data 
+Clear the internal storage in preparation for a new record. Your data
 destination class B<must> define this method. It returns a hash reference of
 default values.
 
@@ -108,8 +108,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2012  Center for Patient and Professional Advocacy,
-                Vanderbilt University Medical Center
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

@@ -46,7 +46,7 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-B<Note:> This role defines no attributes that can are set with the 
+B<Note:> This role defines no attributes that can are set with the
 L<Data::ETL/load_into> command. Everything is done in the implementing
 classes.
 
@@ -162,11 +162,11 @@ L<Data::ETL>, L<Data::ETL::Extract>
 
 =head1 AUTHOR
 
-Robert Wohlfarth <rbwohlfarth@gmail.com>
+Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2012  Robert Wohlfarth
+Copyright 2013 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
