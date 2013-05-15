@@ -51,7 +51,7 @@ our $VERSION = '1.00';
 =head3 bypass_if
 
 Sometimes you just get bad data. This code reference checks for those times
-and skips moves on to the next record.
+and moves on to the next record.
 
 If the code returns B<true>, then L<Data::ETL/run> ignores this record and
 moves to the next one. This keeps the record count synchronized with the
