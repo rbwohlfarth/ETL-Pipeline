@@ -39,4 +39,22 @@ subtest 'Skip records' => sub {
 	is( $record->{un}, 'Field6', 'Skipped first row' );
 };
 
+subtest 'Trim flag' => sub {
+	subtest 'Trimmed fields' => sub {
+		my $file = new_ok( 'Data::ETL::Extract::UnitTest' );
+		$file->setup;
+
+		ok( $file->next_record, 'Header row loaded' );
+		is( $file->get( 0 ), 'Header1', 'Get trimmed value' );
+	};
+
+	subtest 'Untrimmed fields' => sub {
+		my $file = new_ok( 'Data::ETL::Extract::UnitTest' => [trim => 0] );
+		$file->setup;
+
+		ok( $file->next_record, 'Header row loaded' );
+		is( $file->get( 0 ), 'Header1', 'Get untrimmed value' );
+	};
+};
+
 done_testing;
