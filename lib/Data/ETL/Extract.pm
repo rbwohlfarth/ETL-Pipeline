@@ -124,18 +124,18 @@ around 'next_record' => sub {
 };
 
 
-=head3 trim
+=head3 no_trim
 
 The ETL process removes trailing and leading white space from the data. 99% of
 the time this is exactly what you want. It returns just the useful text.
 
-For that 1% where leading or trailing space matters, set B<trim> to false. It
+For that 1% where leading or trailing space matters, set B<no_trim> to true. It
 leaves the whitespace on all of the fields in this file.
 
 =cut
 
-has 'trim' => (
-	default => 1,
+has 'no_trim' => (
+	default => 0,
 	is      => 'rw',
 	isa     => 'Bool',
 );
@@ -143,8 +143,8 @@ has 'trim' => (
 use String::Util qw/trim/;
 around 'get' => sub {
 	my ($original, $self, @arguments) = @_;
-	if ($self->trim) { return trim( $original->( $self, @arguments ) ); }
-	else             { return       $original->( $self, @arguments )  ; }
+	if ($self->no_trim) { return       $original->( $self, @arguments )  ; }
+	else                { return trim( $original->( $self, @arguments ) ); }
 };
 
 

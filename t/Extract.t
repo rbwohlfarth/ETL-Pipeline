@@ -49,7 +49,7 @@ subtest 'Trim flag' => sub {
 	};
 
 	subtest 'Untrimmed fields' => sub {
-		my $file = new_ok( 'Data::ETL::Extract::UnitTest' => [trim => 0] );
+		my $file = new_ok( 'Data::ETL::Extract::UnitTest' => [no_trim => 1] );
 		$file->setup;
 
 		ok( $file->next_record, 'Header row loaded' );
