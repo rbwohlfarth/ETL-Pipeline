@@ -92,6 +92,11 @@ reference. The caller sets L</record> using that reference.
 
 requires 'new_record';
 
+after 'setup' => sub {
+	my $self = shift;
+	$self->record( $self->new_record );
+};
+
 after 'write_record' => sub {
 	my $self = shift;
 	$self->record( $self->new_record );
