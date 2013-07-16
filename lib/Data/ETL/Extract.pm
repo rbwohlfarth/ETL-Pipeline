@@ -124,27 +124,44 @@ around 'next_record' => sub {
 };
 
 
-=head3 no_trim
+=head3 filter
 
-The ETL process removes trailing and leading white space from the data. 99% of
-the time this is exactly what you want. It returns just the useful text.
+This attribute holds a code reference. The code filters values returned by the
+L</get> method. You can define NULL values from databases, blank out
+placeholder text like B<< <N/S> >>, or remove invalid characters.
+B<Data::ETL::Extract> runs this code every time you retrieve the value from a
+field.
 
-For that 1% where leading or trailing space matters, set B<no_trim> to true. It
-leaves the whitespace on all of the fields in this file.
+The filter code does not have access to the B<Data::ETL::Extract> object. You
+can not check the value of other fields inside of your code. It only has
+access to the current field's value...
+
+=over
+
+=item 1. In C<$_>.
+
+=item 2. As the one and only parameter to your code.
+
+=back
+
+The default filter trims whitespace from the start and end of the value. To
+turn off the trimming, do this: C<filter => sub { $_ }>.
 
 =cut
 
-has 'no_trim' => (
-	default => 0,
+use String::Util qw/trim/;
+
+has 'filter' => (
+	default => sub { \&trim },
 	is      => 'rw',
-	isa     => 'Bool',
+	isa     => 'CodeRef',
 );
 
-use String::Util qw/trim/;
 around 'get' => sub {
 	my ($original, $self, @arguments) = @_;
-	if ($self->no_trim) { return       $original->( $self, @arguments )  ; }
-	else                { return trim( $original->( $self, @arguments ) ); }
+	local $_;
+	$_ = $original->( $self, @arguments );
+	return $self->filter->( $_ );
 };
 
 
