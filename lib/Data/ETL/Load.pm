@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-Data::ETL::Load - Role for ETL data destinations
+Data::ETL::Load - This role defines an ETL destination bridge class
 
 =head1 SYNOPSIS
 
@@ -16,24 +16,32 @@ Data::ETL::Load - Role for ETL data destinations
 
 =head1 DESCRIPTION
 
-ETL stands for I<Extract>, I<Transform>, I<Load>. The ETL pattern executes
-data conversions or uploads. It moves data from one system to another. The
-ETL family of classes facilitate these data transfers using Perl.
+ETL stands for I<Extract-Transform-Load>. L<Data::ETL> uses
+L<bridge class|Data::ETL/Bridge Classes> for reading and writing files. This
+role defines the API for output L<bridge classes|Data::ETL/Bridge Classes> -
+those used by the L<Data::ETL/load_into> command.
 
-This role defines the Application Programming Interface (API) for all ETL
-data destinations. A data destination controls where your data goes. This role
-defines the methods common to every destination. These methods work regardless
-of the data format - CSV file, spreadsheet, database, etc.
+=head2 Writing Your Own Output Class
 
-Every data destination class B<must> implement this role. The L<Data::ETL/run>
-command calls these methods as part of the ETL process. Most ETL scripts
-never access them directly.
+=over
 
-=head2 Why use a role instead of inheritance?
+=item 1. Create a Perl module.
 
-Roles let you force the child class to implement certain methods. Plus a role
-lets me create other generic types without having a convuluted inheritance
-tree.
+=item 2. Make it a Moose object: C<use Moose;>.
+
+=item 3. Include this role: C<with 'Data::ETL::Load';>.
+
+=item 4. Use a hash for in-memory storage: C<with 'Data::ETL::Load::AsHash';>.
+
+=item 5. Add the L<write_record> method: C<sub write_record { ... }>.
+
+=item 6. Add the L<setup> method: C<sub setup { ... }>.
+
+=item 7. Add the L<finished> method: C<sub finished { ... }>.
+
+=item 8. In your L<Data::ETL> script, add a line like this: C<load_into 'MyOutput'>. Replace I<MyOutput> with your class name.
+
+=back
 
 =cut
 
@@ -46,20 +54,29 @@ our $VERSION = '1.00';
 
 =head1 METHODS & ATTRIBUTES
 
-B<Note:> This role defines no attributes that can are set with the
-L<Data::ETL/load_into> command. Everything is done in the implementing
-classes.
+B<Note:> This role defines no attributes that are set with the
+L<Data::ETL/load_into> command. Each child class defines its own options.
+
+=head2 Implemented by your output class
+
+Your output L<bridge class|Data::ETL/Bridge Classes> must implement all of the
+following methods...
 
 =head3 set
 
-Set the value of a single field in the intermediate storage. L</write_record>
-takes these values and saves them to their final destination.
+It's expensive writing each field individually onto disk. For performance, I
+recommend that you save the current record in memory and write it all at once
+in L</write_record>. B<set> does this for you.
+
+L<Data::ETL/run> calls B<set> inside of a loop - once for each field. Your
+B<set> code plops the values into memory. Then L<write_record> sends it to the
+disk.
 
 B<set> accepts two parameters:
 
 =over
 
-=item 1. The field destination name.
+=item 1. The output field name.
 
 =item 2. The value for that field.
 
@@ -74,56 +91,18 @@ requires 'set';
 
 =head3 write_record
 
-Saves the contents of the L</record> hash to storage. This method is
-automatically called by L<Data::ETL/run>. It takes one parameter - the current
-record number.
+B<write_record> outputs the current record to the file or database. It saves
+the current record. This method is called by L<Data::ETL/run> once for each
+record.
 
-The function returns the number of records created. If there is an error, then
-return B<0> (nothing saved). Otherwise return a B<1> (the number created).
+B<write_record> takes one parameter - the current record number.
+
+B<write_record> returns the number of records created. If there is an error,
+then return B<0> (nothing saved). Otherwise return a B<1> (the number created).
 
 =cut
 
 requires 'write_record';
-
-
-=head3 record_number
-
-This attribute is the number of records saved in this session. It is for
-informational purposes only. Changing this value has no effect.
-
-The role automatically increments this value B<after> every call to
-L</write_record>.
-
-=cut
-
-has 'record_number' => (
-	default => '0',
-	is      => 'rw',
-	isa     => 'Int',
-);
-
-around 'write_record' => sub {
-	my ($original, $self, @arguments) = @_;
-	my $count = $original->( $self, @arguments );
-	$self->record_number_add( $count );
-	return $count;
-};
-
-
-=head3 record_number_add
-
-Add a number to the record count. I do this often enough to warrant this
-convenience method. The code only checks that the result is an integer greater
-than zero.
-
-=cut
-
-sub record_number_add {
-	my ($self, $amount) = @_;
-	$self->record_number( $self->record_number + $amount );
-	$self->record_number( 0 ) if $self->record_number < 0;
-	return $self->record_number;
-}
 
 
 =head3 setup
@@ -154,6 +133,40 @@ method modifiers.
 =cut
 
 requires 'finished';
+
+
+=head2 Other methods and attributes
+
+=head3 record_number
+
+This attribute holds the total number of records already saved. It is for
+informational purposes only. Changing this value has no effect.
+
+L<Data::ETL/run> automatically increments this value B<after> every call to
+L</write_record>.
+
+=cut
+
+has 'record_number' => (
+	default => '0',
+	is      => 'rw',
+	isa     => 'Int',
+);
+
+around 'write_record' => sub {
+	my ($original, $self, @arguments) = @_;
+
+	# Call "write_record"...
+	my $count = $original->( $self, @arguments );
+
+	# Include the new record in the count. Do not let them decrement the count
+	# below zero. That's absurd.
+	$self->record_number( $self->record_number + $count );
+	$self->record_number( 0 ) if $self->record_number < 0;
+
+	# Send the count back to the caller, as if they called "write_record".
+	return $count;
+};
 
 
 =head1 SEE ALSO

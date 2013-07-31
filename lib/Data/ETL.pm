@@ -166,7 +166,7 @@ As you can see, B<Data::ETL> acts as a front end to various data related
 classes called I<bridges>. The bridges do the actual work. B<Data::ETL> lets
 you write a little script, harnessing the work of existing Perl modules.
 
-The bridge classes all fall under the I<Data::ETL::Extract::*> or
+The bridge classes all belong under the I<Data::ETL::Extract::*> or
 I<Data::ETL::Load::*> namespaces. And they implement the L<Data::ETL::Extract>
 or L<Data::ETL::Load> roles respectively. I<extract_from> and I<load_into>
 automatically add the namespace, making it easy to scan a script and determine
@@ -265,7 +265,7 @@ See L<Data::ETL::Extract> for a complete explanation of these options.
 
 Note that you do not have to put the I<Data::ETL::Extract::> in front of the
 bridge class name. B<extract_from> automatically adds that bit for you. This
-makes the B<Data::ETL> easier to read.
+makes your B<Data::ETL> script easier to read.
 
 =cut
 
@@ -376,27 +376,6 @@ sub set {
 B<run> kicks off the entire data conversion process. It takes no parameters.
 All of the setup is done by the other commands. This should be the last command
 in your B<Data::ETL> script. And 90% of the time, it will be.
-
-What happens if the input data spans multiple files? B<Data::ETL> supports
-processing multiple files inside one script. For example...
-
-  use Data::ETL;
-
-  # The first file has demographic details.
-  extract_from 'Excel', path => 'C:\Pine\Details.xlsx';
-  transform_as Name => 'A', Address => 'B', Birthday => 'C';
-  set Client => 1, Type => 'Person';
-  load_into 'Access', path => 'C:\ETL\review.accdb';
-  run;
-
-  # The second file holds the Notes for the details that we loaded above.
-  extract_from 'Excel', path => 'C:\Pine\Notes.xlsx';
-  transform_as Name => 'A', Text => 'B';
-  load_into 'Access', path => 'C:\ETL\review.accdb';
-  run;
-
-See the two B<run> commands? When B<run> finishes, it wipes out the settings.
-Simply tack the second B<Data::ETL> script onto the end of the first.
 
 =cut
 
@@ -578,9 +557,62 @@ sub _code {
 
 =head3 Adding your output file format
 
+See L<Data::ETL::Load/Writing Your Own Output Class> for details.
+
 =head3 Adding a new input file format
 
+See L<Data::ETL::Extract> for details.
+
 =head3 Multiple input files
+
+What happens if the input data spans multiple files? B<Data::ETL> supports
+processing multiple files inside one script. For example...
+
+  use Data::ETL;
+
+  # The first file has demographic details.
+  extract_from 'Excel', path => 'C:\Ficticious\Details.xlsx';
+  transform_as Name => 'A', Address => 'B', Birthday => 'C';
+  set Client => 1, Type => 'Person';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+  # The second file holds the Notes for the details that we loaded above.
+  extract_from 'Excel', path => 'C:\Ficticious\Notes.xlsx';
+  transform_as Name => 'A', Text => 'B';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+See the two B<run> commands? When the first B<run> finishes, it wipes out the
+settings. Simply tack the second B<Data::ETL> script onto the end of the first.
+
+You can repeat this for three files...
+
+  use Data::ETL;
+  working_folder search_in => 'C:\Data', find_folder => qr/Ficticious/;
+
+  # The first file has demographic details.
+  extract_from 'Excel', find_file => qr/Demographics.*\.xlsx$/i;
+  transform_as Name => 'A', Address => 'B', Birthday => 'C';
+  set Client => 1, Type => 'Person';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+  # The second file holds the Notes for the details that we loaded above.
+  extract_from 'Excel', find_file => qr/Notes.*\.xlsx/i;
+  transform_as Name => 'A', Text => 'B';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+  # The third file holds a date field.
+  extract_from 'Excel', find_file => qr/Dates.*\.xlsx/i;
+  transform_as Name => 'A', Date => 'B';
+  load_into 'Access', path => 'C:\ETL\review.accdb';
+  run;
+
+Notice the single L</working_folder> command at the top? All three files
+reside in the same working folder. B<Data::ETL> assumes that you group related
+files inside the same folder.
 
 =head1 SEE ALSO
 
