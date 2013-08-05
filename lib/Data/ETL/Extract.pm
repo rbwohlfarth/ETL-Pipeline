@@ -16,9 +16,10 @@ Data::ETL::Extract - Role for ETL input sources
 
 =head1 DESCRIPTION
 
-ETL stands for I<Extract>, I<Transform>, I<Load>. The ETL pattern executes
-data conversions or uploads. It moves data from one system to another. The
-ETL family of classes facilitate these data transfers using Perl.
+ETL stands for I<Extract-Transform-Load>. L<Data::ETL> uses
+L<bridge classes|Data::ETL/Bridge Classes> for reading and writing files. This
+role defines the API for input L<bridge classes|Data::ETL/Bridge Classes> -
+those used by the L<Data::ETL/extract_from> command.
 
 This role defines the Application Programming Interface (API) for all ETL
 input sources. An input source controls where your data comes from. This role
@@ -34,6 +35,31 @@ never access them directly.
 Roles let you force the child class to implement certain methods. Plus a role
 lets me create other generic types without having a convuluted inheritance
 tree.
+
+=head2 Adding a new file format
+
+Out of the box, L<Data::ETL> supports Microsoft Excel and CSV (comma seperated
+variable) files. So what happens when you run into something new?
+
+=over
+
+=item 1. Create a Perl module.
+
+=item 2. Make it a Moose object: C<use Moose;>.
+
+=item 3. Include this role: C<with 'Data::ETL::Extract';>.
+
+=item 4. Use a hash for in-memory storage: C<with 'Data::ETL::Extract::AsHash';>.
+
+=item 5. Add the L<next_record> method: C<sub next_record { ... }>.
+
+=item 6. Add the L<setup> method: C<sub setup { ... }>.
+
+=item 7. Add the L<finished> method: C<sub finished { ... }>.
+
+=item 8. In your L<Data::ETL> script, add a line like this: C<load_into 'MyOutput'>. Replace I<MyOutput> with your class name.
+
+=back
 
 =cut
 

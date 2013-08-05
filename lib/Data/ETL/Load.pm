@@ -17,9 +17,18 @@ Data::ETL::Load - This role defines an ETL destination bridge class
 =head1 DESCRIPTION
 
 ETL stands for I<Extract-Transform-Load>. L<Data::ETL> uses
-L<bridge class|Data::ETL/Bridge Classes> for reading and writing files. This
+L<bridge classes|Data::ETL/Bridge Classes> for reading and writing files. This
 role defines the API for output L<bridge classes|Data::ETL/Bridge Classes> -
 those used by the L<Data::ETL/load_into> command.
+
+This role defines the Application Programming Interface (API) for all ETL
+output sources. An output source controls where your data comes from. This role
+defines the methods common to every output source. These methods work
+regardless of the data format - CSV file, spreadsheet, database, etc.
+
+Every output source class B<must> implement this role. The L<Data::ETL/run>
+command calls these methods as part of the ETL process. Most ETL scripts
+never access them directly.
 
 =head2 Writing Your Own Output Class
 
