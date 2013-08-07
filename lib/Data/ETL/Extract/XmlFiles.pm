@@ -133,7 +133,7 @@ sub get {
 	my ($xpath_string, $join_with) = ($xpath, '; ');
 	($xpath_string, $join_with) = @$xpath if ref( $xpath ) eq 'ARRAY';
 
-	my $match = $self->xpath->find( $xpath_string, $self->node );
+	my $match = $self->xpath->find( $xpath_string );
 	if ($match->isa( 'XML::XPath::NodeSet' )) {
 		my @values = grep { hascontent( $_ ) }
 			map { trim( $_->string_value ) }
