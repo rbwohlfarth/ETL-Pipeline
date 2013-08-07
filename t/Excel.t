@@ -6,7 +6,7 @@ require_ok( 'Data::ETL::Extract::Excel' );
 subtest 'XLSX format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 		has_field_names => 0,
-		path            => 't/Excel2007.xlsx',
+		path            => 't/DataFiles/Excel2007.xlsx',
 	] );
 	$file->setup;
 
@@ -49,7 +49,7 @@ subtest 'XLSX format' => sub {
 subtest 'XLS format' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 		has_field_names => 0,
-		path            => 't/Excel2003.xls',
+		path            => 't/DataFiles/Excel2003.xls',
 	] );
 	$file->setup;
 
@@ -92,7 +92,7 @@ subtest 'XLS format' => sub {
 subtest 'Skip blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 		has_field_names     => 0,
-		path                => 't/Excel2007-Skip.xlsx',
+		path                => 't/DataFiles/Excel2007-Skip.xlsx',
 		report_header_until => 1,
 	] );
 	$file->setup;
@@ -107,7 +107,7 @@ subtest 'Skip blank rows' => sub {
 subtest 'Skip page header ending with blank rows' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 		has_field_names     => 0,
-		path                => 't/Excel2007-Skip.xlsx',
+		path                => 't/DataFiles/Excel2007-Skip.xlsx',
 		report_header_until => 2,
 	] );
 	$file->setup;
@@ -124,7 +124,7 @@ subtest 'Load a specific worksheet' => sub {
 		subtest 'XLSX format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 				has_field_names => 0,
-				path            => 't/Excel2007.xlsx',
+				path            => 't/DataFiles/Excel2007.xlsx',
 				worksheet       => 'Sheet2',
 			] );
 			$file->setup;
@@ -139,7 +139,7 @@ subtest 'Load a specific worksheet' => sub {
 		subtest 'XLS format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 				has_field_names => 0,
-				path            => 't/Excel2003.xls',
+				path            => 't/DataFiles/Excel2003.xls',
 				worksheet       => 'Sheet2',
 			] );
 			$file->setup;
@@ -156,7 +156,7 @@ subtest 'Load a specific worksheet' => sub {
 		subtest 'XLSX format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 				has_field_names => 0,
-				path            => 't/Excel2007.xlsx',
+				path            => 't/DataFiles/Excel2007.xlsx',
 				worksheet       => qr/t2$/,
 			] );
 			$file->setup;
@@ -171,7 +171,7 @@ subtest 'Load a specific worksheet' => sub {
 		subtest 'XLS format' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 				has_field_names => 0,
-				path            => 't/Excel2003.xls',
+				path            => 't/DataFiles/Excel2003.xls',
 				worksheet       => qr/t2$/,
 			] );
 			$file->setup;
@@ -186,7 +186,7 @@ subtest 'Load a specific worksheet' => sub {
 		subtest 'No tab found' => sub {
 			my $file = new_ok( 'Data::ETL::Extract::Excel' => [
 				has_field_names => 0,
-				path            => 't/Excel2003.xls',
+				path            => 't/DataFiles/Excel2003.xls',
 				worksheet       => qr/t2$/,
 			] );
 			$file->tab( undef );

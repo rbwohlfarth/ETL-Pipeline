@@ -53,8 +53,8 @@ subtest '"working_folder" command' => sub {
 	working_folder 't';
 	is( $Data::ETL::WorkingFolder, 't', 'Fixed root' );
 
-	working_folder search_in => 't', find_folder => qr|^FileListing$|i;
-	is( $Data::ETL::WorkingFolder, 't/FileListing', 'Search for a subfolder' );
+	working_folder search_in => 't', find_folder => qr|^DataFiles$|i;
+	is( $Data::ETL::WorkingFolder, 't/DataFiles', 'Search for a subfolder' );
 
 	working_folder find_folder => qr|^t$|i;
 	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );

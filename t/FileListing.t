@@ -1,7 +1,7 @@
 use Data::ETL;
 use Test::More;
 
-working_folder 't';
+working_folder 't/DataFiles';
 
 BEGIN { use_ok( 'Data::ETL::Extract::FileListing' ); }
 require_ok( 'Data::ETL::Extract::FileListing' );
@@ -16,11 +16,11 @@ subtest 'Dynamic folder search' => sub {
 	subtest 'First match' => sub {
 		ok( $file->next_record, 'Record loaded' );
 		ok( defined $file->record, 'Record has data' );
-		is  ( $file->get( 'Extension' ), 'txt'                              , 'Extension'     );
-		like( $file->get( 'File'      ), qr/^Test\s\d\.txt$/                , 'File name'     );
-		is  ( $file->get( 'Inside'    ), ''                                 , 'Inside folder' );
-		like( $file->get( 'Path'      ), qr|^t\\FileListing\\Test\s\d\.txt$|, 'Full path'     );
-		like( $file->get( 'Relative'  ), qr|^Test\s\d\.txt$|                , 'Relative path' );
+		is  ( $file->get( 'Extension' ), 'txt'              , 'Extension'     );
+		like( $file->get( 'File'      ), qr/^Test\s\d\.txt$/, 'File name'     );
+		is  ( $file->get( 'Inside'    ), ''                 , 'Inside folder' );
+		like( $file->get( 'Path'      ), qr|^t\\DataFiles\\FileListing\\Test\s\d\.txt$|, 'Full path' );
+		like( $file->get( 'Relative'  ), qr|^Test\s\d\.txt$|, 'Relative path' );
 	};
 
 	my $first = $file->record->{File};
@@ -36,7 +36,7 @@ subtest 'Dynamic folder search' => sub {
 
 subtest 'Hard coded search path' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
-		path => 't/FileListing',
+		path => 't/DataFiles/FileListing',
 	] );
 	$file->setup;
 	subtest 'First match' => sub {
@@ -59,7 +59,7 @@ subtest 'Depth controls' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::FileListing' => [
 		max_depth => 2,
 		min_depth => 2,
-		path      => 't',
+		path      => 't/DataFiles/FileListingDepth',
 	] );
 	$file->setup;
 	subtest 'First match' => sub {

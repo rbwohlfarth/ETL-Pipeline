@@ -9,14 +9,14 @@ subtest 'File selection' => sub {
 		find_file => qr/\.txt$/i,
 	] );
 	$file->setup;
-	is( $file->path, 't/DelimitedText.txt', 'Search for file name' );
+	is( $file->path, 't/DataFiles/DelimitedText.txt', 'Search for file name' );
 	$file->finished;
 
 	$file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
-		path => 't/DelimitedText.txt',
+		path => 't/DataFiles/DelimitedText.txt',
 	] );
 	$file->setup;
-	is( $file->path, 't/DelimitedText.txt', 'Fixed path' );
+	is( $file->path, 't/DataFiles/DelimitedText.txt', 'Fixed path' );
 	$file->finished;
 
 	$file->path( undef );
@@ -26,7 +26,7 @@ subtest 'File selection' => sub {
 subtest 'Without header row' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_field_names => 0,
-		path            => 't/DelimitedText.txt',
+		path            => 't/DataFiles/DelimitedText.txt',
 	] );
 	$file->setup;
 
@@ -52,7 +52,7 @@ subtest 'Without header row' => sub {
 subtest 'With header row' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_field_names => 1,
-		path            => 't/DelimitedText.txt',
+		path            => 't/DataFiles/DelimitedText.txt',
 	] );
 	$file->setup;
 
@@ -76,7 +76,7 @@ subtest 'With header row' => sub {
 subtest 'Skip report headers' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_field_names     => 0,
-		path                => 't/DelimitedText.txt',
+		path                => 't/DataFiles/DelimitedText.txt',
 		report_header_until => 2,
 	] );
 	$file->setup;
@@ -87,7 +87,7 @@ subtest 'Skip report headers' => sub {
 subtest 'Variable length report headers' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 		has_field_names     => 0,
-		path                => 't/DelimitedText.txt',
+		path                => 't/DataFiles/DelimitedText.txt',
 		report_header_until => sub { $_->get( 0 ) eq 'Field6' },
 	] );
 	$file->setup;

@@ -6,7 +6,7 @@ require_ok( 'Data::ETL::Extract::DelimitedText' );
 my $file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
 	allow_whitespace => 1,
 	has_field_names  => 0,
-	path             => 't/DelimitedText.txt',
+	path             => 't/DataFiles/DelimitedText.txt',
 ] );
 $file->setup;
 
