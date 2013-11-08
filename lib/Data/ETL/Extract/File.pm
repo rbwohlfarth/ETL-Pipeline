@@ -73,8 +73,20 @@ before 'setup' => sub {
 	unless (defined $self->path) {
 		my $search = File::Find::Rule->new;
 		$search->file;
-		$search->name( $self->find_file ) if defined $self->find_file;
-		$self->path( shift [$search->in( $Data::ETL::WorkingFolder )] );
+
+		my $pattern = $self->find_file;
+		if (ref( $pattern ) eq 'CODE') {
+			foreach my $file ($search->in( $Data::ETL::WorkingFolder )) {
+				local $_ = $file;
+				if ($pattern->( $file )) {
+					$self->path( $file );
+					last;
+				}
+			}
+		} else {
+			$search->name( $pattern ) if defined $pattern;
+			$self->path( shift [$search->in( $Data::ETL::WorkingFolder )] );
+		}
 	}
 
 	die "'extract_from' could not find a matching file"
@@ -106,14 +118,19 @@ has 'path' => (
 
 =head3 find_file
 
-This attribute also holds a regular expression. The search finds the first
-file that matches it.
+This attribute finds the first file that matches a pattern. The pattern is
+normally a regular expression. The search finds the first file whose name
+matches the regular expression.
+
+For very weird cases, you may also use a code reference. The search runs this
+code against the file names. It uses the first file where this code returns
+B<true>. The search passes the file name to the code as C<$_>.
 
 =cut
 
 has 'find_file' => (
 	is  => 'rw',
-	isa => 'Maybe[RegexpRef]',
+	isa => 'Maybe[CodeRef|RegexpRef]',
 );
 
 

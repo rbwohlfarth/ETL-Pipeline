@@ -9,7 +9,14 @@ subtest 'File selection' => sub {
 		find_file => qr/\.txt$/i,
 	] );
 	$file->setup;
-	is( $file->path, 't/DataFiles/DelimitedText.txt', 'Search for file name' );
+	is( $file->path, 't/DataFiles/DelimitedText.txt', 'Regular expression' );
+	$file->finished;
+
+	$file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
+		find_file => sub { m/\.txt$/i },
+	] );
+	$file->setup;
+	is( $file->path, 't/DataFiles/DelimitedText.txt', 'Code reference' );
 	$file->finished;
 
 	$file = new_ok( 'Data::ETL::Extract::DelimitedText' => [
