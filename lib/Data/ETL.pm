@@ -20,6 +20,7 @@ Data::ETL - Extract-Transform-Load pattern for converting data
 package Data::ETL;
 
 use 5.14.0;
+use Data::ETL::CodeRef;
 use Exporter qw/import/;
 use File::Find::Rule;
 use String::Util qw/hascontent/;
@@ -403,18 +404,19 @@ sub run {
 
 	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
-		next if _code( $extract->bypass_if, $extract );
+		next if Data::ETL::CodeRef::run( $extract->bypass_if, $extract );
 
 		# "set" values...
 		while (my ($field, $value) = each %constants) {
-			$value = _code( $value, $load ) if ref( $value ) eq 'CODE';
+			$value = Data::ETL::CodeRef::run( $value, $load )
+				if ref( $value ) eq 'CODE';
 			$load->set( $field, $value );
 		}
 
 		# "transform_as" values...
 		while (my ($to, $from) = each %mapping) {
 			if (ref( $from ) eq 'CODE') {
-				$load->set( $to, _code( $from, $extract ) );
+				$load->set( $to, Data::ETL::CodeRef::run( $from, $extract ) );
 			} else {
 				$load->set( $to, $extract->get( $from ) );
 			}
@@ -521,36 +523,6 @@ The default value is the current directory.
 =cut
 
 my $WorkingFolder = '.';
-
-
-=head3 _code
-
-This subroutine executes a code reference. If any of your options accept a code
-reference, then use B<_code> to execute it. For example, the L</transform_as>
-command calls B<_code> when you set an output field to a code reference.
-
-B<_code> takes two parameters:
-
-=over
-
-=item 1. A code reference to execute.
-
-=item 2. An arbitrary object passed to the code reference.
-
-=back
-
-The second parameter lets you pass data or objects to the code reference. This
-lets the code reference interact with B<Data::ETL>. B<_code> passes the object
-as the only parameter and in C<$_>.
-
-=cut
-
-sub _code {
-	my ($code, $object) = @_;
-	local $_;
-	$_ = $object;
-	return $code->( $object );
-}
 
 
 =head1 ADVANCED USES
