@@ -66,6 +66,8 @@ variable) files. So what happens when you run into something new?
 package Data::ETL::Extract;
 use Moose::Role;
 
+use Data::ETL::CodeRef;
+
 
 our $VERSION = '1.00';
 
@@ -144,9 +146,7 @@ around 'next_record' => sub {
 	my $count = $original->( $self, @arguments );
 
 	# 0 = stop processing this file.
-	local $_;
-	$_ = $self;
-	return ($self->stop_if->( $self ) ? 0 : $count);
+	return (Data::ETL::CodeRef::run( $self->stop_if, $self ) ? 0 : $count);
 };
 
 
@@ -185,9 +185,8 @@ has 'filter' => (
 
 around 'get' => sub {
 	my ($original, $self, @arguments) = @_;
-	local $_;
-	$_ = $original->( $self, @arguments );
-	return $self->filter->( $_ );
+	return Data::ETL::CodeRef::run( $self->filter,
+		$original->( $self, @arguments ) );
 };
 
 
@@ -210,18 +209,13 @@ B<Data::ETL::Extract> passes in a reference to itself two ways...
 =cut
 
 has 'debug' => (
-	default => sub { sub {} },
-	is      => 'rw',
-	isa     => 'CodeRef',
+	is  => 'rw',
+	isa => 'CodeRef',
 );
 
 after 'next_record' => sub {
 	my $self = shift @_;
-
-	local $_;
-	$_ = $self;
-
-	$self->debug->( $self );
+	Data::ETL::CodeRef::run( $self->debug, $self );
 };
 
 

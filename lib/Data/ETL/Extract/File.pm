@@ -28,6 +28,7 @@ use Moose::Role;
 
 
 use 5.14.0;
+use Data::ETL::CodeRef;
 use File::Find::Rule;
 
 
@@ -77,8 +78,7 @@ before 'setup' => sub {
 		my $pattern = $self->find_file;
 		if (ref( $pattern ) eq 'CODE') {
 			foreach my $file ($search->in( $Data::ETL::WorkingFolder )) {
-				local $_ = $file;
-				if ($pattern->( $file )) {
+				if (Data::ETL::CodeRef::run( $pattern, $file )) {
 					$self->path( $file );
 					last;
 				}
@@ -197,8 +197,8 @@ after 'setup' => sub {
 	# Ignore report headers. Always end with the column names in memory.
 	my $headers = $self->report_header_until;
 	if (ref( $headers ) eq 'CODE') {
-		local $_ = $self;
-		do { $self->next_record( 1 ); } until $headers->( $self );
+		do { $self->next_record( 1 ); }
+		until Data::ETL::CodeRef::run( $headers, $self );
 	} else {
 		$self->next_record( 1 ) foreach (1 .. $headers);
 		$self->next_record;
