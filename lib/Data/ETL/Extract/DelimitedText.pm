@@ -183,7 +183,7 @@ has 'file' => (
 =head1 SEE ALSO
 
 L<Data::ETL>, L<Data::ETL::Extract>, L<Data::ETL::Extract::AsHash>,
-L<Data::ETL::Extract::File>, L<Spreadsheet::ParseExcel>, L<Spreadsheet::XLSX>
+L<Data::ETL::Extract::File>, L<Text::CSV>
 
 =head1 AUTHOR
 
