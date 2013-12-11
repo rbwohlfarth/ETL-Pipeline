@@ -30,6 +30,7 @@ use Moose::Role;
 use 5.14.0;
 use Data::ETL::CodeRef;
 use File::Find::Rule;
+use List::AllUtils qw/first/;
 
 
 our $VERSION = '1.00';
@@ -77,12 +78,9 @@ before 'setup' => sub {
 
 		my $pattern = $self->find_file;
 		if (ref( $pattern ) eq 'CODE') {
-			foreach my $file ($search->in( $Data::ETL::WorkingFolder )) {
-				if (Data::ETL::CodeRef::run( $pattern, $file )) {
-					$self->path( $file );
-					last;
-				}
-			}
+			my $path = first { Data::ETL::CodeRef::run( $pattern, $_ ) }
+				$search->in( $Data::ETL::WorkingFolder );
+			$self->path( $path );
 		} else {
 			$search->name( $pattern ) if defined $pattern;
 			$self->path( shift [$search->in( $Data::ETL::WorkingFolder )] );

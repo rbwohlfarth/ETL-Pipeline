@@ -9,6 +9,7 @@ all_from 'lib/Data/ETL.pm';
 
 requires 'Exporter';
 requires 'File::Find::Rule';
+requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';
 requires 'Regexp::Common';
