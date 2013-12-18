@@ -1,5 +1,6 @@
 use Test::More;
 
+
 BEGIN { use_ok( 'Data::ETL' ); }
 require_ok( 'Data::ETL' );
 
@@ -55,6 +56,9 @@ subtest '"working_folder" command' => sub {
 
 	working_folder search_in => 't', find_folder => qr|^DataFiles$|i;
 	is( $Data::ETL::WorkingFolder, 't/DataFiles', 'Search for a subfolder' );
+
+	working_folder find_folder => '*', search_in => 't/DataFiles';
+	is( $Data::ETL::WorkingFolder, 't/DataFiles/FileListing', 'Alphabetical order' );
 
 	working_folder find_folder => qr|^t$|i;
 	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );

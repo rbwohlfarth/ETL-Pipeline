@@ -493,8 +493,7 @@ sub working_folder {
 		$criteria{search_in} = '.' unless hascontent( $criteria{search_in} );
 
 		if (defined $criteria{find_folder}) {
-			$Data::ETL::WorkingFolder = shift [
-				File::Find::Rule
+			$Data::ETL::WorkingFolder = shift [ sort File::Find::Rule
 				->directory
 				->maxdepth( 1 )
 				->name( $criteria{find_folder} )
