@@ -64,4 +64,15 @@ subtest '"working_folder" command' => sub {
 	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );
 };
 
+subtest 'Use modules from a different namespace' => sub {
+	unshift @INC, './t';
+
+	my $result = extract_from module => 'MyTestExtract';
+	ok( defined( $result ), 'Data::ETL::extract set' );
+
+	$result = load_into module => 'MyTestLoad', option => 1;
+	ok( defined( $result ), 'Data::ETL::load set' );
+};
+
+
 done_testing();

@@ -264,20 +264,33 @@ Executed once for each record. Used to debug errors with the data.
 
 See L<Data::ETL::Extract> for a complete explanation of these options.
 
-Note that you do not have to put the I<Data::ETL::Extract::> in front of the
-bridge class name. B<extract_from> automatically adds that bit for you. This
-makes your B<Data::ETL> script easier to read.
+=head4 The class name
+
+You do not have to put the I<Data::ETL::Extract::> in front of the bridge class
+name. B<extract_from> automatically adds that bit for you. This makes your
+B<Data::ETL> script easier to read.
+
+Bridge classes B<do not> have to be in the I<Data::ETL::Extract> namespace. I
+use one-off modules for some truly unique formats. How do you stop B<Data::ETL>
+from adding the the I<Data::ETL::Extract::>?
+
+  extract_from module => 'MyModule';
+
+B<Data::ETL> loads B<MyModule> and not B<Data::ETL::Extract::MyModule>.
 
 =cut
 
 my $extract;
 
 sub extract_from {
-	my $class      = shift @_;
-	my %attributes = @_;
+	my $class = shift @_;
+	if ($class eq 'module') {
+		$class = shift @_;
+	} elsif ($class !~ m/^Data::ETL::Extract/) {
+		$class = "Data::ETL::Extract::$class";
+	}
 
-	$class = "Data::ETL::Extract::$class"
-		unless $class =~ m/^Data::ETL::Extract/;
+	my %attributes = @_;
 	$extract = eval "use $class; $class->new( \%attributes )";
 }
 
@@ -331,15 +344,33 @@ Note that you do not have to put the I<Data::ETL::Load::> in front of the
 bridge class name. B<load_into> automatically adds that bit for you. This makes
 the B<Data::ETL> easier to read.
 
+=head4 The class name
+
+You do not have to put the I<Data::ETL::Load::> in front of the bridge class
+name. B<load_into> automatically adds that bit for you. This makes your
+B<Data::ETL> script easier to read.
+
+Bridge classes B<do not> have to be in the I<Data::ETL::Load> namespace. I
+use one-off modules for some truly unique formats. How do you stop B<Data::ETL>
+from adding the the I<Data::ETL::Load::>?
+
+  load_into module => 'MyModule';
+
+B<Data::ETL> loads B<MyModule> and not B<Data::ETL::Load::MyModule>.
+
 =cut
 
 my $load;
 
 sub load_into {
-	my $class      = shift @_;
-	my %attributes = @_;
+	my $class = shift @_;
+	if ($class eq 'module') {
+		$class = shift @_;
+	} elsif ($class !~ m/^Data::ETL::Load/) {
+		$class = "Data::ETL::Load::$class";
+	}
 
-	$class = "Data::ETL::Load::$class" unless $class =~ m/^Data::ETL::Load/;
+	my %attributes = @_;
 	$load = eval "use $class; $class->new( \%attributes )";
 }
 
