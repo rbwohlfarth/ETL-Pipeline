@@ -100,7 +100,7 @@ unique. This lets the tests determine which lines it loaded.
 
 has 'data' => (
 	default => sub { [
-		[qw/Header1 Header2 Header3 Header4/],
+		[qw/Header1 Header2 Header3/, '  Header4  '],
 		[qw/Field1 Field2 Field3 Field4 Field5/],
 		[qw/Field6 Field7 Field8 Field9 Field0/],
 	] },

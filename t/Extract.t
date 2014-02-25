@@ -39,7 +39,15 @@ subtest 'Skip records' => sub {
 	is( $record->{un}, 'Field6', 'Skipped first row' );
 };
 
-subtest 'Data filter' => sub {
+subtest 'Standard data filter' => sub {
+	my $file = new_ok( 'Data::ETL::Extract::UnitTest' );
+	$file->setup;
+
+	ok( $file->next_record, 'Header row loaded' );
+	is( $file->get( 3 ), 'Header4', 'Spaces trimmed value' );
+};
+
+subtest 'Custom data filter' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::UnitTest' => [
 		filter => sub { y/a//d; $_ }
 	] );
