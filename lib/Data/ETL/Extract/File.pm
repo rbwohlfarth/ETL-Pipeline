@@ -31,6 +31,7 @@ use 5.14.0;
 use Data::ETL::CodeRef;
 use File::Find::Rule;
 use List::AllUtils qw/first/;
+use String::Util qw/hascontent/;
 
 
 our $VERSION = '1.00';
@@ -88,7 +89,7 @@ before 'setup' => sub {
 	}
 
 	die "'extract_from' could not find a matching file"
-		unless defined $self->path;
+		unless hascontent $self->path;
 };
 
 
