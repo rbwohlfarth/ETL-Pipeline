@@ -78,18 +78,14 @@ before 'setup' => sub {
 		my $search = File::Find::Rule->new;
 		$search->file;
 
-		my $under = $Data::ETL::WorkingFolder;
-		$under = catdir( $under, $self->in_folder )
-			if hascontent $self->in_folder;
-
 		my $pattern = $self->find_file;
 		if (ref( $pattern ) eq 'CODE') {
 			my $path = first { Data::ETL::CodeRef::run( $pattern, $_ ) }
-				$search->in( $under );
+				$search->in( $Data::ETL::SourceFolder );
 			$self->path( $path );
 		} else {
 			$search->name( $pattern ) if defined $pattern;
-			$self->path( shift [$search->in( $under )] );
+			$self->path( shift [$search->in( $Data::ETL::SourceFolder )] );
 		}
 	}
 
@@ -135,26 +131,6 @@ B<true>. The search passes the file name to the code as C<$_>.
 has 'find_file' => (
 	is  => 'rw',
 	isa => 'Maybe[CodeRef|RegexpRef]',
-);
-
-
-=head3 in_folder
-
-This attribute limits the L</find_file> search to a sub-folder. For example,
-you receive two ZIP files. Both ZIP archives contain on file named F<data.csv>.
-When you unzip them, one file overwrites the other. So you extract each file
-into its own sub-folder. This attribute lets you process the files separately.
-
-Let's assume the files go into folders named F<one> and F<two>. To process
-F<one/data.csv>, you set B<in_folder> to F<one>. For the second file, you set
-B<in_folder> to F<two>.
-
-=cut
-
-has 'in_folder' => (
-	default => '',
-	is      => 'rw',
-	isa     => 'Str',
 );
 
 

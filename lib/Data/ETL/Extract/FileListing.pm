@@ -71,31 +71,10 @@ has 'find_file' => (
 );
 
 
-=head3 in_folder
-
-This attribute limits the L</files_in> and L</find_file> searches to a
-sub-folder. For example, you receive two ZIP files. Both ZIP archives contain a
-subdirectory named F<attachments>. When you unzip them, one directory
-overwrites the other. So you extract each archive into its own sub-folder. This
-attribute lets you process the files separately.
-
-Let's assume the files go into folders named F<one> and F<two>. To process
-F<one/attachments>, you set B<in_folder> to F<one>. For the second directory,
-you set B<in_folder> to F<two>.
-
-=cut
-
-has 'in_folder' => (
-	default => '',
-	is      => 'rw',
-	isa     => 'Str',
-);
-
-
 =head3 path
 
 The full path name of the directory to list. Setting this attribute bypasses
-the L<Data::ETL/working_folder>.
+the L<Data::ETL/source_folder>.
 
 =cut
 
@@ -214,17 +193,13 @@ sub setup {
 	my ($self) = @_;
 
 	unless (defined $self->path) {
-		my $under = $Data::ETL::WorkingFolder;
-		$under = catdir( $under, $self->in_folder )
-			if hascontent $self->in_folder;
-
 		if (defined $self->files_in) {
 			$self->path( shift [File::Find::Rule
 				->directory()
 				->name( $self->files_in )
-				->in( $under )
+				->in( $Data::ETL::SourceFolder )
 			] );
-		} else { $self->path( $under ); }
+		} else { $self->path( $Data::ETL::SourceFolder ); }
 	}
 
 	die "Could not find a matching folder" unless defined $self->path;

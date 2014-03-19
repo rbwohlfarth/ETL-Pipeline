@@ -26,7 +26,8 @@ use File::Find::Rule;
 use String::Util qw/hascontent/;
 
 
-our @EXPORT  = qw/extract_from transform_as set load_into run working_folder/;
+our @EXPORT  = qw/extract_from load_into run set source_folder transform_as
+	working_folder/;
 our $VERSION = '1.00';
 
 
@@ -477,7 +478,7 @@ sub run {
 
 The B<working_folder> command sets the root directory for finding data files.
 The L<Data::ETL::Extract> L<bridge class|/Bridge Classes> only loads files
-from this directory. And the L<Data::ETL::Extract>
+from this directory. And the L<Data::ETL::Load>
 L<bridge class|/Bridge Classes> writes its files into this directory. This
 keeps all of your files organized.
 
@@ -502,8 +503,8 @@ B<working_folder> supports variable directory names using the search options:
 =item search_in
 
 When searching, only look inside this folder. The code does not search
-subdirectories. Data directories can be quite large. And a fully recursive
-search could take a very long time.
+subdirectories. Data directories can be quite large. A fully recursive search
+could take a very long time.
 
 =item find_folder
 
@@ -511,6 +512,8 @@ The search looks for a folder underneath I<search_in> whose name matches this
 regular expression.
 
 =back
+
+B<working_folder> always resets L</source_folder>.
 
 =cut
 
@@ -532,6 +535,35 @@ sub working_folder {
 			];
 		} else { $Data::ETL::WorkingFolder = $criteria{search_in}; }
 	}
+
+	source_folder( '' );
+}
+
+
+=head3 source_folder
+
+The B<source_folder> command sets the top directory for finding input files.
+The L<Data::ETL::Extract> L<bridge class|/Bridge Classes> only loads files
+from this directory. The B<source_folder> must be a sub-folder of the
+L</working_folder>.
+
+B<source_folder> accepts a string or regular expression. The command finds the
+first L</working_folder> sub-folder that matches.
+
+=cut
+
+sub source_folder {
+	my $name = shift;
+
+	# A blank causes errors in File::Find::Rule.
+	if (hascontent $name) {
+		$Data::ETL::SourceFolder = shift [ sort File::Find::Rule
+			->directory
+			->maxdepth( 1 )
+			->name( $name )
+			->in( $Data::ETL::WorkingFolder )
+		];
+	} else { $Data::ETL::SourceFolder = $Data::ETL::WorkingFolder; }
 }
 
 
@@ -553,6 +585,19 @@ The default value is the current directory.
 =cut
 
 my $WorkingFolder = '.';
+
+
+=head3 SourceFolder
+
+This scalar variable contains the path to the source data files. It is set by
+the set by the L</working_folder> or L</source_folder> commands. Your
+L<Data::ETL::Extract> classes will find their data files in this directory.
+
+The default value is the current directory.
+
+=cut
+
+my $SourceFolder = $WorkingFolder;
 
 
 =head1 ADVANCED USES

@@ -9,6 +9,7 @@ ok( defined &transform_as  , 'transform_as command exported'   );
 ok( defined &set           , 'set command exported'            );
 ok( defined &load_into     , 'load_into command exported'      );
 ok( defined &run           , 'run command exported'            );
+ok( defined &source_folder , 'source_folder command exported'  );
 ok( defined &working_folder, 'working_folder command exported' );
 
 use Data::ETL::Load::UnitTest;
@@ -53,6 +54,7 @@ subtest '"run" command clears the settings' => sub {
 subtest '"working_folder" command' => sub {
 	working_folder 't';
 	is( $Data::ETL::WorkingFolder, 't', 'Fixed root' );
+	is( $Data::ETL::SourceFolder, 't', 'Set source_folder too' );
 
 	working_folder search_in => 't', find_folder => qr|^DataFiles$|i;
 	is( $Data::ETL::WorkingFolder, 't/DataFiles', 'Search for a subfolder' );
@@ -62,6 +64,16 @@ subtest '"working_folder" command' => sub {
 
 	working_folder find_folder => qr|^t$|i;
 	is( $Data::ETL::WorkingFolder, 't', 'Search in the current directory' );
+};
+
+subtest '"source_folder" command' => sub {
+	working_folder 't';
+
+	source_folder 'DataFiles';
+	is( $Data::ETL::SourceFolder, 't/DataFiles', 'Fixed root' );
+
+	source_folder qr|^DataFiles$|i;
+	is( $Data::ETL::SourceFolder, 't/DataFiles', 'Search for a subfolder' );
 };
 
 subtest 'Use modules from a different namespace' => sub {
