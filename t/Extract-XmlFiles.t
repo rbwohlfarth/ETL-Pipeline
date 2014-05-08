@@ -28,28 +28,31 @@ is( $data->get( [
 --divider--
 <P>A second follow up sentence.</P>
 LITERAL
-	is( $data->get( [
-		'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
-		undef,
-	] ), trim( <<LITERAL ), 'undef returns first of multiple fields');
+is( $data->get( [
+	'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
+	undef,
+] ), trim( <<LITERAL ), 'undef returns first of multiple fields');
 <P>The first feedback line went right here.</P>
 <P>I replaced it with this silly text.</P>
 <P>I don't want real data for testing - just the structure.</P>
 LITERAL
-	is( $data->get( [
-		'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
-		'first',
-	] ), trim( <<LITERAL ), 'First of multiple fields');
+is( $data->get( [
+	'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
+	'first',
+] ), trim( <<LITERAL ), 'First of multiple fields');
 <P>The first feedback line went right here.</P>
 <P>I replaced it with this silly text.</P>
 <P>I don't want real data for testing - just the structure.</P>
 LITERAL
-	is( $data->get( [
-		'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
-		'last',
-	] ), trim( <<LITERAL ), 'Last of multiple fields');
+is( $data->get( [
+	'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription',
+	'last',
+] ), trim( <<LITERAL ), 'Last of multiple fields');
 <P>A second follow up sentence.</P>
 LITERAL
+
+ok( $data->exists( '/FeedbackFile' ), 'Node exists');
+ok( !$data->exists( '/Other' ), 'Node does not exist');
 
 is( $data->next_record, 0, 'End of file list' );
 

@@ -63,6 +63,42 @@ has 'find_file' => (
 );
 
 
+=head2 Extra methods and attributes
+
+=head3 exists
+
+This method tells you whether the given path exists or not. Unlike L</get>,
+it does not return the value from that path. It returns a boolena flag. B<True>
+means that the path exists. B<False> means that it doesn't.
+
+You pass an XPath string as the only parameter. You can learn more about XPath
+here: L<http://www.w3schools.com/xpath/xpath_functions.asp>.
+
+=cut
+
+sub exists {
+	my ($self, $xpath_string) = @_;
+
+	my @matches = $self->xpath->findnodes( $xpath_string );
+	return (scalar( @matches ) > 0 ? 1 : 0);
+}
+
+
+=head3 path
+
+Returns the relative path of the current XML file. You can use this method to
+get at the file name.
+
+  transform_as File => sub { $_->path };
+
+=cut
+
+has 'path' => (
+	is  => 'rw',
+	isa => 'Str',
+);
+
+
 =head2 Automatically called from L<Data::ETL/run>
 
 =head3 get
@@ -145,21 +181,6 @@ sub get {
 		else                                { return join( $join_with, @values ); }
 	} else { return $match->value; }
 }
-
-
-=head3 path
-
-Returns the relative path of the current XML file. You can use this method to
-get at the file name.
-
-  transform_as File => sub { $_->path };
-
-=cut
-
-has 'path' => (
-	is  => 'rw',
-	isa => 'Str',
-);
 
 
 =head3 next_record
