@@ -7,6 +7,7 @@ my %data;
 my $load = new_ok( 'Data::ETL::Load::Hash' => [hash => \%data] );
 
 sub fill_record {
+	my $load                = shift     ;
 	my $return_on_duplicate = shift // 1;
 
 	$load->set( key   => 1   );
@@ -21,10 +22,12 @@ sub fill_record {
 }
 
 subtest 'Keep duplicates' => sub {
-	$load->duplicates( 'keep' );
+	my $load = new_ok( 'Data::ETL::Load::Hash' => [
+		duplicates => 'keep',
+		hash       => \%data,
+	] );
 	$load->setup;
-
-	fill_record;
+	fill_record( $load );
 
 	my @keys = keys %data;
 	is( scalar( @keys ), 2, 'Correct number of records' );
@@ -42,10 +45,12 @@ subtest 'Keep duplicates' => sub {
 };
 
 subtest 'Overwrite duplicates' => sub {
-	$load->duplicates( 'overwrite' );
+	my $load = new_ok( 'Data::ETL::Load::Hash' => [
+		duplicates => 'overwrite',
+		hash       => \%data,
+	] );
 	$load->setup;
-
-	fill_record;
+	fill_record( $load );
 
 	my @keys = keys %data;
 	is( scalar( @keys ), 2, 'Correct number of records' );
@@ -60,10 +65,12 @@ subtest 'Overwrite duplicates' => sub {
 };
 
 subtest 'Skip duplicates' => sub {
-	$load->duplicates( 'skip' );
+	my $load = new_ok( 'Data::ETL::Load::Hash' => [
+		duplicates => 'skip',
+		hash       => \%data,
+	] );
 	$load->setup;
-
-	fill_record( 0 );
+	fill_record( $load, 0 );
 
 	my @keys = keys %data;
 	is( scalar( @keys ), 2, 'Correct number of records' );
@@ -73,6 +80,22 @@ subtest 'Skip duplicates' => sub {
 	is( ref( $data{1} ), 'HASH', 'One value in list' );
 	is( $data{1}{value}, 'a', 'First duplicate correct' );
 	is( $data{2}{value}, 'b', 'Second record correct' );
+
+	$load->finished;
+};
+
+subtest 'Do not clear the hash' => sub {
+	my $load = new_ok( 'Data::ETL::Load::Hash' => [
+		duplicates => 'overwrite',
+		hash       => \%data,
+	] );
+	$load->setup;
+	fill_record( $load );
+
+	$load->clear( 0 );
+	$load->setup;
+	my @keys = keys %data;
+	is( scalar( @keys ), 2, 'Old data still in hash' );
 
 	$load->finished;
 };

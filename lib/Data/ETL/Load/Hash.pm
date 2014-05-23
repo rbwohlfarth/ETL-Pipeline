@@ -52,7 +52,7 @@ L<Data::ETL/run>, it contains all of your data.
 
 has 'hash' => (
 	is  => 'rw',
-	isa => 'HashRef[Str]',
+	isa => 'HashRef[ArrayRef[HashRef[Str]]|HashRef[Str]]',
 );
 
 
@@ -67,6 +67,7 @@ has 'key' => (
 	is      => 'rw',
 	isa     => 'Str',
 );
+
 
 =head3 duplicates
 
@@ -95,6 +96,23 @@ has 'duplicates' => (
 	default => 'keep',
 	is      => 'rw',
 	isa     => enum( [qw/keep overwrite skip/] ),
+);
+
+
+=head3 clear
+
+This attribute instructs the L</setup> to empty out the hash. Clearing the hash
+at the start prevents you from accidently re-using data.
+
+If you are merging more than one file into the hash, then set C<clear> to
+B<false>. Otherwise you will only have data from the last file.
+
+=cut
+
+has 'clear' => (
+	default => 1,
+	is      => 'rw',
+	isa     => 'Bool',
 );
 
 
@@ -152,7 +170,7 @@ other.
 
 =cut
 
-sub setup { %{shift->hash} = (); }
+sub setup { my $self = shift; %{$self->hash} = () if $self->clear; }
 
 
 =head3 finished
