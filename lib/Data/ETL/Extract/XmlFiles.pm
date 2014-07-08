@@ -65,6 +65,30 @@ has 'find_file' => (
 
 =head2 Extra methods and attributes
 
+=head3 get_nodes
+
+This method returns a list of nodes at the given XPath. You can use this to
+access the structured data and retrieve multiple fields from a single node set.
+
+B<get_nodes> accepts an optional, additional parameter - context. I<context> is
+an XML nodeset. The code looks for an XPath relative to this nodeset. The
+default value starts at the root of the current document.
+
+Unlike L</get>, this method does not join multiple values. Your code must
+iterate over the returned list.
+
+=cut
+
+sub get_nodes {
+	my ($self, $xpath, $context) = @_;
+
+	my $match = $self->xpath->find( $xpath, $context );
+	if ($match->isa( 'XML::XPath::NodeSet' )) {
+		return $match->get_nodelist;
+	} else { return ($match); }
+}
+
+
 =head3 exists
 
 This method tells you whether the given path exists or not. Unlike L</get>,
@@ -108,8 +132,10 @@ string. The method returns a string representing the nodes found at that
 location. You can learn more about XPath here:
 L<http://www.w3schools.com/xpath/xpath_functions.asp>.
 
-B<Important Note:> The XPath is relative to the current record - not the
-document root.
+B<get> accepts an optional, additional parameter - context. I<context> is an
+XML nodeset. The code looks for an XPath relative to this nodeset. The default
+value starts at the root of the current document. You can use this in
+conjunction with L</get_nodes> for aggregating repeating records.
 
 =head4 Multiple values
 
@@ -164,12 +190,12 @@ They make poor seperators. Find something more suitable.
 =cut
 
 sub get {
-	my ($self, $xpath) = @_;
+	my ($self, $xpath, $context) = @_;
 
 	my ($xpath_string, $join_with) = ($xpath, '; ');
 	($xpath_string, $join_with) = @$xpath if ref( $xpath ) eq 'ARRAY';
 
-	my $match = $self->xpath->find( $xpath_string );
+	my $match = $self->xpath->find( $xpath_string, $context );
 	if ($match->isa( 'XML::XPath::NodeSet' )) {
 		my @values = grep { hascontent( $_ ) }
 			map { trim( $_->string_value ) }

@@ -51,6 +51,9 @@ is( $data->get( [
 <P>A second follow up sentence.</P>
 LITERAL
 
+my @nodes = $data->get_nodes( '/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription' );
+ok( scalar( @nodes ) > 1, 'Raw node set' );
+
 ok( $data->exists( '/FeedbackFile' ), 'Node exists');
 ok( !$data->exists( '/Other' ), 'Node does not exist');
 
