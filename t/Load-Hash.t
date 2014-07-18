@@ -34,12 +34,18 @@ subtest 'Keep duplicates' => sub {
 	ok( exists( $data{1} ), 'First record exists' );
 	ok( exists( $data{2} ), 'Second record exists' );
 
-	is( ref( $data{1} ), 'ARRAY', 'Duplicates in list' );
-	is( scalar( @{$data{1}} ), 2, 'Two duplicates' );
-	is( $data{1}[0]{value}, 'a', 'First duplicate correct' );
-	is( $data{1}[1]{value}, 'c', 'Second duplicate correct' );
+	subtest 'Duplicates as a list' => sub {
+		is( ref( $data{1} ), 'ARRAY', 'Stored as a list' );
+		is( scalar( @{$data{1}} ), 2, 'Two records' );
+		is( $data{1}[0]{value}, 'a', 'First record correct' );
+		is( $data{1}[1]{value}, 'c', 'Second record correct' );
+	};
 
-	is( $data{2}{value}, 'b', 'Second record correct' );
+	subtest 'Single as a list' => sub {
+		is( ref( $data{2} ), 'ARRAY', 'Stored as a list' );
+		is( scalar( @{$data{2}} ), 1, 'One record' );
+		is( $data{2}[0]{value}, 'b', 'First record correct' );
+	};
 
 	$load->finished;
 };

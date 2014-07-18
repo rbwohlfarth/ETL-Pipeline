@@ -136,15 +136,14 @@ sub write_record {
 	my $record  = $self->record;
 	my $key     = $record->{$self->key};
 
-	if (exists $storage->{$key}) {
-		if ($self->duplicates eq 'keep') {
-			my $value = $storage->{$key};
+	if ($self->duplicates eq 'keep') {
+		my $value = $storage->{$key};
 
-			if (ref( $value ) eq 'ARRAY') { push @$value, $record; }
-			else { $storage->{$key} = [$value, $record]; }
-		} elsif ($self->duplicates eq 'overwrite') {
-			$storage->{$key} = $record;
-		} else { return 0; }
+		if    (!defined( $value )      ) { $storage->{$key} = [$record]; }
+		elsif (ref( $value ) eq 'ARRAY') { push @$value, $record; }
+		else { $storage->{$key} = [$value, $record]; }
+	} elsif ($self->duplicates eq 'skip' and exists $storage->{$key}) {
+		return 0;
 	} else { $storage->{$key} = $record; }
 
 	return 1;
