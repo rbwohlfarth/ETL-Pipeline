@@ -436,6 +436,9 @@ sub run {
 
 	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
+		# User defined, record level logic...
+		        Data::ETL::CodeRef::run( $extract->debug    , $extract );
+		last if Data::ETL::CodeRef::run( $extract->stop_if  , $extract );
 		next if Data::ETL::CodeRef::run( $extract->bypass_if, $extract );
 
 		# "set" values...
@@ -454,6 +457,7 @@ sub run {
 			}
 		}
 
+		# load_into...
 		$load->write_record( $extract->record_number );
 	} continue {
 		say( 'Finsihed record #', $extract->record_number )

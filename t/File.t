@@ -37,10 +37,10 @@ subtest 'Without header row' => sub {
 	] );
 	$file->setup;
 
-	is( $file->record_number, 1, 'First record loaded' );
-	ok( $file->_cached, 'First record is data' );
+	is( $file->record_number, 0, 'No records loaded' );
+	is( $file->_cached, 0, 'No records read' );
 
-	ok( $file->next_record, 'Cached record used' );
+	ok( $file->next_record, 'First record loaded' );
 	ok( defined $file->record, 'Record has data' );
 
 	my @keys = keys %{$file->record};
@@ -87,8 +87,8 @@ subtest 'Skip report headers' => sub {
 		report_header_until => 2,
 	] );
 	$file->setup;
-	is( $file->record_number, 3, 'Skipped two rows' );
-	ok( $file->_cached, 'First data row cached' );
+	is( $file->record_number, 2, 'Skipped two rows' );
+	is( $file->_cached, 0, 'Nothing in memory' );
 };
 
 subtest 'Variable length report headers' => sub {

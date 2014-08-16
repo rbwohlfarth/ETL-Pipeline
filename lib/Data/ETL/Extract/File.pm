@@ -38,7 +38,7 @@ use String::Util qw/hascontent/;
 our $VERSION = '1.00';
 
 
-# This must come before the "around 'next_record' call. Otherwise the record
+# This must come before the "around 'next_record'" call. Otherwise the record
 # counter will be off and you will lose data records. This role also has an
 # "around 'next_record'". With the "use" command up here, that one executes
 # first. It is wrapped by the one in this role. For cached records, I never
@@ -194,21 +194,19 @@ has 'report_header_until' => (
 after 'setup' => sub {
 	my $self = shift @_;
 
-	# Ignore report headers. Always end with the column names in memory.
+	# Ignore report headers.
 	my $headers = $self->report_header_until;
 	if (ref( $headers ) eq 'CODE') {
 		do { $self->next_record( 1 ); }
 		until Data::ETL::CodeRef::run( $headers, $self );
-	} else {
-		$self->next_record( 1 ) foreach (1 .. $headers);
-		$self->next_record;
-	}
+		$self->_cached( 1 );
+	} else { $self->next_record( 1 ) foreach (1 .. $headers); }
 
 	# Process the field names. "next_record" starts with the first data row.
 	if ($self->has_field_names) {
+		$self->next_record;
 		$self->set_field_names;
-		$self->_cached( 0 );
-	} else { $self->_cached( 1 ); }
+	}
 };
 
 

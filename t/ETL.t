@@ -86,5 +86,30 @@ subtest 'Use modules from a different namespace' => sub {
 	ok( defined( $result ), 'Data::ETL::load set' );
 };
 
+subtest 'Stop processing' => sub {
+	working_folder 't';
+	extract_from 'UnitTest', stop_if => sub { shift->get( 0 ) eq 'Field1' };
+	transform_as un => 0, deux => 1, trois => 2;
+	load_into 'UnitTest';
+	run;
+
+	is( scalar( @Data::ETL::Load::UnitTest::storage ), 1, 'First data row' );
+};
+
+subtest 'Skip records' => sub {
+	working_folder 't';
+	extract_from 'UnitTest', bypass_if => sub { $_->get( 0 ) eq 'Field1' };
+	transform_as un => 0, deux => 1, trois => 2;
+	load_into 'UnitTest';
+	run;
+
+	is( scalar( @Data::ETL::Load::UnitTest::storage ), 2, 'Two records' );
+
+	my $record = shift @Data::ETL::Load::UnitTest::storage;
+	is( $record->{un}, 'Header1', 'Header row found' );
+
+	$record = shift @Data::ETL::Load::UnitTest::storage;
+	is( $record->{un}, 'Field6', 'Skipped first row' );
+};
 
 done_testing();

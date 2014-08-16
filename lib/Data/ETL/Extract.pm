@@ -107,9 +107,8 @@ L<Data::ETL/run> only executes this code against data records.
 =cut
 
 has 'bypass_if' => (
-	default => sub { sub { 0 } },
-	is      => 'rw',
-	isa     => 'CodeRef',
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
 );
 
 
@@ -136,18 +135,9 @@ By default, the ETL process reads B<all> records in the file.
 =cut
 
 has 'stop_if' => (
-	default => sub { sub { 0 } },
-	is      => 'rw',
-	isa     => 'CodeRef',
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
 );
-
-around 'next_record' => sub {
-	my ($original, $self, @arguments) = @_;
-	my $count = $original->( $self, @arguments );
-
-	# 0 = stop processing this file.
-	return (Data::ETL::CodeRef::run( $self->stop_if, $self ) ? 0 : $count);
-};
 
 
 =head3 filter
@@ -210,13 +200,8 @@ B<Data::ETL::Extract> passes in a reference to itself two ways...
 
 has 'debug' => (
 	is  => 'rw',
-	isa => 'CodeRef',
+	isa => 'Maybe[CodeRef]',
 );
-
-after 'next_record' => sub {
-	my $self = shift @_;
-	Data::ETL::CodeRef::run( $self->debug, $self );
-};
 
 
 =head2 Automatically called from L<Data::ETL/run>
@@ -300,7 +285,7 @@ L</next_record>.
 =head3 add_records
 
 This method increments L</record_number> by the given number. It accepts an
-integer as its only parameters.
+integer as its only parameter.
 
 =cut
 
@@ -312,13 +297,7 @@ has 'record_number' => (
 	traits  => [qw/Number/],
 );
 
-around 'next_record' => sub {
-	my ($original, $self, @arguments) = @_;
-	my $count = $original->( $self, @arguments );
-
-	$self->add_records( $count );
-	return $count;
-};
+after 'next_record' => sub { shift->add_records( 1 ) };
 
 
 =head3 set_field_names
