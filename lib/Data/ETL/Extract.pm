@@ -66,6 +66,7 @@ variable) files. So what happens when you run into something new?
 package Data::ETL::Extract;
 use Moose::Role;
 
+use 5.14.0;
 use Data::ETL::CodeRef;
 
 
@@ -282,7 +283,7 @@ number of records loaded.
 The role automatically increments this value after every call to
 L</next_record>.
 
-=head3 add_records
+=head3 increment_record_number
 
 This method increments L</record_number> by the given number. It accepts an
 integer as its only parameter.
@@ -291,13 +292,13 @@ integer as its only parameter.
 
 has 'record_number' => (
 	default => '0',
-	handles => {add_records => 'add'},
+	handles => {increment_record_number => 'inc'},
 	is      => 'rw',
 	isa     => 'Int',
-	traits  => [qw/Number/],
+	traits  => [qw/Counter/],
 );
 
-after 'next_record' => sub { shift->add_records( 1 ) };
+after 'next_record' => sub { shift->increment_record_number };
 
 
 =head3 set_field_names
