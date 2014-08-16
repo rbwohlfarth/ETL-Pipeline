@@ -298,8 +298,6 @@ has 'record_number' => (
 	traits  => [qw/Counter/],
 );
 
-after 'next_record' => sub { shift->increment_record_number };
-
 
 =head3 set_field_names
 

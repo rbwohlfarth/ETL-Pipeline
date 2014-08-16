@@ -197,14 +197,20 @@ after 'setup' => sub {
 	# Ignore report headers.
 	my $headers = $self->report_header_until;
 	if (ref( $headers ) eq 'CODE') {
-		do { $self->next_record( 1 ); }
-		until Data::ETL::CodeRef::run( $headers, $self );
+		do {
+			$self->next_record( 1 );
+			$self->increment_record_number;
+		} until Data::ETL::CodeRef::run( $headers, $self );
 		$self->_cached( 1 );
-	} else { $self->next_record( 1 ) foreach (1 .. $headers); }
+	} else { foreach (1 .. $headers) {
+		$self->next_record( 1 );
+		$self->increment_record_number;
+	} }
 
 	# Process the field names. "next_record" starts with the first data row.
 	if ($self->has_field_names) {
 		$self->next_record;
+		$self->increment_record_number;
 		$self->set_field_names;
 	}
 };
