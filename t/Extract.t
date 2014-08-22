@@ -4,6 +4,17 @@ use Test::More;
 
 working_folder 't';
 
+subtest 'Increment record counter' => sub {
+	my $file = new_ok( 'Data::ETL::Extract::UnitTest' );
+	$file->setup;
+
+	ok( $file->next_record, 'Header row loaded' );
+	is( $file->record_number, 1, 'Record #1' );
+
+	ok( $file->next_record, 'Data row loaded' );
+	is( $file->record_number, 2, 'Record #2' );
+};
+
 subtest 'Standard data filter' => sub {
 	my $file = new_ok( 'Data::ETL::Extract::UnitTest' );
 	$file->setup;

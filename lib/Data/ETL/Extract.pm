@@ -283,20 +283,35 @@ number of records loaded.
 The role automatically increments this value after every call to
 L</next_record>.
 
+=head3 decrement_record_number
+
+This method decrements L</record_number> by one.
+
 =head3 increment_record_number
 
-This method increments L</record_number> by the given number. It accepts an
-integer as its only parameter.
+This method increments L</record_number> by one.
 
 =cut
 
 has 'record_number' => (
 	default => '0',
-	handles => {increment_record_number => 'inc'},
+	handles => {
+		decrement_record_number => 'dec',
+		increment_record_number => 'inc',
+	},
 	is      => 'rw',
 	isa     => 'Int',
 	traits  => [qw/Counter/],
 );
+
+around 'next_record' => sub {
+	my $original = shift;
+	my $self     = shift;
+
+	my $result = $self->$original( @_ );
+	$self->increment_record_number if $result;
+	return $result;
+};
 
 
 =head3 set_field_names

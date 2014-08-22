@@ -28,8 +28,6 @@ subtest 'XLSX format' => sub {
 		is( $file->get( 'C' ), 'Header3', 'Found Header3 by letter' );
 		is( $file->get( 'D' ), 'Header4', 'Found Header4 by letter' );
 		is( $file->get( 'E' ), 'Header5', 'Found Header5 by letter' );
-
-		$file->increment_record_number;
 	};
 
 	subtest 'Second record' => sub {
@@ -41,13 +39,9 @@ subtest 'XLSX format' => sub {
 		is( $file->get( 2 ), 'Field3', 'Found Field3' );
 		is( $file->get( 3 ), 'Field4', 'Found Field4' );
 		is( $file->get( 4 ), 'Field5', 'Found Field5' );
-
-		$file->increment_record_number;
 	};
 
 	is( $file->next_record, 0, 'End of file reached' );
-	$file->increment_record_number;
-
 	$file->finished;
 };
 
@@ -76,8 +70,6 @@ subtest 'XLS format' => sub {
 		is( $file->get( 'C' ), 'Header3', 'Found Header3 by letter' );
 		is( $file->get( 'D' ), 'Header4', 'Found Header4 by letter' );
 		is( $file->get( 'E' ), 'Header5', 'Found Header5 by letter' );
-
-		$file->increment_record_number;
 	};
 
 	subtest 'Second record' => sub {
@@ -89,13 +81,9 @@ subtest 'XLS format' => sub {
 		is( $file->get( 2 ), 'Field3', 'Found Field3' );
 		is( $file->get( 3 ), 'Field4', 'Found Field4' );
 		is( $file->get( 4 ), 'Field5', 'Found Field5' );
-
-		$file->increment_record_number;
 	};
 
 	is( $file->next_record, 0, 'End of file reached' );
-	$file->increment_record_number;
-
 	$file->finished;
 };
 

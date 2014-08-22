@@ -55,6 +55,7 @@ of attributes.
 =cut
 
 with 'Data::ETL::Extract::AsHash';
+with 'Data::ETL::Extract';
 with 'Data::ETL::Extract::File';
 
 

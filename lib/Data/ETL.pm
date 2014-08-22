@@ -436,8 +436,6 @@ sub run {
 
 	say $Data::ETL::WorkingFolder;
 	while ($extract->next_record) {
-		$extract->increment_record_number;
-
 		# User defined, record level logic...
 		        Data::ETL::CodeRef::run( $extract->debug    , $extract );
 		last if Data::ETL::CodeRef::run( $extract->stop_if  , $extract );

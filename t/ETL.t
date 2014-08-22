@@ -51,20 +51,6 @@ subtest '"run" command clears the settings' => sub {
 	is( $Data::ETL::load                    , undef, 'Cleared Data::ETL::load'      );
 };
 
-subtest 'Increment record counter' => sub {
-	working_folder 't';
-	extract_from 'UnitTest', debug => sub {
-		if ($_->get( 0 ) eq 'Header1') {
-			is( $_->record_number, 1, 'Record #1' );
-		} elsif ($_->get( 0 ) eq 'Field1') {
-			is( $_->record_number, 2, 'Record #2' );
-		}
-	};
-	transform_as un => 0, deux => 1, trois => 2;
-	load_into 'UnitTest';
-	run;
-};
-
 subtest '"working_folder" command' => sub {
 	working_folder 't';
 	is( $Data::ETL::WorkingFolder, 't', 'Fixed root' );

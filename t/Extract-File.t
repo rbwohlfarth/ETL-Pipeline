@@ -98,7 +98,7 @@ subtest 'Variable length report headers' => sub {
 		report_header_until => sub { $_->get( 0 ) eq 'Field6' },
 	] );
 	$file->setup;
-	is( $file->record_number, 3, 'Skipped two rows' );
+	is( $file->record_number, 2, 'Skipped two rows' );
 	ok( $file->_cached, 'First data row cached' );
 };
 

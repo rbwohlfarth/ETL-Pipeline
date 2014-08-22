@@ -36,6 +36,7 @@ use warnings;
 package Data::ETL::Extract::Xml;
 use Moose;
 
+with 'Data::ETL::Extract';
 with 'Data::ETL::Extract::File';
 
 use List::Util qw/first/;

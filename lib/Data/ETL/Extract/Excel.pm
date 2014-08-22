@@ -35,9 +35,6 @@ use warnings;
 package Data::ETL::Extract::Excel;
 use Moose;
 
-with 'Data::ETL::Extract::AsHash';
-with 'Data::ETL::Extract::File';
-
 use List::Util qw/first/;
 use Spreadsheet::ParseExcel;
 use Spreadsheet::ParseExcel::Utility qw/int2col/;
@@ -54,6 +51,13 @@ our $VERSION = '1.00';
 
 See L<Data::ETL::Extract::File> and L<Data::ETL::Extract::AsHash> for more
 attributes.
+
+=cut
+
+with 'Data::ETL::Extract::AsHash';
+with 'Data::ETL::Extract';
+with 'Data::ETL::Extract::File';
+
 
 =head3 has_field_names
 

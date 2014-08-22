@@ -38,15 +38,6 @@ use String::Util qw/hascontent/;
 our $VERSION = '1.00';
 
 
-# This must come before the "around 'next_record'" call. Otherwise the record
-# counter will be off and you will lose data records. This role also has an
-# "around 'next_record'". With the "use" command up here, that one executes
-# first. It is wrapped by the one in this role. For cached records, I never
-# call the inner "around" (from Data::ETL::Extract). And that keeps the counter
-# synchronized with what we actually loaded.
-with 'Data::ETL::Extract';
-
-
 =head2 Identifying the input file
 
 B<Data::ETL::Extract::File> offers two ways to identify the specific input
@@ -92,6 +83,8 @@ before 'setup' => sub {
 	die "'extract_from' could not find a matching file"
 		unless hascontent $self->path;
 };
+
+requires 'setup';
 
 
 =head1 METHODS & ATTRIBUTES
@@ -199,18 +192,13 @@ after 'setup' => sub {
 	if (ref( $headers ) eq 'CODE') {
 		do {
 			$self->next_record( 1 );
-			$self->increment_record_number;
 		} until Data::ETL::CodeRef::run( $headers, $self );
 		$self->_cached( 1 );
-	} else { foreach (1 .. $headers) {
-		$self->next_record( 1 );
-		$self->increment_record_number;
-	} }
+	} else { $self->next_record( 1 ) foreach (1 .. $headers); }
 
 	# Process the field names. "next_record" starts with the first data row.
 	if ($self->has_field_names) {
 		$self->next_record;
-		$self->increment_record_number;
 		$self->set_field_names;
 	}
 };
@@ -238,6 +226,7 @@ has '_cached' => (
 	default => 0,
 	is      => 'rw',
 	isa     => 'Bool',
+	trigger => \&_trigger_cached,
 );
 
 around 'next_record' => sub {
@@ -248,6 +237,14 @@ around 'next_record' => sub {
 		return 1;
 	} else { return $original->( $self, @arguments ); }
 };
+
+sub _trigger_cached {
+	my ($self, $new, $old) = @_;
+	$self->decrement_record_number if $new;
+}
+
+requires 'decrement_record_number';
+requires 'increment_record_number';
 
 
 =head1 SEE ALSO
@@ -260,7 +257,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 LICENSE
 
-Copyright 2013 (c) Vanderbilt University
+Copyright 2014 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
