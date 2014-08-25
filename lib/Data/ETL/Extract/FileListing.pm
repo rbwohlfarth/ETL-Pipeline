@@ -32,8 +32,8 @@ would not normally use it directly.
 package Data::ETL::Extract::FileListing;
 use Moose;
 
-use File::Find::Rule;
-use File::Spec::Functions qw/catdir catpath splitpath/;
+use 5.14.0;
+use Path::Class::Rule;
 use String::Util qw/hascontent/;
 
 
@@ -159,56 +159,55 @@ L</path>.
 sub next_record {
 	my ($self) = @_;
 
-	if ($self->no_matches) {
-		return 0;
-	} else {
-		my $path = $self->next_match;
-		my (undef, $directory, $file) = splitpath( $path );
-
-		my %record;
-		$record{Extension} = pop [split /\./, $file];
-		$record{File     } = $file;
-		$record{Folder   } = catdir( $self->path, $directory );
-		$record{Inside   } = $directory;
-		$record{Path     } = catdir( $self->path, $path );
-		$record{Relative } = $path;
-
-		$self->record( \%record );
+	my $path = $self->iterator->();
+	if (defined $path) {
+		$self->record( {
+			Extension => pop [split /\./, $path->basename],
+			File      => $path->basename,
+			Folder    => $path->dir->absolute( $self->path )->stringify,
+			Inside    => $path->dir->stringify,
+			Path      => $path->absolute( $self->path )->stringify,
+			Relative  => "$path",
+		} );
 		return 1;
-	}
+	} else { return 0; }
 }
 
 
 =head3 setup
 
-This method configures the input source. In this object, that means opening
-the file and looking for a header record. If the file has a header row, then
-I name the fields based on the header row. You can identify data by the
-field name or by the column name. See L<Data::ETL::Extract::AsHash/headers>
-for more information.
+This method configures the input source. In this object, that means creating
+the iterator. L</next_record> then loops through that selecting each file. The
+iterator rules are created based on the attributes from
+L<Data::ETL/extract_from>.
 
 =cut
 
 sub setup {
 	my ($self) = @_;
 
+	# Search for the directory that has the attachments.
 	unless (defined $self->path) {
 		if (defined $self->files_in) {
-			$self->path( shift [File::Find::Rule
+			my $result = Path::Class::Rule->new
 				->directory()
 				->name( $self->files_in )
-				->in( $Data::ETL::SourceFolder )
-			] );
+				->iter( $Data::ETL::SourceFolder )
+				->()
+			;
+			$self->path( "$result" ) if defined $result;
 		} else { $self->path( $Data::ETL::SourceFolder ); }
 	}
 
 	die "Could not find a matching folder" unless defined $self->path;
 
-	my $rule = File::Find::Rule->file()->relative();
+	# Create the filter and iterator for listing files.
+	my $rule = Path::Class::Rule->new->file();
 	$rule->name( $self->find_file ) if defined $self->find_file;
-	$rule->mindepth( $self->min_depth ) if defined $self->min_depth;
-	$rule->maxdepth( $self->max_depth ) if defined $self->max_depth;
-	$self->add_matches( $rule->in( $self->path ) );
+	$rule->min_depth( $self->min_depth ) if defined $self->min_depth;
+	$rule->max_depth( $self->max_depth ) if defined $self->max_depth;
+
+	$self->_set_iterator( $rule->iter( $self->path, {relative => 1} ) );
 }
 
 
@@ -226,23 +225,31 @@ sub finished { }
 You should never use these items. They can change at any moment. I documented
 them for the module maintainers.
 
-=head3 matches
+=head3 iterator
 
-The list of files underneath the specified folder.
-B<Data::ETL::Extract::FileListing> returns them one at a time.
+L<Path::Class::Rule> creates an iterator for walking over the directory
+structure. This attribute holds the iterator reference for L</next_record>. It
+is automatically set by L</setup>.
 
 =cut
 
-has 'matches' => (
-	default => sub { [] },
-	handles => {
-		add_matches => 'push',
-		next_match  => 'shift',
-		no_matches  => 'is_empty',
-	},
+has 'iterator' => (
+	is     => 'ro',
+	isa    => 'CodeRef',
+	writer => '_set_iterator',
+);
+
+
+=head3 rule
+
+This attribute holds the L<Path::Class::Rule> used in L</setup>.
+
+=cut
+
+has 'rule' => (
+	default => sub { Path::Class::Rule->new },
 	is      => 'ro',
-	isa     => 'ArrayRef',
-	traits  => [qw/Array/],
+	isa     => 'Path::Class::Rule',
 );
 
 

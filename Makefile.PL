@@ -12,6 +12,8 @@ requires 'File::Find::Rule';
 requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';
+requires 'Path::Class';
+requires 'Path::Class::Rule';
 requires 'Regexp::Common';
 requires 'Spreadsheet::ParseExcel';
 requires 'Spreadsheet::ParseExcel::Utility';

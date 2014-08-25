@@ -18,8 +18,8 @@ subtest 'Dynamic folder search' => sub {
 		ok( defined $file->record, 'Record has data' );
 		is  ( $file->get( 'Extension' ), 'txt'              , 'Extension'     );
 		like( $file->get( 'File'      ), qr/^Test\s\d\.txt$/, 'File name'     );
-		is  ( $file->get( 'Inside'    ), ''                 , 'Inside folder' );
-		like( $file->get( 'Path'      ), qr|^t\\DataFiles\\FileListing\\Test\s\d\.txt$|, 'Full path' );
+		is  ( $file->get( 'Inside'    ), '.'                , 'Inside folder' );
+		like( $file->get( 'Path'      ), qr|\bt\\DataFiles\\FileListing\\Test\s\d\.txt$|, 'Full path' );
 		like( $file->get( 'Relative'  ), qr|^Test\s\d\.txt$|, 'Relative path' );
 	};
 
