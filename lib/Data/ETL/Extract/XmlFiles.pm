@@ -33,7 +33,7 @@ package Data::ETL::Extract::XmlFiles;
 
 use 5.14.0;
 use File::Find::Rule;
-use List::Util qw/first/;
+use List::AllUtils qw/first uniq/;
 use Moose;
 use String::Util qw/hascontent trim/;
 use XML::XPath;
@@ -140,8 +140,10 @@ conjunction with L</get_nodes> for aggregating repeating records.
 =head4 Multiple values
 
 So what happens when the XPath returns multiple nodes? C<get> joins the string
-values together with a semi-colon between them: C<'; '>. If you want a
-different seperator, pass it to C<get> using a list reference.
+values together with a semi-colon between them: C<'; '>. C<get> joins unique
+values - so you won't get the same value over and over.
+
+If you want a different seperator, pass it to C<get> using a list reference.
 
   # Returns "Line one; Line two"
   transform_as Followup => '/File/More/Text';
@@ -204,7 +206,8 @@ sub get {
 		if    (not defined $join_with     ) { return shift @values; }
 		elsif (lc( $join_with ) eq 'first') { return shift @values; }
 		elsif (lc( $join_with ) eq 'last' ) { return pop   @values; }
-		else                                { return join( $join_with, @values ); }
+		elsif (    $join_with   eq '; '   ) { return join( $join_with, uniq @values ); }
+		else                                { return join( $join_with,      @values ); }
 	} else { return $match->value; }
 }
 

@@ -50,6 +50,9 @@ is( $data->get( [
 ] ), trim( <<LITERAL ), 'Last of multiple fields');
 <P>A second follow up sentence.</P>
 LITERAL
+is( $data->get(
+	'/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/Feedbackid',
+), '369', 'Unique values');
 
 my @nodes = $data->get_nodes( '/FeedbackFile/Row/SubTables/Feedback/Row/SubTables/FeedbackFollowups/Row/Data/FollowupDescription' );
 ok( scalar( @nodes ) > 1, 'Raw node set' );
