@@ -95,6 +95,7 @@ sub set_field_names {
 	my $self = shift;
 
 	while (my ($field, $text) = each %{$self->record}) {
+		$self->alias  ->{$text} = $field;
 		$self->headers->{$text} = $field;
 	}
 }
