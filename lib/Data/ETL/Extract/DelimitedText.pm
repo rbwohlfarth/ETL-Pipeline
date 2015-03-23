@@ -111,7 +111,10 @@ sub next_record {
 		$record{$_} = $fields->[$_] foreach (0 .. $#$fields);
 		$self->record( \%record );
 		return 1;
-	} else { return 0; }
+	} else { 
+		my ($code, $message, $position) = $self->csv->error_diag;
+		die "Error $code: $message at character $position";
+	}
 }
 
 
@@ -131,7 +134,7 @@ sub setup {
 	# Open the new file for reading. Failure = end of file.
 	my $path = $self->path;
 	my $handle;
-
+	
 	die "Unable to open '$path' for reading"
 		unless open( $handle, '<', $path );
 
