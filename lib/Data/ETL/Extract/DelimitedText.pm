@@ -112,6 +112,7 @@ sub next_record {
 		$self->record( \%record );
 		return 1;
 	} else { 
+		return 0 if $self->csv->eof;
 		my ($code, $message, $position) = $self->csv->error_diag;
 		die "Error $code: $message at character $position";
 	}
