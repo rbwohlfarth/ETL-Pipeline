@@ -28,6 +28,7 @@ package Data::ETL::Extract::AsHash;
 use Moose::Role;
 
 use 5.14.0;
+use List::AllUtils qw/first/;
 use Regexp::Common;
 use String::Util qw/hascontent/;
 
@@ -66,20 +67,8 @@ should make sure that each regular expression matches only one column.
 sub get {
 	my ($self, $field) = @_;
 
-	# Find the field whose header matches this regular expression.
-	if (ref( $field ) eq 'Regexp' and not exists $self->alias->{$field}) {
-		foreach my $text (keys %{$self->headers}) {
-			if ($text =~ m/$field/) {
-				$self->alias->{$field} = $self->headers->{$text};
-				last;
-			}
-		}
-	}
-
-	# If no headers match, we end up returning "undef". Regular field names
-	# work automatically.
-	$field = $self->alias->{$field} if defined $self->alias->{$field};
-	return $self->record->{$field};
+	$field = $self->name_for( $field );
+	return (defined( $field ) ? $self->record->{$field} : undef);
 }
 
 
@@ -146,6 +135,43 @@ has 'headers' => (
 	is      => 'ro',
 	isa     => 'HashRef[Str]',
 );
+
+
+=head3
+
+This method returns the name of the field whose header matches a regular
+expression. L</get> retrieves the field name using this method. The code returns
+C<undef> if no field headers match.
+
+L</name_for> accepts one parameter which can be either a regular expression or
+a plain string. A regular expression is matched against the column headers. A
+plain string is returned as the field name. 
+
+The code does not check if the current record has a field by this name.
+
+=cut
+
+sub name_for {
+	my ($self, $field) = @_;
+
+	if (ref( $field ) eq 'Regexp') {
+		if (exists $self->alias->{$field}) {
+			# Matched before, so don't bother looking again.
+			return $self->alias->{$field};
+		} else {
+			# Find the first header that matches.
+			my $text = first { m/$field/ } keys %{$self->headers};
+			if (defined $text) {
+				# Save the results for faster lookup next time.
+				$self->alias->{$field} = $self->headers->{$text};
+				return $self->alias->{$field};
+			} else { return undef; }
+		}
+	} elsif (exists $self->alias->{$field}) {
+		# Aliased column name (like the column letter in MS Excel).
+		return $self->alias->{$field};
+	} else { return $field; }
+}
 
 
 =head1 SEE ALSO
