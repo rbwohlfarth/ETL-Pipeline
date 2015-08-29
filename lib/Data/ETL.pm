@@ -464,6 +464,7 @@ sub run {
 			unless $extract->record_number % 20;
 	}
 
+	say 'Cleaning up, please wait...';
 	$extract->finished;
 	$load->finished;
 
