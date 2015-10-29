@@ -180,7 +180,7 @@ For example...
 use String::Util qw/trim/;
 
 has 'filter' => (
-	default => sub { trim( $_ ) },
+	default => sub { sub { trim( $_ ) } },
 	is      => 'rw',
 	isa     => 'CodeRef',
 );
