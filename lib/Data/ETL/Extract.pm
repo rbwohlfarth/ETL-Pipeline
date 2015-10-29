@@ -157,19 +157,30 @@ access to the current field's value...
 
 =item 1. In C<$_>.
 
-=item 2. As the one and only parameter to your code.
+=item 2. As the first parameter to your code.
 
 =back
 
 The default filter trims whitespace from the start and end of the value. To
 turn off the trimming, do this: C<filter => sub { $_ }>.
 
+Your filter also receives all of the parameters for L</get>. This lets you
+customize the filter for specific fields. For example, a notes file where you
+want surrounding white space on the text but not the identifiers.
+For example...
+
+  # You call "get"...
+  transform_as FirstField => 'ColumnOne';
+
+  # ...calls into the filter like this.
+  $extract->filter( $value, 'ColumnOne' );
+
 =cut
 
 use String::Util qw/trim/;
 
 has 'filter' => (
-	default => sub { \&trim },
+	default => sub { trim( $_ ) },
 	is      => 'rw',
 	isa     => 'CodeRef',
 );
@@ -177,7 +188,7 @@ has 'filter' => (
 around 'get' => sub {
 	my ($original, $self, @arguments) = @_;
 	return Data::ETL::CodeRef::run( $self->filter,
-		$original->( $self, @arguments ) );
+		$original->( $self, @arguments ), @arguments );
 };
 
 
