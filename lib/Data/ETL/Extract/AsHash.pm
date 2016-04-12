@@ -65,7 +65,8 @@ should make sure that each regular expression matches only one column.
 =cut
 
 sub get {
-	my ($self, $field) = @_;
+	my $self  = shift;
+	my $field = shift;
 
 	$field = $self->name_for( $field );
 	return (defined( $field ) ? $self->record->{$field} : undef);

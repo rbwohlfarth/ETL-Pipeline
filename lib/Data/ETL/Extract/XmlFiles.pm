@@ -192,7 +192,9 @@ They make poor seperators. Find something more suitable.
 =cut
 
 sub get {
-	my ($self, $xpath, $context) = @_;
+	my $self    = shift;
+	my $xpath   = shift;
+	my $context = shift;
 
 	my ($xpath_string, $join_with) = ($xpath, '; ');
 	($xpath_string, $join_with) = @$xpath if ref( $xpath ) eq 'ARRAY';

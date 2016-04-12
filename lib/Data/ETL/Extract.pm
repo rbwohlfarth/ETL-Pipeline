@@ -238,14 +238,18 @@ requires 'next_record';
 
 =head3 get
 
-Return the value of a single field. The only parameter is a field name. Since
-the child class implements the actual storage, the I<field name> can really
-be anything. For example, and XML file might accept an XPath.
+Return the value of a single field. The parameters are defined by the 
+child class. In almost all cases, the first parameter has a field name. B<get> 
+retrieves that field from the file. The I<field name> can really be anything. 
+For example, and XML file might accept an XPath.
 
 The return value is the data that came from the file.
 
 The L<Data::ETL/transform> process calls this method for each input field that
 was mapped to the data destination.
+
+B<NOTE:> L</filter> receives all of the parameters passed into B<get>. When
+you write B<get> method, allow for extra parameters to control custom filters.
 
 =cut
 
