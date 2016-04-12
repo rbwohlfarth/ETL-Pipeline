@@ -191,6 +191,11 @@ is no base type.
 
 has 'extract' => (is => 'rw');
 
+before 'setup' => sub {
+	my $self = shift;
+	$self->extract( shift );
+};
+
 
 =head1 SEE ALSO
 
