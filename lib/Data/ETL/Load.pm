@@ -178,6 +178,20 @@ around 'write_record' => sub {
 };
 
 
+=head3 extract
+
+This attribute holds a reference to the extract object. This gives your load
+classes direct access to information about the source. For example, I put the
+file name in error messages.
+
+This attribute has no type check because I build the classes using roles. There
+is no base type.
+
+=cut
+
+has 'extract' => (is => 'rw');
+
+
 =head1 SEE ALSO
 
 L<Data::ETL>, L<Data::ETL::Extract>
