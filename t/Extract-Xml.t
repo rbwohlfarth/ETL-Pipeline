@@ -1,14 +1,16 @@
 use Data::ETL;
+use Path::Class;
 use String::Util qw/trim/;
 use Test::More;
 
-working_folder 't/DataFiles';
+my $root = dir( 't/DataFiles' );
+working_folder "$root";
 
 BEGIN { use_ok( 'Data::ETL::Extract::Xml' ); }
 require_ok( 'Data::ETL::Extract::Xml' );
 
 my $data = new_ok( 'Data::ETL::Extract::Xml', [
-	path      => 't/DataFiles/FM-Export.xml',
+	path      => $root->file( 'FM-Export.XML' )->stringify,
 	root_node => '/RLXML/FILES/FEEDBACK',
 ] );
 $data->setup;
