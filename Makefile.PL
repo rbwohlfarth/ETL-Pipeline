@@ -3,15 +3,15 @@
 # expected.  You have been warned.
 use inc::Module::Install;
 
-name 'Data-ETL';
+name 'ETL-Pipeline';
 license 'perl';
-all_from 'lib/Data/ETL.pm';
+all_from 'lib/ETL/Pipeline.pm';
 
-requires 'Exporter';
-requires 'File::Find::Rule';
+requires 'Carp';
 requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';
+requires 'MooseX::Types::Path::Class';
 requires 'Path::Class';
 requires 'Path::Class::Rule';
 requires 'Regexp::Common';
@@ -20,6 +20,7 @@ requires 'Spreadsheet::ParseExcel::Utility';
 requires 'Spreadsheet::XLSX';
 requires 'String::Util';
 requires 'Text::CSV';
+requires 'XML::XPath';
 
 test_requires 'Test::More' => '0.88';
 test_requires 'Test::Pod'  => '1.44';
