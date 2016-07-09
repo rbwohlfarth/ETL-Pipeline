@@ -278,7 +278,7 @@ For example, this command uses the input class B<Local::CustomExtract>.
 =head3 get
 
 The B<get> method returns the value of a single field from the input. It maps
-directly to the L<ETL::Pipeline::Input/get|get method from ETL::Pipeline::Input>.
+directly to the L<get method from ETL::Pipeline::Input|ETL::Pipeline::Input/get>.
 See L<ETL::Pipeline::Input/get> for more information.
 
   $pipeline->get( 'A' );
@@ -292,7 +292,7 @@ can write C<< $_->get >>.
 =head3 record_number
 
 The B<record_number> method returns current record number. It maps directly
-to the L<ETL::Pipeline::Input/record_number|record_number method from ETL::Pipeline::Input>.
+to the L<record_number method from ETL::Pipeline::Input|ETL::Pipeline::Input/record_number>.
 See L<ETL::Pipeline::Input/record_number> for more information.
 
   $pipeline->record_number;
@@ -920,8 +920,8 @@ sub progress {
 =head3 execute_code_ref
 
 This method runs arbitrary Perl code. B<ETL::Pipeline> itself,
-L<ETL::Pipeline::Input|input sources>, and
-L<ETL::Pipeline::Output|output destinations > call this method.
+L<input sources|ETL::Pipeline::Input>, and
+L<output destinations|ETL::Pipeline::Output> call this method.
 
 The first parameter is the code reference. Any additional parameters are
 passed directly to the code reference.
