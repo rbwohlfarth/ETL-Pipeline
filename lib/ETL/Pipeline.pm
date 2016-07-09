@@ -245,7 +245,7 @@ for more details.
 sub chain {
 	my ($self, %arguments) = @_;
 	$arguments{chain} = $self unless exists $arguments{chain};
-	__PACKAGE__->new( \%arguments );
+	return __PACKAGE__->new( \%arguments );
 }
 
 
@@ -533,6 +533,11 @@ sub output {
 
 B<process> kicks off the entire data conversion process. It takes no
 parameters. All of the setup is done by the other methods.
+
+B<process> returns the B<ETL::Pipeline> object so you can do things like 
+this...
+
+  ETL::Pipeline->new( {...} )->process->chain( ... )->process;
 
 =cut
 
