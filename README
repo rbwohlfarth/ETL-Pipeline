@@ -1,0 +1,13 @@
+ETL::Pipeline
+
+Copyright 2016 (c) Vanderbilt University Medical Center
+
+You can redistribute and/or modify this module under the same terms as Perl
+itself.
+
+
+ETL::Pipeline automates repetitive file processing tasks. It converts data from one format into another. ETL::Pipeline follows the pattern Extract-Transform-Load (ETL). ETL::Pipeline provides base modules for common input formats such as spreadsheets, CSV files, and XML.
+
+Changes in 2.01...
+* Fix POD errors
+* Allow method chaining
