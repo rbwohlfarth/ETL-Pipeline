@@ -191,9 +191,9 @@ sub BUILD {
 		my $object = $arguments->{chain};
 		croak '"chain" requires an ETL::Pipeline object' unless defined blessed( $object );
 		croak '"chain" requires an ETL::Pipeline object' unless $object->isa( 'ETL::Pipeline' );
-		$self->_set_work_in( $object->work_in ) if defined $object->work_in;
-		$self->_set_data_in( $object->data_in ) if defined $object->data_in;
-		$self->_set_session( $object->_get_session );
+		$self->_work_in( $object->_work_in ) if defined $object->_work_in;
+		$self->_data_in( $object->_data_in ) if defined $object->_data_in;
+		$self->_session( $object->_session );
 	}
 
 	# The order of these two is important. "work_in" resets "data_in" with a
@@ -218,14 +218,6 @@ sub BUILD {
 		my $values = $arguments->{input};
 		$self->input( ref( $values ) eq '' ? $values : @$values );
 	}
-	if (defined $arguments->{constants}) {
-		my $values = $arguments->{constants};
-		$self->constants( %$values );
-	}
-	if (defined $arguments->{mapping}) {
-		my $values = $arguments->{mapping};
-		$self->mapping( %$values );
-	}
 	if (defined $arguments->{output}) {
 		my $values = $arguments->{output};
 		$self->output( ref( $values ) eq '' ? $values : @$values );
@@ -249,7 +241,7 @@ sub chain {
 }
 
 
-=head2 Reading the input
+=head2 Reading the input (Extract)
 
 =head3 input
 
@@ -301,25 +293,23 @@ See L<ETL::Pipeline::Input/record_number> for more information.
 
 =cut
 
-has 'input' => (
+has '_input' => (
 	does     => 'ETL::Pipeline::Input',
 	handles  => {get => 'get', record_number => 'record_number'},
 	init_arg => undef,
-	is       => 'bare',
-	reader   => '_get_input',
-	writer   => '_set_input',
+	is       => 'rw',
 );
 
 
 sub input {
 	my $self = shift;
 
-	$self->_set_input( $self->_object_of_class( 'Input', @_ ) ) if (scalar @_);
-	return $self->_get_input;
+	return $self->_input( $self->_object_of_class( 'Input', @_ ) ) if (scalar @_);
+	return $self->_input;
 }
 
 
-=head2 Translating the data
+=head2 Translating the data (Transform)
 
 =head3 mapping
 
@@ -374,14 +364,12 @@ B<add_mapping> accepts key/value pairs as parameters.
 
 =cut
 
-has 'mapping' => (
+has '_mapping' => (
 	handles  => {add_mapping => 'set', has_mapping => 'count'},
-	init_arg => undef,
-	is       => 'bare',
+	init_arg => 'mapping',
+	is       => 'rw',
 	isa      => 'HashRef',
-	reader   => '_get_mapping',
 	traits   => [qw/Hash/],
-	writer   => '_set_mapping',
 );
 
 
@@ -390,12 +378,13 @@ sub mapping {
 	my @pairs = @_;
 
 	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
-		$self->_set_mapping( $pairs[0] );
+		return $self->_mapping( $pairs[0] );
 	} elsif (scalar @pairs) {
 		my %new = @pairs;
-		$self->_set_mapping( \%new );
+		return $self->_mapping( \%new );
+	} else {
+		return $self->_mapping;
 	}
-	return $self->_get_mapping;
 }
 
 
@@ -432,14 +421,12 @@ B<add_constant> accepts key/value pairs as parameters.
 
 =cut
 
-has 'constants' => (
+has '_constants' => (
 	handles  => {add_constant => 'set', add_constants => 'set', has_constants => 'count'},
-	init_arg => undef,
-	is       => 'bare',
+	init_arg => 'constants',
+	is       => 'rw',
 	isa      => 'HashRef',
-	reader   => '_get_constants',
 	traits   => [qw/Hash/],
-	writer   => '_set_constants',
 );
 
 
@@ -448,16 +435,17 @@ sub constants {
 	my @pairs = @_;
 
 	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
-		$self->_set_constants( $pairs[0] );
+		return $self->_constants( $pairs[0] );
 	} elsif (scalar @pairs) {
 		my %new = @_;
-		$self->_set_constants( \%new );
+		return $self->_constants( \%new );
+	} else {
+		return $self->_constants;
 	}
-	return $self->_get_constants;
 }
 
 
-=head2 Saving the output
+=head2 Saving the output (Load)
 
 =head3 output
 
@@ -509,21 +497,19 @@ special. B<write_record> takes no parameters.
 
 =cut
 
-has 'output' => (
+has '_output' => (
 	does     => 'ETL::Pipeline::Output',
 	handles  => {set => 'set', write_record => 'write_record'},
 	init_arg => undef,
-	is       => 'bare',
-	reader   => '_get_output',
-	writer   => '_set_output',
+	is       => 'rw',
 );
 
 
 sub output {
 	my $self = shift;
 
-	$self->_set_output( $self->_object_of_class( 'Output', @_ ) ) if (scalar @_);
-	return $self->_get_output;
+	return $self->_output( $self->_object_of_class( 'Output', @_ ) ) if (scalar @_);
+	return $self->_output;
 }
 
 
@@ -550,46 +536,46 @@ sub process {
 	# Configure the input and output objects. I expect them to "die" if they
 	# encounter errors. Always configure the input first. The output may use
 	# information from it.
-	$self->input->configure;
-	$self->output->configure;
+	$self->_input->configure;
+	$self->_output->configure;
 
 	# The actual ETL process...
-	my $constants = $self->constants;
-	my $mapping   = $self->mapping  ;
+	my $constants = $self->_constants;
+	my $mapping   = $self->_mapping  ;
 
 	$self->progress( 'start' );
-	while ($self->input->next_record) {
+	while ($self->_input->next_record) {
 		# User defined, record level logic...
-		        $self->execute_code_ref( $self->input->debug   );
-		last if $self->execute_code_ref( $self->input->stop_if );
-		next if $self->execute_code_ref( $self->input->skip_if );
+		        $self->execute_code_ref( $self->_input->debug   );
+		last if $self->execute_code_ref( $self->_input->stop_if );
+		next if $self->execute_code_ref( $self->_input->skip_if );
 
 		# "constants" values...
 		while (my ($field, $value) = each %$constants) {
 			$value = $self->execute_code_ref( $value ) if ref( $value ) eq 'CODE';
-			$self->output->set( $field, $value );
+			$self->_output->set( $field, $value );
 		}
 
 		# "mapping" values...
 		while (my ($to, $from) = each %$mapping) {
 			if (ref( $from ) eq 'CODE') {
-				$self->output->set( $to, $self->execute_code_ref( $from ) );
+				$self->_output->set( $to, $self->execute_code_ref( $from ) );
 			} elsif (ref( $from ) eq 'ARRAY') {
-				$self->output->set( $to, $self->input->get( @$from ) );
+				$self->_output->set( $to, $self->_input->get( @$from ) );
 			} else {
-				$self->output->set( $to, $self->input->get( $from ) );
+				$self->_output->set( $to, $self->_input->get( $from ) );
 			}
 		}
 
 		# "output"...
-		$self->output->write_record;
+		$self->_output->write_record;
 	} continue { $self->progress( '' ); }
 	$self->progress( 'end' );
 
 	# Close the input and output in the opposite order we created them. This
 	# safely unwinds any dependencies.
-	$self->output->finish;
-	$self->input->finish;
+	$self->_output->finish;
+	$self->_input->finish;
 
 	# Return the pipeline object so that we can chain calls. Useful shorthand
 	# when running multiple pipelines.
@@ -636,14 +622,12 @@ B<work_in> automatically resets L</data_in>.
 
 =cut
 
-has 'work_in' => (
+has '_work_in' => (
 	coerce   => 1,
 	init_arg => undef,
-	is       => 'bare',
+	is       => 'rw',
 	isa      => Dir,
-	reader   => '_get_work_in',
 	trigger  => \&_trigger_work_in,
-	writer   => '_set_work_in',
 );
 
 
@@ -651,7 +635,7 @@ sub work_in {
 	my $self = shift;
 
 	if (scalar( @_ ) == 1) {
-		$self->_set_work_in( shift );
+		return $self->_work_in( shift );
 	} elsif(scalar( @_ ) > 1) {
 		my %options = @_;
 
@@ -670,17 +654,18 @@ sub work_in {
 			;
 			my $match = $next->();
 			croak 'No matching directories' unless defined $match;
-			$self->_set_work_in( $match );
-		} else { $self->_set_work_in( $options{search} ); }
+			return $self->_work_in( $match );
+		} else { return $self->_work_in( $options{search} ); }
+	} else {
+		return $self->_work_in;
 	}
-	return $self->_get_work_in;
 }
 
 
 sub _trigger_work_in {
 	my $self = shift;
 	my $new  = shift;
-	$self->_set_data_in( $new );
+	$self->_data_in( $new );
 }
 
 
@@ -700,13 +685,11 @@ changes the data directory, the next in line can change back.
 
 =cut
 
-has 'data_in' => (
+has '_data_in' => (
 	coerce   => 1,
 	init_arg => undef,
-	is       => 'bare',
+	is       => 'rw',
 	isa      => Dir,
-	reader   => '_get_data_in',
-	writer   => '_set_data_in',
 );
 
 
@@ -714,7 +697,7 @@ sub data_in {
 	my $self = shift;
 
 	if (scalar @_) {
-		croak 'The working folder was not set' unless defined $self->work_in;
+		croak 'The working folder was not set' unless defined $self->_work_in;
 
 		my $name = shift;
 		if (hascontent( $name )) {
@@ -727,12 +710,13 @@ sub data_in {
 			;
 			my $match = $next->();
 			croak 'No matching directories' unless defined $match;
-			$self->_set_data_in( $match );
+			return $self->_data_in( $match );
 		} else {
-			$self->_set_data_in( $self->work_in );
+			return $self->_data_in( $self->work_in );
 		}
+	} else {
+		return $self->_data_in;
 	}
-	return $self->_get_data_in;
 }
 
 
@@ -785,7 +769,7 @@ defined.
 
 =cut
 
-has 'session' => (
+has '_session' => (
 	default => sub { {} },
 	handles => {
 		_get_variable => 'get',
@@ -793,11 +777,9 @@ has 'session' => (
 		_set_variable => 'set',
 	},
 	init_arg => undef,
-	is       => 'bare',
+	is       => 'rw',
 	isa      => 'HashRef[Any]',
-	reader   => '_get_session',
 	traits   => [qw/Hash/],
-	writer   => '_set_session',
 );
 
 
@@ -854,11 +836,11 @@ sub is_valid {
 	my $self = shift;
 	my $error = '';
 
-	if (!defined $self->work_in) {
+	if (!defined $self->_work_in) {
 		$error = 'The working folder was not set';
-	} elsif (!defined $self->input) {
+	} elsif (!defined $self->_input) {
 		$error = 'The "input" object was not set';
-	} elsif (!defined $self->output) {
+	} elsif (!defined $self->_output) {
 		$error = 'The "output" object was not set';
 	} elsif (!$self->has_mapping && !$self->has_constants) {
 		$error = 'The mapping was not set';
@@ -903,14 +885,14 @@ sub progress {
 	my ($self, $mark) = @_;
 
 	if (nocontent( $mark )) {
-		my $count = $self->input->record_number;
+		my $count = $self->_input->record_number;
 		say "Processed record #$count..." unless $count % 50;
 	} elsif ($mark eq 'start') {
 		my $name;
-		if ($self->input->does( 'Data::Pipeline::Input::File' )) {
-			$name = $self->input->path->relative( $self->work_in );
+		if ($self->_input->does( 'Data::Pipeline::Input::File' )) {
+			$name = $self->_input->path->relative( $self->_work_in );
 		} else {
-			$name = ref( $self->input );
+			$name = ref( $self->_input );
 			$name =~ s/^ETL::Pipeline::Input:://;
 		}
 		say "Processing '$name'...";
