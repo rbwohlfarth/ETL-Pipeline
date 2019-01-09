@@ -297,7 +297,7 @@ L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File>
 
 =head1 AUTHOR
 
-Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 

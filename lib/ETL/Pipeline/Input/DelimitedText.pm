@@ -225,7 +225,7 @@ with 'ETL::Pipeline::Input';
 
 =head1 AUTHOR
 
-Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 

@@ -124,8 +124,8 @@ B<filter> does extra processing on the file data. The default filter trims
 leading and trailing whitespace. You can use your own filter to handle special
 values like "N/A" or "NULL".
 
-Assign a code reference to B<filter>. Unlike the other code references, 
-B<filter> does not have access to the L<ETL::Pipeline> object. The filter 
+Assign a code reference to B<filter>. Unlike the other code references,
+B<filter> does not have access to the L<ETL::Pipeline> object. The filter
 receives two array references as parameters. The first array holds the values
 for filtering. The second array holds the arguments passed to L</get>.
 
@@ -140,7 +140,7 @@ same order as the values found in the input.
 =cut
 
 has 'filter' => (
-	default => sub { sub { 
+	default => sub { sub {
 		my ($values, $arguments) = @_;
 		return map { trim( $_ ) } @$values;
 	} },
@@ -230,7 +230,7 @@ internally. You should use the format that best suits your needs. For example,
 L<ETL::Pipeline::Input::Excel> uses an L<Spreadsheet::XLSX> object. It's B<get>
 accesses object methods to retrieve fields.
 
-L<ETL::Pipeline/process> passes in the value from L<ETL::Pipeline/mapping>. 
+L<ETL::Pipeline/process> passes in the value from L<ETL::Pipeline/mapping>.
 That can be a scalar value (string), regular expression, or array reference.
 B<get> returns a list of values from matching fields. L<ETL::Pipeline/process>
 passes that list directly to L<ETL::Pipeline::Output/set>.
@@ -242,15 +242,15 @@ The implmenting class must define this method.
 
   # Retrieve one field named 'A'.
   $etl->get( 'A' );
-  
+
   # Retrieve the field from the column 'ID Num'.
   $etl->get( qr/id\s*num/i );
-  
+
   # A list is used to build composite field names.
   $etl->get( '/root', '/first' );
 
 B<NOTE:> B<get> returns a list - not an individual value. Even if only one
-field matches, B<get> still returns a list. Calling it in scalar context 
+field matches, B<get> still returns a list. Calling it in scalar context
 returns the number of elements in the list - not a value. Keep this in mind
 when calling B<get> from L</stop_if> or L</skip_if>.
 
@@ -356,7 +356,7 @@ L<ETL::Pipeline>, L<ETL::Pipeline::Output>
 
 =head1 AUTHOR
 
-Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
+Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 
