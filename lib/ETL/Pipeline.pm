@@ -102,9 +102,9 @@ Create a new ETL pipeline. The constructor accepts these values...
 
 =item chain
 
-This optional attribute copies L</work_in>, L</data_in>, and L</session> from 
-another object. B<chain> accepts an B<ETL::Pipeline> object. The constructor 
-copies L</work_in>, L</data_in>, and L</session> from that object. It helps 
+This optional attribute copies L</work_in>, L</data_in>, and L</session> from
+another object. B<chain> accepts an B<ETL::Pipeline> object. The constructor
+copies L</work_in>, L</data_in>, and L</session> from that object. It helps
 scripts process multiple files from the same place.
 
 See the section L</Multiple input sources> for an example.
@@ -169,7 +169,7 @@ When creating the pipeline, B<ETL::Pipeline> sets up arguments in this order...
 
 =back
 
-Later parts (e.g. output) can depend on earlier parts (e.g. input). For 
+Later parts (e.g. output) can depend on earlier parts (e.g. input). For
 example, the B<input> will use B<data_in> in its constructor.
 
 =cut
@@ -179,18 +179,18 @@ sub BUILD {
 	my $arguments = shift;
 
 	# The order of these blocks is important. ETL::Pipeline::Input and
-	# ETL::Pipeline::Output objects depend on work_in and data_in being set. 
+	# ETL::Pipeline::Output objects depend on work_in and data_in being set.
 	# And I want parameters to override chained values.
 
 	# Copy information from an existing object. This allows objects to share
 	# settings or information.
-	# 
+	#
 	# NOTE: Always copy "work_in" before "data_in". The trigger on "work_in"
 	#       will change "data_in" if you don't.
 	if (defined $arguments->{chain}) {
 		my $object = $arguments->{chain};
-		croak '"link" requires an ETL::Pipeline object' unless defined blessed( $object );
-		croak '"link" requires an ETL::Pipeline object' unless $object->isa( 'ETL::Pipeline' );
+		croak '"chain" requires an ETL::Pipeline object' unless defined blessed( $object );
+		croak '"chain" requires an ETL::Pipeline object' unless $object->isa( 'ETL::Pipeline' );
 		$self->_set_work_in( $object->work_in ) if defined $object->work_in;
 		$self->_set_data_in( $object->data_in ) if defined $object->data_in;
 		$self->_set_session( $object->_get_session );
@@ -210,8 +210,8 @@ sub BUILD {
 
 	# Configure the object in one fell swoop. This always happen AFTER copying
 	# the linked object. Normal setup overrides the linked object.
-	# 
-	# The order of the object creation matches the order of execution - 
+	#
+	# The order of the object creation matches the order of execution -
 	# Extract, Transform, Load. Later parts on the pipeline can depend on
 	# the configuration of earlier parts.
 	if (defined $arguments->{input}) {
@@ -392,7 +392,7 @@ sub mapping {
 	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
 		$self->_set_mapping( $pairs[0] );
 	} elsif (scalar @pairs) {
-		my %new = @_;
+		my %new = @pairs;
 		$self->_set_mapping( \%new );
 	}
 	return $self->_get_mapping;
@@ -534,7 +534,7 @@ sub output {
 B<process> kicks off the entire data conversion process. It takes no
 parameters. All of the setup is done by the other methods.
 
-B<process> returns the B<ETL::Pipeline> object so you can do things like 
+B<process> returns the B<ETL::Pipeline> object so you can do things like
 this...
 
   ETL::Pipeline->new( {...} )->process->chain( ... )->process;
@@ -738,11 +738,11 @@ sub data_in {
 
 =head3 session
 
-B<ETL::Pipeline> supports sessions. A session allows input and output objects 
+B<ETL::Pipeline> supports sessions. A session allows input and output objects
 to share information along a chain. For example, imagine 3 Excel files being
 loaded into an Access database. All 3 files go into the same Access database.
 The first pipeline creates the database and saves its path in the session. That
-pipeline chains with a second pipeline. The second pipeline retrieves the 
+pipeline chains with a second pipeline. The second pipeline retrieves the
 Access filename from the session.
 
 The B<session> method provides access to session level variables. As you write
@@ -755,30 +755,30 @@ B<session> returns the value.
   my $database = $etl->session( 'access_file' );
   my $identifier = $etl->session( 'session_identifier' );
 
-A second parameter is the value. 
+A second parameter is the value.
 
   $etl->session( access_file => 'C:\ExcelData.accdb' );
 
 You can set multiple variables in one call.
-  
+
   $etl->session( access_file => 'C:\ExcelData.accdb', name => 'Abe' );
 
-When retrieving an array or hash reference, B<session> automatically 
+When retrieving an array or hash reference, B<session> automatically
 derefernces it if called in a list context. In a scalar context, B<session>
 returns the reference.
 
   # Returns the list of names as a list.
   foreach my $name ($etl->session( 'name_list' )) { ... }
-  
+
   # Returns a list reference instead of a list.
   my $reference = $etl->session( 'name_list' );
 
 =head3 session_has
 
 B<session_has> checks for a specific session variable. It returns I<true> if
-the variable exists and I<false> if it doesn't. 
+the variable exists and I<false> if it doesn't.
 
-B<session_has> only checks existence. It does not tell you if the value is 
+B<session_has> only checks existence. It does not tell you if the value is
 defined.
 
   if ($etl->session_has( 'access_file' )) { ... }
@@ -788,8 +788,8 @@ defined.
 has 'session' => (
 	default => sub { {} },
 	handles => {
-		_get_variable => 'get', 
-		session_has   => 'exists', 
+		_get_variable => 'get',
+		session_has   => 'exists',
 		_set_variable => 'set',
 	},
 	init_arg => undef,
@@ -803,14 +803,14 @@ has 'session' => (
 
 sub session {
 	my $self = shift;
-	
+
 	if (scalar( @_ ) > 1) {
 		my %parameters = @_;
 		while (my ($key, $value) = each %parameters) {
 			$self->_set_variable( $key, $value );
 		}
 	}
-	
+
 	my $key = shift;
 	if (wantarray) {
 		my $result = $self->_get_variable( $key );
@@ -823,17 +823,17 @@ sub session {
 
 # Alternate design: Use attributes for session level information.
 # Result: Discarded
-# 
-# Instead of keeping session variables in a hash, the class would have an 
-# attribute corresponding to the session data it can keep. Since 
+#
+# Instead of keeping session variables in a hash, the class would have an
+# attribute corresponding to the session data it can keep. Since
 # ETL::Pipeline::Input and ETL::Pipeline::Output objects have access to the
 # the pipeline, they can share data through the attributes.
-# 
+#
 # For any session information, the developer must subclass ETL::Pipeline. The
 # ETL::Pipeline::Input or ETL::Pipeline::Output classes would be tied to that
-# specific subclass. And if you needed to combine two sets of session 
+# specific subclass. And if you needed to combine two sets of session
 # variables, well that just means another class type. That's very confusing.
-# 
+#
 # Attributes make development of new input and output classes very difficult.
 # The hash is simple. It decouples the input/output classes from pipeline.
 # That keeps customization simpler.
@@ -1102,7 +1102,7 @@ outputs.
 
 =head1 SEE ALSO
 
-L<ETL::Pipeline::Input>, L<ETL::Pipeline::Output>, L<ETL::Pipeline::Mapping>
+L<ETL::Pipeline::Input>, L<ETL::Pipeline::Output>
 
 =head2 Input Source Formats
 
@@ -1118,13 +1118,13 @@ Robert Wohlfarth <robert.j.wohlfarth@vanderbilt.edu>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2016  Robert Wohlfarth
+Copyright (c) 2019  Robert Wohlfarth
 
-This module is free software; you can redistribute it and/or modify it 
-under the same terms as Perl 5.10.0. For more details, see the full text 
+This module is free software; you can redistribute it and/or modify it
+under the same terms as Perl 5.10.0. For more details, see the full text
 of the licenses in the directory LICENSES.
 
-This program is distributed in the hope that it will be useful, but 
+This program is distributed in the hope that it will be useful, but
 without any warranty; without even the implied
 
 =cut
