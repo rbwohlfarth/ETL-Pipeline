@@ -96,20 +96,17 @@ subtest 'execute_code_ref' => sub {
 	subtest 'In pipeline' => sub {
 		$etl->work_in( 't' );
 		$etl->input( 'UnitTest' );
-		$etl->constants( constant => sub { 'String literal' } );
 		$etl->mapping( un => sub { $_->get( 0 ) } );
 		$etl->output( 'UnitTest' );
 		$etl->process;
 
 		subtest 'First record' => sub {
 			my $record = $etl->output->get_record( 0 );
-			is( $record->{un      }, 'Header1'       , 'mapping'  );
-			is( $record->{constant}, 'String literal', 'constants' );
+			is( $record->{un}, 'Header1', 'mapping' );
 		};
 		subtest 'Second record' => sub {
 			my $record = $etl->output->get_record( 1 );
-			is( $record->{un      }, 'Field1'        , 'mapping'   );
-			is( $record->{constant}, 'String literal', 'constants' );
+			is( $record->{un}, 'Field1', 'mapping' );
 		};
 	};
 };
@@ -122,7 +119,7 @@ subtest 'is_valid' => sub {
 			output  => 'UnitTest',
 		} );
 		ok( !$etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( !$error[0], 'Return code' );
 		is( $error[1], 'The working folder was not set' );
@@ -134,7 +131,7 @@ subtest 'is_valid' => sub {
 			output  => 'UnitTest',
 		} );
 		ok( !$etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( !$error[0], 'Return code' );
 		is( $error[1], 'The "input" object was not set' );
@@ -146,7 +143,7 @@ subtest 'is_valid' => sub {
 			mapping => {un => 1},
 		} );
 		ok( !$etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( !$error[0], 'Return code' );
 		is( $error[1], 'The "output" object was not set' );
@@ -158,7 +155,7 @@ subtest 'is_valid' => sub {
 			output  => 'UnitTest',
 		} );
 		ok( !$etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( !$error[0], 'Return code' );
 		is( $error[1], 'The mapping was not set' );
@@ -171,7 +168,7 @@ subtest 'is_valid' => sub {
 			output  => 'UnitTest',
 		} );
 		ok( $etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( $error[0], 'Return code' );
 		is( $error[1], '' );
@@ -184,7 +181,7 @@ subtest 'is_valid' => sub {
 			output    => 'UnitTest',
 		} );
 		ok( $etl->is_valid, 'Boolean return' );
-		
+
 		my @error = $etl->is_valid;
 		ok( $error[0], 'Return code' );
 		is( $error[1], '' );
@@ -288,11 +285,42 @@ subtest 'Delegations' => sub {
 		output => 'UnitTest',
 	} );
 	$etl->process;
-	
+
 	my $record = $etl->output->get_record( 0 );
 	is( $record->{un}, 'Header2', 'get' );
 	is( $record->{fake}, 1, 'record_number' );
 	pass( 'set' );
+};
+
+subtest 'stop_if' => sub {
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		stop_if => sub { shift->get( 0 ) eq 'Field1' },
+		mapping => {un => 0, deux => 1, trois => 2},
+		output  => 'UnitTest',
+	} );
+	$etl->process;
+	is( $etl->output->record_number, 1, 'Stopped on first record' );
+};
+
+subtest 'skip_if' => sub {
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		skip_if => sub { shift->get( 0 ) eq 'Field1' },
+		mapping => {un => 0, deux => 1, trois => 2},
+		output  => 'UnitTest',
+	} );
+	$etl->process;
+
+	is( $etl->output->record_number, 2, 'Loaded 2 of 3 records' );
+
+	my @data = $etl->output->get_record( 0 );
+	is( $data[0]->{un}, 'Header1', 'Record 1' );
+
+	@data = $etl->output->get_record( 1 );
+	is( $data[0]->{un}, 'Field6', 'Record 2' );
 };
 
 done_testing();

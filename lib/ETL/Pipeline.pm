@@ -39,7 +39,7 @@ use Scalar::Util qw/blessed/;
 use String::Util qw/hascontent nocontent/;
 
 
-our $VERSION = '2.02';
+our $VERSION = '2.03';
 
 
 =head1 DESCRIPTION
@@ -329,14 +329,16 @@ names. The hash values can be...
 
 =item A code reference
 
+=item Anything else that the B<get> method for your input source accepts
+
 =back
 
 Strings and regular expressions are passed to L<ETL::Pipeline::Input/get>.
-They must refer to an input field.
+They refer to an input field.
 
 A code reference is executed in a scalar context. It's return value goes into
-the output field. The subroutine receives this B<ETL::Pipeline> object as its
-first parameter B<and> in the C<$_> variable.
+the output field. The subroutine receives the current B<ETL::Pipeline> object as
+its first parameter and only parameter.
 
   # Get the current mapping...
   my $transformation = $pipeline->mapping;
@@ -407,6 +409,10 @@ field names. The hash values are literals.
   # Set the output field "Name" to the string "John Doe"...
   $pipeline->constants( Name => 'John Doe' );
 
+B<Note:> B<constants> does not accept code references, array references, or hash
+references. It only works with literal values. Use L</mapping> instead for
+calculated items.
+
 =head3 add_constant
 
 =head3 add_constants
@@ -425,7 +431,7 @@ has '_constants' => (
 	handles  => {add_constant => 'set', add_constants => 'set', has_constants => 'count'},
 	init_arg => 'constants',
 	is       => 'rw',
-	isa      => 'HashRef',
+	isa      => 'HashRef[Maybe[Str]]',
 	traits   => [qw/Hash/],
 );
 
@@ -443,6 +449,131 @@ sub constants {
 		return $self->_constants;
 	}
 }
+
+
+=head3 filter
+
+B<filter> does extra processing on all file fields, after the extract but
+before the mapping.
+
+B<filter> is a code reference. L</process> calls the filter code with itself as
+the first parameter followed by the single value for filtering. Your code
+returns the filtered value.
+
+  ETL::Pipeline->new( {
+    ...
+    filter => sub {
+      my ($etl, $value) = @_;
+      return ($value eq 'NA' ? '' : $value);
+    },
+    ...
+  } )->process;
+
+  # -- OR --
+  $etl->filter( sub {
+    my ($etl, $value) = @_;
+    return ($value eq 'NA' ? '' : $value);
+  } );
+
+B<Note:> L<ETL::Pipeline::Input> automatically removes leading and trailing
+whitespace. You do not need B<filter> for that.
+
+=cut
+
+has 'filter' => (
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
+);
+
+
+=head3 skip_if
+
+B<skip_if> bypasses individual records based on customized logic. Skipped
+records are not transformed or loaded. Use B<skip_if> to bypass bad data.
+
+B<skip_if> is a code reference. It receives the current B<ETL::Pipeline> object
+as its one and only parameter. Use L</get> to retrieve fields from the current
+record. If the code returns I<true>, L</process> moves to the next record.
+
+L</process> calls B<skip_if> after L</debug> and L</stop_if>, but before any
+transformations.
+
+  ETL::Pipeline->new( {
+    ...
+    skip_if => sub { shift->get( 0 ) eq 'Bypass' ? 1 : 0 },
+    ...
+  } )->process;
+
+  # -- OR --
+  $etl->skip_if( sub { shift->get( 0 ) eq 'Bypass' ? 1 : 0 } );
+
+=cut
+
+has 'skip_if' => (
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
+);
+
+
+=head3 stop_if
+
+Normally, L<ETL::Pipeline> goes until the end of the file. B<stop_if> halts
+processing early. It can be used when the input has footers or to limit the
+amount of data for testing.
+
+B<stop_if> is a code reference. It receives the current B<ETL::Pipeline> object
+as its one and only parameter. Use L</get> to retrieve fields from the current
+record. If the code returns I<true>, L</process> terminates, just as if it
+reached the end of the file.
+
+L</process> runs this logic after L</debug>, but before L</skip_if> and any
+transformations.
+
+  ETL::Pipeline->new( {
+    ...
+    stop_if => sub { shift->get( 0 ) eq 'Last Record' ? 1 : 0 },
+    ...
+  } )->process;
+
+  # -- OR --
+  $etl->stop_if( sub { shift->get( 0 ) eq 'Last Record' ? 1 : 0 } );
+
+=cut
+
+has 'stop_if' => (
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
+);
+
+
+=head3 debug
+
+While we expect perfect data, things go wrong. B<debug> lets developers execute
+code before L</process> applies any logic. Useful when tracking down random
+problems in the middle of a 3,000 row spread sheet.
+
+B<debug> is a code reference. It receives the current B<ETL::Pipeline> object as
+its one and only parameter. Use L</get> to retrieve fields from the current
+record. The return value is ignored.
+
+L</process> runs this logic before L</stop_if>, L</skip_if>, or any
+transformations.
+
+  ETL::Pipeline->new( {
+    ...
+    debug => sub { print shift->get( 0 ) },
+    ...
+  } )->process;
+
+  # -- OR --
+  $etl->debug( sub { print shift->get( 0 ) } );
+
+=cut
+
+has 'debug' => (
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
+);
 
 
 =head2 Saving the output (Load)
@@ -546,25 +677,32 @@ sub process {
 	$self->progress( 'start' );
 	while ($self->_input->next_record) {
 		# User defined, record level logic...
-		        $self->execute_code_ref( $self->_input->debug   );
-		last if $self->execute_code_ref( $self->_input->stop_if );
-		next if $self->execute_code_ref( $self->_input->skip_if );
+		        $self->execute_code_ref( $self->debug   );
+		last if $self->execute_code_ref( $self->stop_if );
+		next if $self->execute_code_ref( $self->skip_if );
 
 		# "constants" values...
 		while (my ($field, $value) = each %$constants) {
-			$value = $self->execute_code_ref( $value ) if ref( $value ) eq 'CODE';
 			$self->_output->set( $field, $value );
 		}
 
 		# "mapping" values...
 		while (my ($to, $from) = each %$mapping) {
+			my $value;
 			if (ref( $from ) eq 'CODE') {
-				$self->_output->set( $to, $self->execute_code_ref( $from ) );
-			} elsif (ref( $from ) eq 'ARRAY') {
-				$self->_output->set( $to, $self->_input->get( @$from ) );
+				$value = $self->execute_code_ref( $from );
 			} else {
-				$self->_output->set( $to, $self->_input->get( $from ) );
+				$value = $self->_input->get( $from );
 			}
+
+			# Yes, execujte_code_ref checks if the filter is defined. But I need
+			# to know the difference between undef from the filter and undef
+			# because there is no filter. I don't want to alter the value if
+			# there is no filter. But I do if a filter returns undef.
+			$value = $self->execute_code_ref( $self->filter, $value )
+				if defined( $self->filter );
+
+			$self->_output->set( $to, $value );
 		}
 
 		# "output"...

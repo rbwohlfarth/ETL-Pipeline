@@ -72,7 +72,7 @@ use 5.014000;
 use String::Util qw/trim/;
 
 
-our $VERSION = '2.00';
+our $VERSION = '2.03';
 
 
 =head1 METHODS & ATTRIBUTES
@@ -95,110 +95,26 @@ has 'pipeline' => (
 
 =head2 Arguments for L<ETL::Pipeline/input>
 
-=head3 debug
+=head3 leave_whitespace
 
-While we expect perfect data, things go wrong. B<debug> lets
-L<ETL::Pipeline/process> peek into the raw data one record at a time. I use
-this when tracking down random problems in the middle of a 3,000 row spread
-sheet.
+B<ETL::Pipeline::Input> automatically removes leading and trailing whitespace
+on all fields. 99.9% of the time, this is what you want.
 
-L<ETL::Pipeline/process> executes this code reference for every record.
-L<ETL::Pipeline/process> ignores the return value.
+B<leave_whitespace> is a boolean flag to override that behaviour. When set to
+I<TRUE>, B<ETL::Pipeline::Input> leaves the white space alone. Your ETL scripts
+should take this into account.
 
-The code reference receives the current L<ETL::Pipeline> as its first parameter
-and in C<$_>.
-
-  $etl->input( 'UnitTest', debug => sub { print $_->get( 'A' ) } );
-
-=cut
-
-has 'debug' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
-);
-
-
-=head3 filter
-
-B<filter> does extra processing on the file data. The default filter trims
-leading and trailing whitespace. You can use your own filter to handle special
-values like "N/A" or "NULL".
-
-Assign a code reference to B<filter>. Unlike the other code references,
-B<filter> does not have access to the L<ETL::Pipeline> object. The filter
-receives two array references as parameters. The first array holds the values
-for filtering. The second array holds the arguments passed to L</get>.
-
-The filter returns a list of filtered values. The results should be in the
-same order as the values found in the input.
-
-  $etl->input( 'UnitTest', filter => sub {
-    my ($values, $arguments) = @_;
-    map { $_ eq 'NA' ? '' : $_ } @$values;
-  } );
+  ETL::Pipeline->new( {
+    input => ['Excel', leave_whitespace => 1],
+    ...
+  } )->process;
 
 =cut
 
-has 'filter' => (
-	default => sub { sub {
-		my ($values, $arguments) = @_;
-		return map { trim( $_ ) } @$values;
-	} },
+has 'leave_whitespace' => (
+	default => 0,
 	is      => 'rw',
-	isa     => 'CodeRef',
-);
-
-around 'get' => sub {
-	my ($original, $self, @arguments) = @_;
-
-	my @values = $original->( $self, @arguments );
-	return $self->filter->( \@values, \@arguments );
-};
-
-
-=head3 skip_if
-
-B<skip_if> accepts a code reference. L<ETL::Pipeline/process> executes this
-code for every input record. If this code returns I<false>,
-L<ETL::Pipeline/process> discards the record with no further processing.
-
-Use B<skip_if> to bypass bad data.
-
-The code reference receives the current L<ETL::Pipeline> as its first parameter
-and in C<$_>.
-
-I<Note:> B<skip_if> only works on data records. It is not applied to column
-headers.
-
-  $etl->input( 'UnitTest', skip_if => sub { $_->get( 'A' ) eq 'DELETED' } );
-
-=cut
-
-has 'skip_if' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
-);
-
-
-=head3 stop_if
-
-Normally, L<ETL::Pipeline> goes until the end of the file. This code reference
-stops processing early. If the code reference returns I<true>, L<ETL::Pipeline>
-shuts down, just as if it reached the end of the file.
-
-I use this with report formats that have grand totals at the end. The totals
-aren't real data.
-
-The code reference receives the current L<ETL::Pipeline> as its first parameter
-and in C<$_>.
-
-  $etl->input( 'UnitTest', stop_if => sub { $_->get( 'A' ) eq 'Totals' } );
-
-=cut
-
-has 'stop_if' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
+	isa     => 'Bool',
 );
 
 
@@ -224,21 +140,21 @@ requires 'next_record';
 
 =head3 get
 
-B<get> returns a list of values from matching fields from the current record.
+B<get> returns a single value from the current record.
+
 B<ETL::Pipeline::Input> does not define how L</next_record> stores its data
 internally. You should use the format that best suits your needs. For example,
-L<ETL::Pipeline::Input::Excel> uses an L<Spreadsheet::XLSX> object. It's B<get>
-accesses object methods to retrieve fields.
+L<ETL::Pipeline::Input::Excel> uses an L<Spreadsheet::XLSX> object. The B<get>
+method accesses the L<Spreadsheet::XLSX> object methods to retrieve fields.
 
-L<ETL::Pipeline/process> passes in the value from L<ETL::Pipeline/mapping>.
-That can be a scalar value (string), regular expression, or array reference.
-B<get> returns a list of values from matching fields. L<ETL::Pipeline/process>
-passes that list directly to L<ETL::Pipeline::Output/set>.
+B<get> is defined by your input source. L<ETL::Pipeline/process> passes in the
+value from the L<ETL::Pipeline/mapping> hash. It would normally be something
+like a scalar value (string), regular expression, or array reference. B<get>
+macthes that against its knowledge of the input fields and returns the
+corresponding data value.
 
-B<Note:> B<ETL::Pipeline::Input> automatically passes the return values through
-L</filter>. You should not call L</filter> from inside of the B<get> method.
-
-The implmenting class must define this method.
+The implmenting class must define this method. If your code finds multiple
+fields that match the given name, it should throw an error with C<die>.
 
   # Retrieve one field named 'A'.
   $etl->get( 'A' );
@@ -247,16 +163,25 @@ The implmenting class must define this method.
   $etl->get( qr/id\s*num/i );
 
   # A list is used to build composite field names.
-  $etl->get( '/root', '/first' );
+  $etl->get( ['/root', '/first'] );
 
-B<NOTE:> B<get> returns a list - not an individual value. Even if only one
-field matches, B<get> still returns a list. Calling it in scalar context
-returns the number of elements in the list - not a value. Keep this in mind
-when calling B<get> from L</stop_if> or L</skip_if>.
+B<ETL::Pipeline::Input> automatically trims leading and trailing white space.
+You do not need to do this inside your B<get> method.
 
 =cut
 
 requires 'get';
+
+
+around 'get' => sub {
+	my ($original, $self, @arguments) = @_;
+
+	if ($self->leave_whitespace) {
+		return $original->( $self, @arguments );
+	} else {
+		return trim( $original->( $self, @arguments ) );
+	}
+};
 
 
 =head3 configure
@@ -360,7 +285,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 
-Copyright 2016 (c) Vanderbilt University Medical Center
+Copyright 2019 (c) Vanderbilt University Medical Center
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

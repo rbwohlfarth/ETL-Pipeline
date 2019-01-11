@@ -33,7 +33,7 @@ use String::Util qw/hascontent trim/;
 use XML::XPath;
 
 
-our $VERSION = '2.00';
+our $VERSION = '2.03';
 
 
 =head1 METHODS & ATTRIBUTES
@@ -57,76 +57,59 @@ has 'root' => (
 
 =head3 get
 
-B<get> returns a list of values from matching nodes. The field name is an 
-I<XPath>, relative to L</root>. See 
-L<http://www.w3schools.com/xpath/xpath_functions.asp> for more information on 
+B<get> returns a single value form a matching node. The field name is an
+I<XPath>, relative to L</root>. See
+L<http://www.w3schools.com/xpath/xpath_functions.asp> for more information on
 XPaths.
 
-XML lends itself to recursive records. What happens when you need two fields
-under the same subnode? For example, a I<person involved> can have both a 
-I<name> and a I<role>. The names and roles go together. How do you B<get> them
-together?
-
-B<get> supports subnodes as additional parameters. Pass the top node as the
-first parameter. Pass the subnode names in subsequent parameters. The values
-are returned in the same order as the parameters. B<get> returns C<undef> for
-any non-existant subnodes.
-
-Here are some examples...
+XML lends itself to recursive records. That means a single field name can
+match multiple nodes. B<get> throws an error with C<die> in this case. Use
+L</get_repeating> instead.
 
   # Return a single value from a single field.
   $etl->get( 'Name' );
   'John Doe'
-  
-  # Return a list from multiple fields with the same name.
+
+  # Subnode.
   $etl->get( 'PersonInvolved/Name' );
-  ('John Doe', 'Jane Doe')
-  
-  # Return a list from subnodes.
-  $etl->get( 'PersonInvolved', 'Name' );
-  ('John Doe', 'Jane Doe')
-  
-  # Return a list of related fields from subnodes.
-  $etl->get( 'PersonInvolved', 'Name', 'Role' );
-  (['John Doe', 'Husband'], ['Jane Doe', 'Wife'])
+  'John Doe'
 
 In the L<ETL::Pipeline/mapping>, those examples looks like this...
 
-  {Name => 'Name'}
-  {Name => 'PersonInvolved/Name'}
-  {Name => ['PersonInvolved', 'Name']}
-  {Name => ['PersonInvolved', 'Name', 'Role']}
+  # Return a single value from a single field.
+  ETL::Pipeline->new( {
+    ...
+    mapping => {Name => 'Name'},
+    ...
+  } )->process;
+
+  # Subnode.
+  ETL::Pipeline->new( {
+    ...
+    mapping => {Name => 'PersonInvolved/Name'},
+    ...
+  } )->process;
 
 =cut
 
 sub get {
-	my ($self, $top, @subnodes) = @_;
+	my ($self, $find) = @_;
 	my $xpath = $self->xpath;
 
-	my $match = $xpath->find( $top, $self->current );
+	my $match = $xpath->find( $find, $self->current );
 	if ($match->isa( 'XML::XPath::NodeSet' )) {
-		if (scalar( @subnodes ) == 0) {
-			return map { $_->string_value } $match->get_nodelist;
-		} elsif (scalar( @subnodes ) == 1) {
-			my @values;
-			foreach my $node ($match->get_nodelist) {
-				my $data = $xpath->find( $subnodes[0], $node );
-				push @values, $data->string_value;
-			}
-			return @values;
+		my @values = map { $_->string_value } $match->get_nodelist;
+		if (scalar( @values ) == 0) {
+			return undef;
+		} elsif (scalar( @values ) == 1) {
+			return $values[0];
 		} else {
-			my @values;
-			foreach my $node ($match->get_nodelist) {
-				my @current;
-				foreach my $path (@subnodes) {
-					my $data = $xpath->find( $path, $node );
-					push @current, $data->string_value;
-				}
-				push @values, \@current;
-			}
-			return @values;
+			my $count = scalar( @values );
+			confess "$count matches found for \"$find\"";
 		}
-	} else { return $match->value; }
+	} else {
+		return $match->value;
+	}
 }
 
 
@@ -182,7 +165,7 @@ sub configure {
 =head3 finish
 
 B<finish> doesn't actually do anything. But it is required by
-L<ETL::Pipeline/process>. 
+L<ETL::Pipeline/process>.
 
 =cut
 
@@ -191,10 +174,94 @@ sub finish { }
 
 =head2 Other Methods & Attributes
 
+=head3 get_repeating
+
+get_repeating retrieves multiple matching nodes (aka a I<node set>). L</get>
+returns a single value. B<get_repeating> works with XML's repeating nodes. It
+returns a list of values - even if there is only one match.
+
+Here's an example...
+
+  # Return a list from multiple fields with the same name.
+  $etl->get_repeating( 'PersonInvolved/Name' );
+  ('John Doe', 'Jane Doe')
+
+  # Throws an error!
+  $etl->get( 'PersonInvolved/Name' );
+
+What happens when you need two fields under the same subnode? For example,
+a I<person involved> can have both a I<name> and a I<role>. The names and roles
+go together. You would call B<get_repeating> with more than one parameter.
+
+The first parameter is the XPath for the root of the repeating nodes. The
+rest of the parameters are subnodes under it that you want values from.
+B<get_repeating> returns a list of array references. Each reference holds the
+values from a single matching node.
+
+  $etl->get_repeating( 'PersonInvolved', 'Name', 'Role' );
+  (['John Doe', 'Husband'], ['Jane Doe', 'Wife'])
+
+This is what the examples look like with L<ETL::Pipeline/mapping>...
+
+  # Return a list from multiple fields with the same name.
+  ETL::Pipeline->new( {
+    ...
+    mapping => {Involved => sub { $_->input->get_repeating( 'PersonInvolved/Name' ) },
+    ...
+  } )->process;
+  ('John Doe', 'Jane Doe')
+
+  # Return multiple sub nodes.
+  ETL::Pipeline->new( {
+    ...
+    mapping => {Involved => sub { $_->input->get_repeating(
+      'PersonInvolved',
+      'Name',
+      'Role'
+    ) },
+    ...
+  } )->process;
+  (['John Doe', 'Husband'], ['Jane Doe', 'Wife'])
+
+If no nodes match the XPaths, B<get_repeating> reutrns an empty list.
+
+=cut
+
+sub get_repeating {
+	my ($self, $top, @subnodes) = @_;
+	my $xpath = $self->xpath;
+
+	my $match = $xpath->find( $top, $self->current );
+	if ($match->isa( 'XML::XPath::NodeSet' )) {
+		if (scalar( @subnodes ) == 0) {
+			return map { $_->string_value } $match->get_nodelist;
+		} elsif (scalar( @subnodes ) == 1) {
+			my @values;
+			foreach my $node ($match->get_nodelist) {
+				my $data = $xpath->find( $subnodes[0], $node );
+				push @values, $data->string_value;
+			}
+			return @values;
+		} else {
+			my @values;
+			foreach my $node ($match->get_nodelist) {
+				my @current;
+				foreach my $path (@subnodes) {
+					my $data = $xpath->find( $path, $node );
+					push @current, $data->string_value;
+				}
+				push @values, \@current;
+			}
+			return @values;
+		}
+	} else { return $match->value; }
+}
+
+
 =head3 attribute
 
 The B<attribute> method returns the value of an attribute on the root node.
-For example, deleted records may have an attribute like C<ACTION="DELETE">. 
+For example, deleted records may have an attribute like C<ACTION="DELETE">.
 L<ETL::Pipeline::Input/skip_if> can use B<attribute> and bypass these records.
 
   $elt->input( 'Xml',
@@ -213,7 +280,7 @@ sub attribute {
 
 =head3 current
 
-The B<current> attribute holds the currently selected node (record). 
+The B<current> attribute holds the currently selected node (record).
 L</next_record> automatically sets B<current>.
 
 =cut
@@ -228,7 +295,7 @@ has 'current' => (
 
 =head3 node_set
 
-The B<node_set> attribute holds the node set of records. It is the list of 
+The B<node_set> attribute holds the node set of records. It is the list of
 records in this file. L</configure> automatically sets B<node_set>.
 
 =cut
@@ -243,7 +310,7 @@ has 'node_set' => (
 
 =head3 xpath
 
-The B<xpath> attribute holds the current L<XML::XPath> object. It is 
+The B<xpath> attribute holds the current L<XML::XPath> object. It is
 automatically set by the L</next_record> method.
 
 =cut
@@ -273,7 +340,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 
-Copyright 2016 (c) Vanderbilt University Medical Center
+Copyright 2019 (c) Vanderbilt University Medical Center
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
