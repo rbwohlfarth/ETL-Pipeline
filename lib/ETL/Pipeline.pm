@@ -1117,7 +1117,7 @@ sub _object_of_class {
 	if ($class =~ m/^\+/) {
 		$class =~ s/^\+//;
 	} elsif ($class !~ m/^ETL::Pipeline::$action/) {
-		$class = "ETL::Pipeline::$action::$class";
+		$class = "ETL::Pipeline::${action}::$class";
 	}
 
 	my %attributes = @arguments;
