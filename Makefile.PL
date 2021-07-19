@@ -1,4 +1,9 @@
 #!/usr/bin/env perl
+#
+# NOTE: If you get an error about "auto_manifest;" not allowed in "strict", it
+#       means that you need to install Module::Install::AutoManifest. Something
+#       like this: cpanm Module::Install::AutoManifest
+
 use inc::Module::Install;
 
 name 'ETL-Pipeline';
