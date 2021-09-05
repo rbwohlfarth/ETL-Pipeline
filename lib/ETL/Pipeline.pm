@@ -118,6 +118,12 @@ attribute.
 
   constants => {Type => 1, Information => 'Demographic'},
 
+=item data_in
+
+In some cases, the actual data may reside in another folder I<inside of>
+L</work_in>. If that's the case, then set this attribute. The attribute takes a
+string. The string is passed directly to L</data_in>.
+
 =item input
 
 Setup the L<ETL::Pipeline::Input> object for retrieving the raw data. The
@@ -126,6 +132,13 @@ attribute. The array is passed directly to L</input> as parameters.
 
   input => ['Excel', find => qr/\.xlsx?$/],
 
+=item mapping
+
+This attribute maps the input to the output. The constructor calls the
+L</mapping> method. Assign a hash reference to the attribute.
+
+  mapping => {Name => 'A', Address => 'B', ID => 'C'},
+
 =item output
 
 Setup the L<ETL::Pipeline::Output> object for retrieving the raw data. The
@@ -133,14 +146,6 @@ constructor calls the L</output> method. Assign an array reference to this
 attribute. The array is passed directly to L</output> as parameters.
 
   output => ['SQL', table => 'NewData'],
-
-=item mapping
-
-Move data from the input to the output. This attribute maps the input to the
-output. The constructor calls the L</mapping> method. Assign a hash
-reference to the attribute.
-
-  mapping => {Name => 'A', Address => 'B', ID => 'C'},
 
 =item work_in
 
@@ -189,8 +194,10 @@ sub BUILD {
 	#       will change "data_in" if you don't.
 	if (defined $arguments->{chain}) {
 		my $object = $arguments->{chain};
-		croak '"chain" requires an ETL::Pipeline object' unless defined blessed( $object );
-		croak '"chain" requires an ETL::Pipeline object' unless $object->isa( 'ETL::Pipeline' );
+		croak '"chain" requires an ETL::Pipeline object' unless
+			defined( blessed( $object ) )
+			&& $object->isa( 'ETL::Pipeline' )
+		;
 		$self->_work_in( $object->_work_in ) if defined $object->_work_in;
 		$self->_data_in( $object->_data_in ) if defined $object->_data_in;
 		$self->_session( $object->_session );
@@ -728,7 +735,7 @@ start here and only descend subdirectories. Temporary or output files go into
 this directory as well.
 
 B<work_in> has two forms: C<work_in( 'C:\Data' );> or
-C<< work_in( search => 'C:\Data', matching => 'Ficticious' ); >>.
+C<< work_in( search => 'C:\Data', iname => 'Ficticious' ); >>.
 
 The first form specifies the exact directory path. In our example, the working
 directory is F<C:\Data>.
@@ -736,7 +743,7 @@ directory is F<C:\Data>.
 The second form searches the file system for a matching directory. Take this
 example...
 
-  $etl->work_in( search => 'C:\Data', matching => 'Ficticious' );
+  $etl->work_in( search => 'C:\Data', iname => 'Ficticious' );
 
 It scans the F<C:\Data> directory for a subdirectory named F<Fictious>, like
 this: F<C:\Data\Ficticious>. The search is B<not> recursive. It locates files
@@ -749,7 +756,7 @@ in the B<search> folder.
 Search inside this directory for a matching subdirectory. The search is not
 recursive.
 
-=item matching
+=item iname
 
 Look for a subdirectory that matches this name. Wildcards and regular
 expressions are supported. Searches are case insensitive.
@@ -786,7 +793,7 @@ sub work_in {
 				->new
 				->max_depth( 1 )
 				->min_depth( 1 )
-				->iname( $options{matching} )
+				->iname( $options{iname} )
 				->directory
 				->iter( $search )
 			;
@@ -803,7 +810,14 @@ sub work_in {
 sub _trigger_work_in {
 	my $self = shift;
 	my $new  = shift;
-	$self->_data_in( $new );
+
+	# Force absolute paths. Changing the value will fire this trigger again.
+	# I only want to change "_data_in" once.
+	if (defined( $new ) && $new->is_relative) {
+		$self->_work_in( $new->cleanup->absolute );
+	} else {
+		$self->_data_in( $new );
+	}
 }
 
 
@@ -844,13 +858,13 @@ sub data_in {
 				->min_depth( 1 )
 				->iname( $name )
 				->directory
-				->iter( $self->work_in )
+				->iter( $self->_work_in )
 			;
 			my $match = $next->();
 			croak 'No matching directories' unless defined $match;
 			return $self->_data_in( $match );
 		} else {
-			return $self->_data_in( $self->work_in );
+			return $self->_data_in( $self->_work_in );
 		}
 	} else {
 		return $self->_data_in;

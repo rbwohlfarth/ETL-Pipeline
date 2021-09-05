@@ -6,17 +6,26 @@ ETL::Pipeline::Input::Xml - Records from an XML file
 
 =head1 SYNOPSIS
 
+  # All records in one file
   use ETL::Pipeline;
   ETL::Pipeline->new( {
-    input   => ['Xml', matching => 'Data.xml', root => '/Root'],
+    input   => ['Xml', iname => 'Data.xml', root => '/Root'],
+    mapping => {Name => 'Name', Address => 'Address'},
+    output  => ['UnitTest']
+  } )->process;
+
+  # One record per file
+  use ETL::Pipeline;
+  ETL::Pipeline->new( {
+    input   => ['Xml', iname => '*.xml', root => '/'],
     mapping => {Name => 'Name', Address => 'Address'},
     output  => ['UnitTest']
   } )->process;
 
 =head1 DESCRIPTION
 
-B<ETL::Pipeline::Input::Xml> defines an input source that reads records from an
-XML file. Individual records are found under the L</root> node. Fields are
+B<ETL::Pipeline::Input::Xml> defines an input source that reads records from
+XML files. Individual records are found under the L</root> node. Fields are
 accessed with a relative XML path.
 
 =cut
@@ -43,13 +52,14 @@ our $VERSION = '2.03';
 =head3 root
 
 The B<root> attribute holds the XPath for the top node. L</next_record>
-iterates over B<root>'s children.
+iterates over B<root>'s children. The default root is B</>.
 
 =cut
 
 has 'root' => (
-	is  => 'ro',
-	isa => 'Str',
+	default => '/',
+	is      => 'ro',
+	isa     => 'Str',
 );
 
 
