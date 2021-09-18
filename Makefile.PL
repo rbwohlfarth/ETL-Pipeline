@@ -23,7 +23,7 @@ requires 'Spreadsheet::ParseExcel::Utility';
 requires 'Spreadsheet::XLSX';
 requires 'String::Util';
 requires 'Text::CSV';
-requires 'XML::XPath';
+requires 'XML::Bare';
 
 test_requires 'Test::More' => '0.88';
 test_requires 'Test::Pod'  => '1.44';

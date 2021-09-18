@@ -87,6 +87,7 @@ sub run {
 	my ($self, $pipeline) = @_;
 
 	my $csv = Text::CSV->new( $self->_csv_options );
+	my $path = $self->file->stringify;
 
 	# Open the file.
 	my $handle = $self->file->openr();
@@ -132,16 +133,17 @@ sub run {
 		} else {
 			$fields = $csv->getline( $handle );
 		}
+		my $at = $csv->input_line_number();
 
 		if (defined $fields) {
 			my %record;
 			while (my ($index, $value) each @$fields) {
 				$record{$index} = $value;
 			}
-			$pipeline->record( \%record );
+			$pipeline->record( \%record, "CSV file '$path', line $at" );
 		} elsif (!$self->csv->eof) {
 			my ($code, $message, $position) = $self->csv->error_diag;
-			croak "Error $code: $message at character $position";
+			croak "CSV file '$path', error $code: $message at character $position (line $at)";
 		}
 	}
 
@@ -175,7 +177,7 @@ has '_csv_options' => (
 =head1 SEE ALSO
 
 L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File>,
-L<ETL::Pipeline::Input::File::Table>
+L<ETL::Pipeline::Input::File::Table>, L<Text::CSV>
 
 =cut
 

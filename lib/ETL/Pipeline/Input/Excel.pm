@@ -46,31 +46,6 @@ B<ETL::Pipeline::Input::Excel> implements the L<ETL::Pipeline::Input::File>
 and L<ETL::Pipeline::Input::File::Table> roles. It supports all of the
 attributes from these roles.
 
-=head3 process_blank_rows
-
-By default, L</run> skips blank rows. After all, they have no data. This
-attribute overrides that behaviour. It allows your script to process empty
-records.
-
-This comes in handy with files of notes, where a blank record indicates a
-blank line.
-
-Why would Excel data have blank lines? Merged rows. L<Spreadsheet::XLSX> and
-L<Spreadsheet::ParseExcel> can't identify merged rows. They simply appear as
-blank. So I needed to handle this case.
-
-Set this attribute to B<1> (true) and your scripts will process blank records.
-The default value is B<0> (false).
-
-=cut
-
-has 'process_blank_rows' => (
-	default => 0,
-	is      => 'rw',	# Allow callbacks to change this flag!
-	isa     => 'Bool',
-);
-
-
 =head3 worksheet
 
 B<worksheet> reads data from a specific worksheet. By default,
@@ -191,10 +166,7 @@ sub run {
 		foreach my $column ($worksheet->{MinCol} .. $worksheet->{MaxCol}) {
 			$record{$column} = $cells->[$row][$column]->value;
 		}
-		my $empty = none { hascontent( $_ ) } values %record;
-
-		$pipeline->record( \%record, "Excel file '$path', row $row" )
-			if !$empty || $self->process_blank_rows;
+		$pipeline->record( \%record, "Excel file '$path', row $row" );
 	}
 }
 
