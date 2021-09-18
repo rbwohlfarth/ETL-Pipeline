@@ -6,6 +6,9 @@
 
 use inc::Module::Install;
 
+#TODO: Add code to check for old version of ETL::Pipeline. Put up warning about
+#      rewriting custom input sources.
+
 name 'ETL-Pipeline';
 license 'perl';
 all_from 'lib/ETL/Pipeline.pm';

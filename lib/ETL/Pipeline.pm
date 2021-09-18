@@ -10,20 +10,20 @@ ETL::Pipeline - Extract-Transform-Load pattern for data file conversions
 
   # The object oriented interface...
   ETL::Pipeline->new( {
-    work_in   => {search => 'C:\Data', find => qr/Ficticious/},
-    input     => ['Excel', find => qr/\.xlsx?$/              ],
-    mapping   => {Name => 'A', Address => 'B', ID => 'C'     },
-    constants => {Type => 1, Information => 'Demographic'    },
-    output    => ['SQL', table => 'NewData'                  ],
+    work_in   => {search => 'C:\Data', iname => qr/Ficticious/},
+    input     => ['Excel', iname => qr/\.xlsx?$/              ],
+    mapping   => {Name => 'A', Address => 'B', ID => 'C'      },
+    constants => {Type => 1, Information => 'Demographic'     },
+    output    => ['SQL', table => 'NewData'                   ],
   } )->process;
 
   # Or using method calls...
   my $pipeline = ETL::Pipeline->new;
-  $pipeline->work_in  ( search => 'C:\Data', find => qr/Ficticious/ );
-  $pipeline->input    ( 'Excel', find => qr/\.xlsx?$/i              );
-  $pipeline->mapping  ( Name => 'A', Address => 'B', ID => 'C'      );
-  $pipeline->constants( Type => 1, Information => 'Demographic'     );
-  $pipeline->output   ( 'SQL', table => 'NewData'                   );
+  $pipeline->work_in  ( search => 'C:\Data', iname => qr/Ficticious/ );
+  $pipeline->input    ( 'Excel', iname => qr/\.xlsx?$/i              );
+  $pipeline->mapping  ( Name => 'A', Address => 'B', ID => 'C'       );
+  $pipeline->constants( Type => 1, Information => 'Demographic'      );
+  $pipeline->output   ( 'SQL', table => 'NewData'                    );
   $pipeline->process;
 
 =cut
@@ -36,7 +36,7 @@ use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
 use Scalar::Util qw/blessed/;
-use String::Util qw/hascontent nocontent/;
+use String::Util qw/hascontent nocontent trim/;
 
 
 our $VERSION = '2.03';
@@ -1141,6 +1141,64 @@ sub _object_of_class {
 	croak "Error creating $class...\n$@\n" unless defined $object;
 	return $object;
 }
+
+
+
+
+
+=head2 Other Methods & Attributes
+
+=head3 record_number
+
+The B<record_number> attribute tells you how many total records have been read
+by L</next_record>. The count includes headers and L</skip_if> records.
+
+The first record is always B<1>.
+
+B<ETL::Pipeline::Input> automatically increments the counter after
+L</next_record>. The L</next_record> method should not change B<record_number>.
+
+=head3 decrement_record_number
+
+This method decreases L</record_number> by one. It can be used to I<back out>
+header records from the count.
+
+  $input->decrement_record_number;
+
+=head3 increment_record_number
+
+This method increases L</record_number> by one.
+
+  $input->increment_record_number;
+
+=cut
+
+has 'record_number' => (
+	default => '0',
+	handles => {
+		decrement_record_number => 'dec',
+		increment_record_number => 'inc',
+	},
+	is      => 'ro',
+	isa     => 'Int',
+	traits  => [qw/Counter/],
+);
+
+around 'next_record' => sub {
+	my $original = shift;
+	my $self     = shift;
+
+	my $result = $self->$original( @_ );
+	$self->increment_record_number if $result;
+	return $result;
+};
+
+
+
+
+
+
+
 
 
 =head1 ADVANCED TOPICS

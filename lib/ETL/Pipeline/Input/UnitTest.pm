@@ -18,7 +18,7 @@ ETL::Pipeline::Input::UnitTest - Input source for unit tests
 B<ETL::Pipeline::Input::UnitTest> is an input source used by the unit tests.
 It proves that the L<ETL::Pipeline::Input> role works.
 
-The "data" is hard coded.
+The I<data> is hard coded.
 
 =cut
 
@@ -31,101 +31,43 @@ use warnings;
 use 5.014;
 
 
-our $VERSION = '2.00';
+our $VERSION = '3.00';
 
 
 =head1 METHODS & ATTRIBUTES
 
-=head3 current
+=head3 run
 
-This array reference holds the current record.
+This is the main loop. For unit tests, I use hard coded data. This guarantees
+consistent behavior.
 
-=cut
-
-has 'current' => (
-	handles => {
-		fields           => 'elements', 
-		_get_value       => 'get',
-		number_of_fields => 'count',
-	},
-	is     => 'rw',
-	isa    => 'ArrayRef[Str]',
-	traits => [qw/Array/],
-);
-
-
-=head3 data
-
-The real input source. This is the data returned by L</next_record>.
+L<ETL::Pipeline> automatically calls this method.
 
 =cut
 
-has 'data' => (
-	default => sub { [
-		[qw/Header1 Header2 Header3/, '  Header4  '],
-		[qw/Field1 Field2 Field3 Field4 Field5/],
-		[qw/Field6 Field7 Field8 Field9 Field0/],
-	] },
-	handles => {retrieve => 'shift'},
-	is      => 'ro',
-	isa     => 'ArrayRef[ArrayRef[Str]]',
-	traits  => [qw/Array/],
-);
+sub run {
+	my ($self, $pipeline) = @_;
 
+	$pipeline->add_alias( 'Header1'    , 1 );
+	$pipeline->add_alias( 'Header2'    , 2 );
+	$pipeline->add_alias( 'Header3'    , 3 );
+	$pipeline->add_alias( '  Header4  ', 4 );
 
-=head2 Called from L<ETL::Pipeline/process>
-
-=head3 get
-
-B<get> retrieves one field from the record. Pass an index number as the field
-name. The test data has 4 header fields and 5 values in each data row.
-Remember that index numbers start at zero.
-
-=cut
-
-sub get {
-	my ($self, $index) = @_;
-	return undef unless $index =~ m/^\d+$/;
-	return $self->_get_value( $index );
+	$pipeline->record( {
+		1 => 'Field1',
+		2 => 'Field2',
+		3 => 'Field3',
+		4 => 'Field4',
+		5 => 'Field5',
+	}, 'Row 1' );
+	$pipeline->record( {
+		1 => 'Field6',
+		2 => 'Field7',
+		3 => 'Field8',
+		4 => 'Field9',
+		5 => 'Field0',
+	}, 'Row 2' );
 }
-
-
-=head3 next_record
-
-B<ETL::Pipeline::Input::UnitTest> returns 3 records by cycling through
-L</data>.
-
-=cut
-
-sub next_record {
-	my $self = shift;
-
-	my $record = $self->retrieve;
-	if (defined $record) {
-		$self->current( $record );
-		return 1;
-	} else { return 0; }
-}
-
-
-=head3 configure
-
-B<configure> doesn't actually do anything. But it is required by
-L<ETL::Pipeline/process>.
-
-=cut
-
-sub configure {}
-
-
-=head3 finish
-
-B<finish> doesn't actually do anything. But it is required by
-L<ETL::Pipeline/process>.
-
-=cut
-
-sub finish {}
 
 
 =head1 SEE ALSO
@@ -143,7 +85,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 LICENSE
 
-Copyright 2016 (c) Vanderbilt University
+Copyright 2021 (c) Vanderbilt University
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
