@@ -48,7 +48,7 @@ attributes from these roles.
 
 =head3 worksheet
 
-B<worksheet> reads data from a specific worksheet. By default,
+Optional. B<worksheet> reads data from a specific worksheet. By default,
 B<ETL::Pipeline::Input::Excel> uses the first worksheet.
 
 B<worksheet> accepts a string or regular expression. As a string, B<worksheet>
@@ -69,8 +69,8 @@ has 'worksheet' => (
 
 =head3 password
 
-B<password> works with encrypted files. B<ETL::Pipeline::Input::Excel> decrypts
-the file automatically.
+Optional. B<password> works with encrypted files. B<ETL::Pipeline::Input::Excel>
+decrypts the file automatically.
 
 B<Warning:> B<password> only works with Excel 2003 file (XLS). Encrypted XLSX
 files always fail. L<Spreadsheet::XLSX> does not support encryption.
@@ -85,8 +85,8 @@ has 'password' => (
 
 =head3 skipping
 
-If you use a code reference for B<skipping>, this input source sends a hash
-reference of each row. You can access the columns by number or letter.
+Optional. If you use a code reference for B<skipping>, this input source sends a
+hash reference of each row. You can access the columns by number or letter.
 
 =head2 Methods
 
@@ -106,15 +106,15 @@ sub run {
 	# Open the file.
 
 	# Create the correct workbook object based on the file format.
-	my $path = $self->file->stringify;
+	my $path = $self->file;
 	my $workbook;
 
-	if ($path =~ m/\.xls$/i) {
+	if ("$path" =~ m/\.xls$/i) {
 		my $excel = Spreadsheet::ParseExcel->new( Password => $self->password );
-		$workbook = $excel->parse( $path );
+		$workbook = $excel->parse( "$path" );
 		croak "Unable to open the Excel file '$path'" unless defined $workbook;
 	} else {
-		$workbook = Spreadsheet::XLSX->new( $path );
+		$workbook = Spreadsheet::XLSX->new( "$path" );
 		croak "Unable to open the Excel file '$path'" unless defined $workbook;
 	}
 

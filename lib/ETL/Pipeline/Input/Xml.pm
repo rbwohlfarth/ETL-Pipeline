@@ -22,12 +22,12 @@ L</root>.
 =cut
 
 package ETL::Pipeline::Input::Xml;
-use Moose;
 
 use 5.014000;
 use warnings;
 
 use Carp;
+use Moose;
 use XML::Bare;
 
 
@@ -38,15 +38,15 @@ our $VERSION = '3.00';
 
 =head2 Arguments for L<ETL::Pipeline/input>
 
-=head3 root
+=head3 records_at
 
-The path to the record nodes, such as C</XMLDATA/Root/Record>. The last item in
-the list is the name of the root for each individual record. The code loops over
-all of these nodes.
+Required. The path to the record nodes, such as C</XMLDATA/Root/Record>. The
+last item in the list is the name of the root for each individual record. The
+code loops over all of these nodes.
 
 =cut
 
-has 'root' => (
+has 'records_at' => (
 	default => '/',
 	is      => 'ro',
 	isa     => 'Str',
@@ -55,8 +55,8 @@ has 'root' => (
 
 =head3 skipping
 
-This attribute is ignored. XML files must follow specific formatting rules.
-Extra rows are parsed as data. There's nothing to skip.
+Not used. This attribute is ignored. XML files must follow specific formatting
+rules. Extra rows are parsed as data. There's nothing to skip.
 
 =head2 Methods
 
@@ -72,16 +72,17 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $pipeline) = @_;
 
-	my $path = $self->file->stringify;
+	my $path = $self->file;
 
 	# Load the XML file and turn it into a Perl hash.
-	my $parser = XML::Bare->new( file => $path );
+	my $parser = XML::Bare->new( file => "$path" );
 	my $xml = $parser->parse;
 
 	# Find the node that is an array of records. This comes from the "root"
 	# attribute.
 	my $list = $xml;
-	$list = $list->{$_} foreach (split '/', $self->root);
+	$list = $list->{$_} foreach (split '/', $self->records_at);
+	$list = [$list] unless ref( $list ) eq 'ARRAY';
 
 	# Process each record. And that's it.
 	foreach my $record (@$list) {

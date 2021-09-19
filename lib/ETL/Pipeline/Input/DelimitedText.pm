@@ -72,6 +72,12 @@ sub BUILD {
 }
 
 
+=head3 skipping
+
+Optional. If you use a code reference for B<skipping>, this input source sends a
+line of plain text as the parameter. The text is B<not> parsed into fields. I
+assume that you're skipping report headers, not formatted data.
+
 =head2 Methods
 
 =head3 run
@@ -87,12 +93,11 @@ sub run {
 	my ($self, $pipeline) = @_;
 
 	my $csv = Text::CSV->new( $self->_csv_options );
-	my $path = $self->file->stringify;
+	my $path = $self->file;
 
 	# Open the file.
-	my $handle = $self->file->openr();
-	croak sprintf( 'Cannot read "%s"', $self->file->stringify )
-		unless defined $handle;
+	my $handle = $path->openr();
+	croak "Cannot read '$path'" unless defined $handle;
 
 	# Skip over report headers. These are not data. They are extra rows put
 	# there for report formats. The data starts after these rows.
@@ -151,12 +156,6 @@ sub run {
 	close $handle;
 }
 
-
-=head3 skipping
-
-If you use a code reference for B<skipping>, this input source sends a line of
-plain text as the parameter. The text is B<not> parsed into fields. I assume
-that you're skipping report headers, not formatted data.
 
 =head2 Internal Methods & Attributes
 
