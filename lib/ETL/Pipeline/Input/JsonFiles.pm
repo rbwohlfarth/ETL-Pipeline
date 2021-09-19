@@ -2,32 +2,32 @@
 
 =head1 NAME
 
-ETL::Pipeline::Input::XmlFiles - Process XML content from individual files
+ETL::Pipeline::Input::JsonFiles - Process JSON content from individual files
 
 =head1 SYNOPSIS
 
   use Data::ETL;
   working_folder search_in => 'C:\Data', find_folder => qr/Ficticious/;
-  extract_from 'XmlFiles', records_at => '/';
+  extract_from 'JsonFiles', records_at => '/json';
   transform_as ExternalID => '/File/A', PatientName => '/File/Patient';
   load_into 'Access', file => 'review.accdb';
   run;
 
 =head1 DESCRIPTION
 
-B<ETL::Pipeline::Input::XmlFiles> defines an input source that reads one or more
-records from one or more XML files. Most of the time, there should be one record
-per file. But the class handles multiple records per file too.
+B<ETL::Pipeline::Input::JsonFiles> defines an input source that reads one or
+more records from one or more JSON files. Most of the time, there should be one
+record per file. But the class handles multiple records per file too.
 
 =cut
 
-package ETL::Pipeline::Input::XmlFiles;
+package ETL::Pipeline::Input::JsonFiles;
 
 use 5.014000;
 use warnings;
 
 use Carp;
-use XML::Bare;
+use JSON;
 use Moose;
 
 
@@ -40,9 +40,9 @@ our $VERSION = '2.00';
 
 =head3 records_at
 
-Optional. The path to the record nodes, such as C</XMLDATA/Root/Record>. The
+Optional. The path to the record nodes, such as C</json/Record>. The
 last item in the list is the name of the root for each individual record. The
-default is B</> - one record in the file.
+default is B</json> - one record in the file.
 
 You might use this attribute in two cases...
 
@@ -65,7 +65,7 @@ has 'records_at' => (
 
 =head3 skipping
 
-Not used. This attribute is ignored. XML files must follow specific formatting
+Not used. This attribute is ignored. JSON files must follow specific formatting
 rules. Extra rows are parsed as data. There's nothing to skip.
 
 =head2 Methods
@@ -82,23 +82,28 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $pipeline) = @_;
 
+	my $parser = JSON->new->utf8;
+
 	my $path = $self->file;
 	while (defined $path) {
-		# Load the XML file and turn it into a Perl hash.
-		my $parser = XML::Bare->new( file => "$path" );
-		my $xml = $parser->parse;
+		my $text = $path->slurp;	# Force scalar context, otherwise slurp breaks it into lines.
+		my $json = $parser->decode( $text );
+		die "JSON file '$path', unable to parse" unless defined $json;
 
 		# Find the node that is an array of records. This comes from the
 		# "records_at" attribute.
-		my $list = $xml;
+		my $list = $json;
 		$list = $list->{$_} foreach (grep { $_ ne '' } split '/', $self->records_at);
 		$list = [$list] unless ref( $list ) eq 'ARRAY';
 
 		# Process each record. And that's it.
+		# This code sends the JSON text representation of the record as part
+		# of the record ID. There isn't a way to figure out which line in the
+		# file a record comes from. I thought this would help us search the
+		# file manually when there are problems.
 		foreach my $record (@$list) {
-			my $count = $record->{_i};
-			my $char  = $record->{_pos};
-			$pipeline->record( $record, "XML file '$path', record $count, file character $char" );
+			my $output = $parser->encode( $record );
+			$pipeline->record( $record, "JSON file '$path', $output" );
 		}
 
 		# Get the next matching file.
@@ -110,7 +115,7 @@ sub run {
 =head1 SEE ALSO
 
 L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File::List>,
-L<XML::Bare>
+L<JSON>
 
 =cut
 
