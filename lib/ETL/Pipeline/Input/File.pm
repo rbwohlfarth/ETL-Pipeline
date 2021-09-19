@@ -74,9 +74,9 @@ wildcards and regular expressions, and is case insensitive.
   # Search using a file glob...
   $etl->input( 'Excel', iname => '*.xlsx' );
 
-B<Warning:> Your input source must account for the case where no file matches
-the search criteria. I thought about throwing a fatal error. But I'd rather the
-ETL script make that decision.
+The code throws an error if no files match the criteria. Only the first match
+is used. If you want to match more than one file, use
+L<ETL::Pipeline::Input::File::List> instead.
 
 =cut
 
@@ -102,22 +102,8 @@ sub BUILD {
 	}
 
 	# Find the first file that matches all of the criteria.
-	my $custom   = $self->matching;
 	my $iterator = $rule->iter( $self->data_in );
-	my $result   = 0;
-
-	while ($result == 0) {
-		my $potential = $iterator->();
-		if (defined $potential) {
-			if (defined $custom) {
-				$result = $custom->( $potential );
-			} else {
-				$result = 1;
-			}
-		} else {
-			$result = -1;
-		}
-	}
+	my $potential = $iterator->();
 
 	if (!defined( $potential )) {
 		carp 'No files matched the search criteria';
@@ -131,8 +117,11 @@ sub BUILD {
 
 =head3 data_in
 
-Path where data files reside. L<ETL::Pipeline> sets this value to
-L<ETL::Pipeline/data_in> when it instantiates the input source.
+Optional. Path where data files reside. Defaults to L<ETL::Pipeline/data_in>.
+
+The default is actually set inside L<ETL::Pipeline/run> when it instantiates
+the input source. If the script doesn't set B<data_in>, then
+L<ETL::Pipeline/run> adds it.
 
 =cut
 
@@ -145,9 +134,9 @@ has 'data_in' => (
 
 =head3 file
 
-When passed to L<ETL::Pipeline/input>, this file becomes the input source. No
-search or matching is performed. If you specify a relative path, it is relative
-to L</data_in>.
+Optional. When passed to L<ETL::Pipeline/input>, this file becomes the input
+source. No search or matching is performed. If you specify a relative path, it
+is relative to L</data_in>.
 
 Once the object has been created, this attribute holds the file that matched
 search criteria. It should be used by your input source class as the file name.
@@ -171,34 +160,10 @@ has 'file' => (
 );
 
 
-=head3 matching
-
-B<matching> executes custom code to evaluate possible input files. This code can
-apply any logic, including reading the file contents. It returns B<true> if the
-file is a valid input source. B<False> skips that file and moves on to the next
-one. The first match becomes the file for this input source.
-
-B<matching> is a code reference. It receives one parameter - a
-L<Path::Class::File> object.
-
-  # File larger than 2K...
-  $etl->input( 'Excel', matching => sub {
-    my ($file) = @_;
-    return ($file->size > 2048 ? 1 : 0);
-  } );
-
-=cut
-
-has 'matching' => (
-	is  => 'ro',
-	isa => 'Maybe[CodeRef]',
-);
-
-
 =head3 skipping
 
-B<skipping> jumps over a certain number of rows/lines in the beginning of the
-file. Report formats often contain extra headers - even before the column
+Optional. B<skipping> jumps over a certain number of rows/lines in the beginning
+of the file. Report formats often contain extra headers - even before the column
 names. B<skipping> ignores those and starts processing at the data.
 
 B<Note:> B<skipping> is applied I<before> reading column names.
@@ -229,7 +194,8 @@ has 'skipping' => (
 
 =head1 SEE ALSO
 
-L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::FileList>
+L<Path::Iterator::Rule>, L<ETL::Pipeline>, L<ETL::Pipeline::Input>,
+L<ETL::Pipeline::Input::File::List>
 
 =head1 AUTHOR
 

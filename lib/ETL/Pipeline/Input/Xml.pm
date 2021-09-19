@@ -53,6 +53,11 @@ has 'root' => (
 );
 
 
+=head3 skipping
+
+This attribute is ignored. XML files must follow specific formatting rules.
+Extra rows are parsed as data. There's nothing to skip.
+
 =head2 Methods
 
 =head3 run
@@ -94,8 +99,8 @@ L<XML::Bare>
 
 =cut
 
-with 'ETL::Pipeline::Input::File';
 with 'ETL::Pipeline::Input';
+with 'ETL::Pipeline::Input::File';
 
 
 =head1 AUTHOR

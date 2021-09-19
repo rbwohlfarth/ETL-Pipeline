@@ -83,6 +83,11 @@ has 'password' => (
 );
 
 
+=head3 skipping
+
+If you use a code reference for B<skipping>, this input source sends a hash
+reference of each row. You can access the columns by number or letter.
+
 =head2 Methods
 
 =head3 run
@@ -171,11 +176,6 @@ sub run {
 }
 
 
-=head3 skipping
-
-If you use a code reference for B<skipping>, this input source sends a hash
-reference of each row. You can access the columns by number of letter.
-
 =head1 SEE ALSO
 
 L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File>,
@@ -183,9 +183,9 @@ L<ETL::Pipeline::Input::File::Table>
 
 =cut
 
+with 'ETL::Pipeline::Input';
 with 'ETL::Pipeline::Input::File';
 with 'ETL::Pipeline::Input::File::Table';
-with 'ETL::Pipeline::Input';
 
 
 =head1 AUTHOR
