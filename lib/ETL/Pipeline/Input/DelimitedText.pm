@@ -90,7 +90,7 @@ L<ETL::Pipeline> automatically calls this method.
 =cut
 
 sub run {
-	my ($self, $pipeline) = @_;
+	my ($self, $etl) = @_;
 
 	my $csv = Text::CSV->new( $self->_csv_options );
 	my $path = $self->file;
@@ -124,7 +124,7 @@ sub run {
 
 		if (defined $fields) {
 			while (my ($index, $value) each @$fields) {
-				$pipeline->add_alias( $value, $index )
+				$etl->add_alias( $value, $index )
 			}
 		}
 	}
@@ -145,7 +145,7 @@ sub run {
 			while (my ($index, $value) each @$fields) {
 				$record{$index} = $value;
 			}
-			$pipeline->record( \%record, "CSV file '$path', line $at" );
+			$etl->record( \%record, "CSV file '$path', line $at" );
 		} elsif (!$self->csv->eof) {
 			my ($code, $message, $position) = $self->csv->error_diag;
 			croak "CSV file '$path', error $code: $message at character $position (line $at)";
@@ -157,16 +157,12 @@ sub run {
 }
 
 
-=head2 Internal Methods & Attributes
+#-------------------------------------------------------------------------------
+# Internal methods and attributes
 
-=head3 _csv_options
-
-L<Text::CSV> options passed into the object constructor. I either needed to
-store the options or a L<Text::CSV> object. I chose to store the options. The
-L</run> method uses them to create a L<Text::CSV> object.
-
-=cut
-
+# Text::CSV options passed into the object constructor. I either needed to
+# store the options or a Text::CSV object. I chose to store the options. The
+# "run" method uses them to create a Text::CSV object.
 has '_csv_options' => (
 	is  => 'rw',
 	isa => 'HashRef[Any]',

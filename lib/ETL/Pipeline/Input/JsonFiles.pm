@@ -80,7 +80,7 @@ L<ETL::Pipeline> automatically calls this method.
 =cut
 
 sub run {
-	my ($self, $pipeline) = @_;
+	my ($self, $etl) = @_;
 
 	my $parser = JSON->new->utf8;
 
@@ -103,7 +103,7 @@ sub run {
 		# file manually when there are problems.
 		foreach my $record (@$list) {
 			my $output = $parser->encode( $record );
-			$pipeline->record( $record, "JSON file '$path', $output" );
+			$etl->record( $record, "JSON file '$path', $output" );
 		}
 
 		# Get the next matching file.

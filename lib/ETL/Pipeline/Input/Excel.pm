@@ -100,7 +100,7 @@ L<ETL::Pipeline> automatically calls this method.
 =cut
 
 sub run {
-	my ($self, $pipeline) = @_;
+	my ($self, $etl) = @_;
 
 	#----------------------------------------------------------------------
 	# Open the file.
@@ -134,7 +134,7 @@ sub run {
 	}
 
 	# Convert the column numbers into their letter designations.
-	$pipeline->add_alias( int2col( $_ ), $_ )
+	$etl->add_alias( int2col( $_ ), $_ )
 		foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
 
 	#----------------------------------------------------------------------
@@ -160,7 +160,7 @@ sub run {
 
 	# Load field names.
 	unless ($self->no_column_names) {
-		$pipeline->add_alias( $cells->[$start][$_]->value, $_ )
+		$etl->add_alias( $cells->[$start][$_]->value, $_ )
 			foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
 		$start++;
 	}
@@ -171,7 +171,7 @@ sub run {
 		foreach my $column ($worksheet->{MinCol} .. $worksheet->{MaxCol}) {
 			$record{$column} = $cells->[$row][$column]->value;
 		}
-		$pipeline->record( \%record, "Excel file '$path', row $row" );
+		$etl->record( \%record, "Excel file '$path', row $row" );
 	}
 }
 

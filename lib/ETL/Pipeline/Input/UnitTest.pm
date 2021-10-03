@@ -36,6 +36,13 @@ our $VERSION = '3.00';
 
 =head1 METHODS & ATTRIBUTES
 
+=head2 Arguments for L<ETL::Pipeline/input>
+
+None - there's no configuration for this source. It's meant to be quick and
+light for unit testing.
+
+=head2 Methods
+
 =head3 run
 
 This is the main loop. For unit tests, I use hard coded data. This guarantees
@@ -46,21 +53,21 @@ L<ETL::Pipeline> automatically calls this method.
 =cut
 
 sub run {
-	my ($self, $pipeline) = @_;
+	my ($self, $etl) = @_;
 
-	$pipeline->add_alias( 'Header1'    , 1 );
-	$pipeline->add_alias( 'Header2'    , 2 );
-	$pipeline->add_alias( 'Header3'    , 3 );
-	$pipeline->add_alias( '  Header4  ', 4 );
+	$etl->add_alias( 'Header1'    , 1 );
+	$etl->add_alias( 'Header2'    , 2 );
+	$etl->add_alias( 'Header3'    , 3 );
+	$etl->add_alias( '  Header4  ', 4 );
 
-	$pipeline->record( {
+	$etl->record( {
 		1 => 'Field1',
 		2 => 'Field2',
 		3 => 'Field3',
 		4 => 'Field4',
 		5 => 'Field5',
 	}, 'Row 1' );
-	$pipeline->record( {
+	$etl->record( {
 		1 => 'Field6',
 		2 => 'Field7',
 		3 => 'Field8',

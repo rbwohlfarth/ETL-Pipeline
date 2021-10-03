@@ -70,7 +70,7 @@ L<ETL::Pipeline> automatically calls this method.
 =cut
 
 sub run {
-	my ($self, $pipeline) = @_;
+	my ($self, $etl) = @_;
 
 	my $path = $self->file;
 
@@ -88,7 +88,7 @@ sub run {
 	foreach my $record (@$list) {
 		my $count = $record->{_i};
 		my $char  = $record->{_pos};
-		$pipeline->record( $record, "XML file '$path', record $count, file character $char" );
+		$etl->record( $record, "XML file '$path', record $count, file character $char" );
 	}
 }
 

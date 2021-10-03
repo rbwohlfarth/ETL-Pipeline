@@ -134,15 +134,11 @@ sub next_file {
 }
 
 
-=head2 Internal Methods & Attributes
+#-------------------------------------------------------------------------------
+# Internal methods and attributes
 
-=head3 _iterator
-
-L<Path::Class::Rule> creates an iterator that returns each file in turn.
-B<iterator> holds it for L</next_record>.
-
-=cut
-
+# "Path::Class::Rule" creates an iterator that returns each file in turn. This
+# attribute holds it for "next_record".
 has '_iterator' => (
 	is  => 'rw',
 	isa => 'CodeRef',

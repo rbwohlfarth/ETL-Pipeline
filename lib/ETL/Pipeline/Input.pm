@@ -9,26 +9,61 @@ ETL::Pipeline::Input - Role for ETL::Pipeline input sources
   use Moose;
   with 'ETL::Pipeline::Input';
 
-  sub next_record {
+  sub run {
     # Add code to read your data here
     ...
   }
 
 =head1 DESCRIPTION
 
-An I<input source> is a Moose object with at least one method - C<run>. This
-role basically defines the requirement for the B<run> method. It should be
-consumed by B<all> input source classes. L<ETL::Pipeline> relies on the input
-source having this role.
+An I<input source> feeds the B<extract> part of B<ETL>. This is where data comes
+from. These are your data sources.
 
-How do you create an I<input source>? Create a Moose class. Add any attributes
-that your source needs. Define the C<run> method. C<run> receives one
-parameter - the L<ETL::Pipeline> object. C<run> should call the
-L<ETL::Pipeline/record> method after it loads each input record. This triggers
-the B<Transform> and B<Load> parts of B<ETL>.
+A data source may be anything - a file, a database, or maybe a socket. Each
+I<format> is an L<ETL::Pipeline> input source. For example, Excel files
+represent one input source. Perl reads every Excel file the same way. With a few
+judicious attributes, we can re-use the same input source for just about any
+type of Excel file.
 
-L<ETL::Pipeline> provides several other utility methods for your input source.
-See the L<ETL::Pipeline> documentation for a complete list.
+L<ETL::Pipeline> defines an I<input source> as a Moose object with at least one
+method - C<run>. This role basically defines the requirement for the B<run>
+method. It should be consumed by B<all> input source classes. L<ETL::Pipeline>
+relies on the input source having this role.
+
+=head2 How do I create an I<input source>?
+
+=over
+
+=item 1. Start a new Perl module. I recommend putting it in the C<ETL::Pipeline::Input> namespace. L<ETL::Pipeline> will pick it up automatically.
+
+=item 2. Make your module a L<Moose> class - C<use Moose;>.
+
+=item 3. Consume this role - C<with 'ETL::Pipeline::Input';>.
+
+=item 4. Write the L</run> method. L</run> follows this basic algorithmn...
+
+=over
+
+=item a. Open the source.
+
+=item b. Loop reading the records. Each iteration should call L<ETL::Pipeline/record> to trigger the I<transform> step.
+
+=item c. Close the source.
+
+=back
+
+=item 5. Add any attributes for your class.
+
+=back
+
+The new source is ready to use, like this...
+
+  $etl->input( 'YourNewSource' );
+
+You can leave off the leading B<ETL::Pipeline::Input::>.
+
+When L<ETL::Pipeline> calls L</run>, it passes the L<ETL::Pipeline> object as
+the only parameter.
 
 =head2 Why this way?
 
@@ -36,60 +71,44 @@ Input sources mostly follow the basic algorithm of open, read, process, and
 close. I originally had the role define methods for each of these steps. That
 was a lot of work, and kind of confusing. This way, the input source only
 I<needs> one code block that does all of these steps - in one place. So it's
-easier to troubleshoot and much simpler.
+easier to troubleshoot and write new sources.
 
-=head2 Adding a new input source
+In the work that I do, we have one output destination that rarely changes. It's
+far more common to write new input sources - especially customized sources.
+Making new sources easier saves time. Making it simpler means that more
+developers can pick up those tasks.
 
-Out of the box, L<ETL::Pipeline> provides a few input sources such as Microsoft
-Excel and CSV (comma seperated variable) files. To add your own formats...
-
-=over
-
-=item 1. Create a Perl module. Name it C<ETL::Pipeline::Input::...>.
-
-=item 2. Make it a Moose object: C<use Moose;>.
-
-=item 3. Include this role: C<with 'ETL::Pipeline::Input';>.
-
-=item 4. Define the C<run> method.
-
-=item 5. Add any attributes needed by your source.
-
-=back
-
-Ta-da! Your input source is ready to use:
-
-  $etl->input( 'YourNewSource' );
-
-Some important things to remember about C<run>...
-
-=over
-
-=item C<run> receives one parameter - the L<ETL::Pipeline> object.
-
-=item Should include all the code to open, read, and close the input source.
-
-=item After reading a record, call L<ETL::Pipeline/record>.
-
-=item L<ETL::Pipeline> provides a few helper methods for input sources.
-
-=back
-
-=head2 Does B<ETL::Pipeline::Input> only work with files?
+=head2 Does B<ETL::Pipeline> only work with files?
 
 No. B<ETL::Pipeline::Input> works for any source of data, such as SQL queries,
 CSV files, or network sockets. Tailor the C<run> method for whatever suits your
 needs.
 
-The B<ETL::Pipeline> distribution comes with a helpful role for file inputs -
+Because files are most common, B<ETL::Pipeline> comes with a helpful role -
 L<ETL::Pipeline::Input::File>. Consume L<ETL::Pipeline::Input::File> in your
-inpiut source class to have access to some standardized attributes.
+inpiut source to access some standardized attributes.
+
+=head2 Upgrading from older versions
+
+L<ETL::Pipeline> version 3 is not compatible with input sources from older
+versions. You will need to rewrite your custom input sources.
+
+=over
+
+=item Merge the C<setup>, C<finish>, and C<next_record> methods into L</run>.
+
+=item Have L</run> call C<$etl->record> in place of C<next_record>.
+
+=item Adjust attributes as necessary.
+
+=back
 
 =cut
 
 package ETL::Pipeline::Input;
 
 use 5.014000;
+use warnings;
 
 use Moose::Role;
 
@@ -107,6 +126,27 @@ This method is the workhorse. It defines the main ETL loop.
 L<ETL::Pipeline/record> acts as a callback.
 
 I say I<file>. It really means I<input source> - whatever that might be.
+
+Some important things to remember about C<run>...
+
+=over
+
+=item C<run> receives one parameter - the L<ETL::Pipeline> object.
+
+=item Should include all the code to open, read, and close the input source.
+
+=item After reading a record, call L<ETL::Pipeline/record>.
+
+=back
+
+If your code encounters an error, B<run> can call L<ETL::Pipeline/error> with
+the error message. L<ETL::Pipeline/error> automatically includes the record
+count with the error message. You should add any other troubleshooting
+information such as file names or key fields.
+
+  $etl->error( "Error message here for id $id" );
+
+For fatal errors, I recommend using the C<croak> command from L<Carp>.
 
 =cut
 

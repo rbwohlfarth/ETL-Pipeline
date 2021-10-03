@@ -18,28 +18,30 @@ ETL::Pipeline - Extract-Transform-Load pattern for data file conversions
   } )->process;
 
   # Or using method calls...
-  my $pipeline = ETL::Pipeline->new;
-  $pipeline->work_in  ( search => 'C:\Data', iname => qr/Ficticious/ );
-  $pipeline->input    ( 'Excel', iname => qr/\.xlsx?$/i              );
-  $pipeline->mapping  ( Name => 'A', Address => 'B', ID => 'C'       );
-  $pipeline->constants( Type => 1, Information => 'Demographic'      );
-  $pipeline->output   ( 'SQL', table => 'NewData'                    );
-  $pipeline->process;
+  my $etl = ETL::Pipeline->new;
+  $etl->work_in  ( search => 'C:\Data', iname => qr/Ficticious/ );
+  $etl->input    ( 'Excel', iname => qr/\.xlsx?$/i              );
+  $etl->mapping  ( Name => 'A', Address => 'B', ID => 'C'       );
+  $etl->constants( Type => 1, Information => 'Demographic'      );
+  $etl->output   ( 'SQL', table => 'NewData'                    );
+  $etl->process;
 
 =cut
 
 package ETL::Pipeline;
 
 use 5.014000;
+use warnings;
+
 use Carp;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
 use Scalar::Util qw/blessed/;
-use String::Util qw/hascontent nocontent trim/;
+use String::Util qw/hascontent trim/;
 
 
-our $VERSION = '2.03';
+our $VERSION = '3.00';
 
 
 =head1 DESCRIPTION
@@ -62,8 +64,8 @@ By dividing a conversion into 3 steps, we isolate the input from the output...
 
 B<ETL::Pipeline> takes your data files from extract to load. It reads an input
 source, translates the data, and writes it to an output destination. For
-example, I use the these pipelines for reading an Excel spread sheet (input)
-and saving the information in an SQL database (output).
+example, I use these pipelines for reading an Excel spread sheet (input) and
+saving the information in an SQL database (output).
 
   use ETL::Pipeline;
   ETL::Pipeline->new( {
@@ -85,6 +87,9 @@ Or like this, calling the methods instead of through the constructor...
   $etl->output   ( 'SQL', table => 'NewData'                   );
   $etl->process;
 
+These are equivalent. They do exactly the same thing. You can pick whichever
+best suits your style.
+
 =head2 What is a pipeline?
 
 The term I<pipeline> describes a complete ETL process - extract, transform,
@@ -96,86 +101,29 @@ B<ETL::Pipeline> object represents a complete pipeline.
 
 =head3 new
 
-Create a new ETL pipeline. The constructor accepts these values...
+Create a new ETL pipeline. The constructor accepts a hash reference whose keys
+are B<ETL::Pipeline> attributes. See the corresponding attribute documentation
+for details about acceptable values.
 
 =over
-
-=item chain
-
-This optional attribute copies L</work_in>, L</data_in>, and L</session> from
-another object. B<chain> accepts an B<ETL::Pipeline> object. The constructor
-copies L</work_in>, L</data_in>, and L</session> from that object. It helps
-scripts process multiple files from the same place.
-
-See the section L</Multiple input sources> for an example.
 
 =item constants
 
-Assigns constant values to output fields. Since B<mapping> accepts input
-field names, B<constants> assigns literal strings or numbers to fields. The
-constructor calls the L</constants> method. Assign a hash reference to this
-attribute.
-
-  constants => {Type => 1, Information => 'Demographic'},
-
 =item data_in
-
-In some cases, the actual data may reside in another folder I<inside of>
-L</work_in>. If that's the case, then set this attribute. The attribute takes a
-string. The string is passed directly to L</data_in>.
 
 =item input
 
-Setup the L<ETL::Pipeline::Input> object for retrieving the raw data. The
-constructor calls the L</input> method. Assign an array reference to this
-attribute. The array is passed directly to L</input> as parameters.
-
-  input => ['Excel', find => qr/\.xlsx?$/],
-
 =item mapping
 
-This attribute maps the input to the output. The constructor calls the
-L</mapping> method. Assign a hash reference to the attribute.
-
-  mapping => {Name => 'A', Address => 'B', ID => 'C'},
+=item on_record
 
 =item output
 
-Setup the L<ETL::Pipeline::Output> object for retrieving the raw data. The
-constructor calls the L</output> method. Assign an array reference to this
-attribute. The array is passed directly to L</output> as parameters.
-
-  output => ['SQL', table => 'NewData'],
+=item session
 
 =item work_in
 
-Sets the working directory. All files - input, output, or temporary - reside
-in this directory. The constructor accepts the same value as the parameters
-to the L</work_in> method. As a matter of fact, the constructor just calls the
-L</work_in> method.
-
 =back
-
-When creating the pipeline, B<ETL::Pipeline> sets up arguments in this order...
-
-=over
-
-=item 1. work_in
-
-=item 2. data_in
-
-=item 3. input
-
-=item 4. constants
-
-=item 5. mapping
-
-=item 6. output
-
-=back
-
-Later parts (e.g. output) can depend on earlier parts (e.g. input). For
-example, the B<input> will use B<data_in> in its constructor.
 
 =cut
 
@@ -183,17 +131,14 @@ sub BUILD {
 	my $self = shift;
 	my $arguments = shift;
 
-	# The order of these blocks is important. ETL::Pipeline::Input and
-	# ETL::Pipeline::Output objects depend on work_in and data_in being set.
-	# And I want parameters to override chained values.
-
-	# Copy information from an existing object. This allows objects to share
-	# settings or information.
+	# "_chain" is a special argument to the constructor that implements the
+	# "chain" method. It copies information from an existing object. This allows
+	# pipelines to share settings.
 	#
-	# NOTE: Always copy "work_in" before "data_in". The trigger on "work_in"
-	#       will change "data_in" if you don't.
-	if (defined $arguments->{chain}) {
-		my $object = $arguments->{chain};
+	# Always handle "_chain" first. That way "work_in" and "data_in" arguments
+	# can override the defaults.
+	if (defined $arguments->{_chain}) {
+		my $object = $arguments->{_chain};
 		croak '"chain" requires an ETL::Pipeline object' unless
 			defined( blessed( $object ) )
 			&& $object->isa( 'ETL::Pipeline' )
@@ -215,12 +160,8 @@ sub BUILD {
 		$self->data_in( ref( $values ) eq '' ? $values : @$values );
 	}
 
-	# Configure the object in one fell swoop. This always happen AFTER copying
-	# the linked object. Normal setup overrides the linked object.
-	#
-	# The order of the object creation matches the order of execution -
-	# Extract, Transform, Load. Later parts on the pipeline can depend on
-	# the configuration of earlier parts.
+	# The input and output configurations may be single string values or an
+	# array of arguments. It depends on what each source or destination expects.
 	if (defined $arguments->{input}) {
 		my $values = $arguments->{input};
 		$self->input( ref( $values ) eq '' ? $values : @$values );
@@ -234,166 +175,26 @@ sub BUILD {
 
 =head3 chain
 
-This method creates a new pipeline using the same L</work_in> and L</data_in>
-directories. It accepts the same arguments as L</new>. Use B<chain> when
-linking multiple pipelines together. See the section L</Multiple input sources>
-for more details.
+This method creates a new pipeline using the same L</work_in>, L</data_in>, and
+L</session> as the current pipeline. It returns a new instance of
+B<ETL::Pipeline>.
+
+B<chain> takes the same arguments as L</new>. It passes those arguments through
+to the constructor of the new object.
+
+See the section on L</Multiple input sources> for examples of chaining.
 
 =cut
 
 sub chain {
-	my ($self, %arguments) = @_;
-	$arguments{chain} = $self unless exists $arguments{chain};
-	return __PACKAGE__->new( \%arguments );
-}
+	my ($self, $arguments) = @_;
 
+	# Create the new object. Use the internal "_chain" argument to do the
+	# actual work of chaining.
+	if (defined $arguments) { $arguments->{_chain} = $self  ; }
+	else                    { $arguments = {_chain => $self}; }
 
-=head2 Reading the input (Extract)
-
-=head3 input
-
-B<input> sets and returns the L<ETL::Pipeline::Input> object. The pipeline uses
-this object for reading the input records.
-
-With no parameters, B<input> returns the current L<ETL::Pipeline::Input> object.
-
-You tie in a new input source by calling B<input> with parameters...
-
-  $pipeline->input( 'Excel', find => qr/\.xlsx/i );
-
-The first parameter is a class name. B<input> looks for a Perl module matching
-this name in the C<ETL::Pipeline::Input> namespace. In this example, the actual
-class name becomes C<ETL::Pipeline::Input::Excel>.
-
-The rest of the parameters are passed directly to the C<new> method of that
-class.
-
-B<Technical Note:> Want to use a custom class from B<Local> instead of
-B<ETL::Pipeline::Input>? Put a B<+> (plus sign) in front of the class name.
-For example, this command uses the input class B<Local::CustomExtract>.
-
-  $pipeline->input( '+Local::CustomExtract' );
-
-=head3 get
-
-The B<get> method returns the value of a single field from the input. It maps
-directly to the L<get method from ETL::Pipeline::Input|ETL::Pipeline::Input/get>.
-See L<ETL::Pipeline::Input/get> for more information.
-
-  $pipeline->get( 'A' );
-  # -or-
-  $pipeline->mapping( Name => sub { lc $_->get( 'A' ) } );
-
-When you use a code reference, B<ETL::Pipeline> passes itself in C<$_>. B<get>
-provides a convenient shortcut. Instead of writing C<< $_->input->get >>, you
-can write C<< $_->get >>.
-
-=head3 record_number
-
-The B<record_number> method returns current record number. It maps directly
-to the L<record_number method from ETL::Pipeline::Input|ETL::Pipeline::Input/record_number>.
-See L<ETL::Pipeline::Input/record_number> for more information.
-
-  $pipeline->record_number;
-  # -or-
-  $pipeline->mapping( Row => sub { $_->record_number } );
-
-=cut
-
-has '_input' => (
-	does     => 'ETL::Pipeline::Input',
-	handles  => {get => 'get', record_number => 'record_number'},
-	init_arg => undef,
-	is       => 'rw',
-);
-
-
-sub input {
-	my $self = shift;
-
-	return $self->_input( $self->_object_of_class( 'Input', @_ ) ) if (scalar @_);
-	return $self->_input;
-}
-
-
-=head2 Translating the data (Transform)
-
-=head3 mapping
-
-B<mapping> ties the input fields with the output fields. If you call
-B<mapping> with no parameters, it returns the hash reference. Call B<mapping>
-with a hash or hash reference and it replaces the entire mapping with the new
-one.
-
-Hash keys are output field names. The L</output> class defines acceptable field
-names. The hash values can be...
-
-=over
-
-=item A string
-
-=item A regular expression reference (with C<qr/.../>)
-
-=item A code reference
-
-=item Anything else that the B<get> method for your input source accepts
-
-=back
-
-Strings and regular expressions are passed to L<ETL::Pipeline::Input/get>.
-They refer to an input field.
-
-A code reference is executed in a scalar context. It's return value goes into
-the output field. The subroutine receives the current B<ETL::Pipeline> object as
-its first parameter and only parameter.
-
-  # Get the current mapping...
-  my $transformation = $pipeline->mapping;
-
-  # Set the output field "Name" to the input column "A"...
-  $pipeline->mapping( Name => 'A' );
-
-  # Set "Name" from "Full Name" or "FullName"...
-  $pipeline->mapping( Name => qr/Full\s*Name/i );
-
-  # Use the lower case of input column "A"...
-  $pipeline->mapping( Name => sub { lc $_->get( 'A' ) } );
-
-Want to save a literal value? Use L</constants> instead.
-
-=head3 add_mapping
-
-B<add_mapping> adds new fields to the current mapping. L</mapping> replaces
-the entire mapping. B<add_mapping> modifies it, leaving all of your old
-transformations in place.
-
-B<add_mapping> accepts key/value pairs as parameters.
-
-  $pipeline->add_mapping( Address => 'B' );
-
-=cut
-
-has '_mapping' => (
-	handles  => {add_mapping => 'set', has_mapping => 'count'},
-	init_arg => 'mapping',
-	is       => 'rw',
-	isa      => 'HashRef',
-	traits   => [qw/Hash/],
-);
-
-
-sub mapping {
-	my $self = shift;
-	my @pairs = @_;
-
-	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
-		return $self->_mapping( $pairs[0] );
-	} elsif (scalar @pairs) {
-		my %new = @pairs;
-		return $self->_mapping( \%new );
-	} else {
-		return $self->_mapping;
-	}
+	return ETL::Pipeline->new( $arguments );
 }
 
 
@@ -403,39 +204,33 @@ B<constants> sets output fields to literal values. L</mapping> accepts input
 field names as strings. Instead of obtuse Perl tricks for marking literals,
 B<constants> explicitly handles them.
 
-If you call B<constants> with no parameters, it returns the hash reference.
-Call B<constants> with a hash or hash reference and it replaces the entire
-hash with the new one.
-
 Hash keys are output field names. The L</output> class defines acceptable
 field names. The hash values are literals.
 
   # Get the current mapping...
-  my $transformation = $pipeline->constants;
+  my $transformation = $etl->constants;
 
   # Set the output field "Name" to the string "John Doe"...
-  $pipeline->constants( Name => 'John Doe' );
+  $etl->constants( Name => 'John Doe' );
 
 B<Note:> B<constants> does not accept code references, array references, or hash
 references. It only works with literal values. Use L</mapping> instead for
 calculated items.
 
-=head3 add_constant
+With no parameters, B<constants> returns the current hash reference. If you pass
+in a hash reference, B<constants> replaces the current hash with this new one.
+If you pass in a list of key value pairs, B<constants> adds them to the current
+hash.
 
-=head3 add_constants
+=head3 has_constants
 
-B<add_constant> adds new fields to the current hash of literal values.
-L</constants> replaces the entire hash. B<add_constant> and B<add_constants>
-modify the hash, leaving all of your old literals in place.
-
-B<add_constant> accepts key/value pairs as parameters.
-
-  $pipeline->add_constant( Address => 'B' );
+Returns a true value if this pipeline has one or more constants defined. A false
+value means no constants.
 
 =cut
 
 has '_constants' => (
-	handles  => {add_constant => 'set', add_constants => 'set', has_constants => 'count'},
+	handles  => {_add_constants => 'set', has_constants => 'count'},
 	init_arg => 'constants',
 	is       => 'rw',
 	isa      => 'HashRef[Maybe[Str]]',
@@ -450,375 +245,30 @@ sub constants {
 	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
 		return $self->_constants( $pairs[0] );
 	} elsif (scalar @pairs) {
-		my %new = @_;
-		return $self->_constants( \%new );
+		return $self->_add_constants( @pairs );
 	} else {
 		return $self->_constants;
 	}
 }
 
 
-=head3 filter
+=head3 count
 
-B<filter> does extra processing on all file fields, after the extract but
-before the mapping.
+This attribute tells you how many records have been read from the input source.
+This value is incremented before any filtering. So it even counts records that
+are bypassed by L</on_record>.
 
-B<filter> is a code reference. L</process> calls the filter code with itself as
-the first parameter followed by the single value for filtering. Your code
-returns the filtered value.
-
-  ETL::Pipeline->new( {
-    ...
-    filter => sub {
-      my ($etl, $value) = @_;
-      return ($value eq 'NA' ? '' : $value);
-    },
-    ...
-  } )->process;
-
-  # -- OR --
-  $etl->filter( sub {
-    my ($etl, $value) = @_;
-    return ($value eq 'NA' ? '' : $value);
-  } );
-
-B<Note:> L<ETL::Pipeline::Input> automatically removes leading and trailing
-whitespace. You do not need B<filter> for that.
+The first record is always number B<1>.
 
 =cut
 
-has 'filter' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
+has 'count' => (
+	default => '0',
+	handles => {_increment_count => 'inc'},
+	is      => 'ro',
+	isa     => 'Int',
+	traits  => [qw/Counter/],
 );
-
-
-=head3 skip_if
-
-B<skip_if> bypasses individual records based on customized logic. Skipped
-records are not transformed or loaded. Use B<skip_if> to bypass bad data.
-
-B<skip_if> is a code reference. It receives the current B<ETL::Pipeline> object
-as its one and only parameter. Use L</get> to retrieve fields from the current
-record. If the code returns I<true>, L</process> moves to the next record.
-
-L</process> calls B<skip_if> after L</debug> and L</stop_if>, but before any
-transformations.
-
-  ETL::Pipeline->new( {
-    ...
-    skip_if => sub { shift->get( 0 ) eq 'Bypass' ? 1 : 0 },
-    ...
-  } )->process;
-
-  # -- OR --
-  $etl->skip_if( sub { shift->get( 0 ) eq 'Bypass' ? 1 : 0 } );
-
-=cut
-
-has 'skip_if' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
-);
-
-
-=head3 stop_if
-
-Normally, L<ETL::Pipeline> goes until the end of the file. B<stop_if> halts
-processing early. It can be used when the input has footers or to limit the
-amount of data for testing.
-
-B<stop_if> is a code reference. It receives the current B<ETL::Pipeline> object
-as its one and only parameter. Use L</get> to retrieve fields from the current
-record. If the code returns I<true>, L</process> terminates, just as if it
-reached the end of the file.
-
-L</process> runs this logic after L</debug>, but before L</skip_if> and any
-transformations.
-
-  ETL::Pipeline->new( {
-    ...
-    stop_if => sub { shift->get( 0 ) eq 'Last Record' ? 1 : 0 },
-    ...
-  } )->process;
-
-  # -- OR --
-  $etl->stop_if( sub { shift->get( 0 ) eq 'Last Record' ? 1 : 0 } );
-
-=cut
-
-has 'stop_if' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
-);
-
-
-=head3 debug
-
-While we expect perfect data, things go wrong. B<debug> lets developers execute
-code before L</process> applies any logic. Useful when tracking down random
-problems in the middle of a 3,000 row spread sheet.
-
-B<debug> is a code reference. It receives the current B<ETL::Pipeline> object as
-its one and only parameter. Use L</get> to retrieve fields from the current
-record. The return value is ignored.
-
-L</process> runs this logic before L</stop_if>, L</skip_if>, or any
-transformations.
-
-  ETL::Pipeline->new( {
-    ...
-    debug => sub { print shift->get( 0 ) },
-    ...
-  } )->process;
-
-  # -- OR --
-  $etl->debug( sub { print shift->get( 0 ) } );
-
-=cut
-
-has 'debug' => (
-	is  => 'rw',
-	isa => 'Maybe[CodeRef]',
-);
-
-
-=head2 Saving the output (Load)
-
-=head3 output
-
-B<output> sets and returns the L<ETL::Pipeline::Output> object. The pipeline
-uses this object for creating output records.
-
-With no parameters, B<output> returns the current L<ETL::Pipeline::Output>
-object.
-
-You tie in a new output destination by calling B<output> with parameters...
-
-  $pipeline->output( 'SQL', table => 'NewData' );
-
-The first parameter is a class name. B<output> looks for a Perl module
-matching this name in the C<ETL::Pipeline::Output> namespace. In this example,
-the actual class name becomes C<ETL::Pipeline::Output::SQL>.
-
-The rest of the parameters are passed directly to the C<new> method of that
-class.
-
-B<Technical Note:> Want to use a custom class from B<Local> instead of
-B<ETL::Pipeline::Output>? Put a B<+> (plus sign) in front of the class name.
-For example, this command uses the input class B<Local::CustomLoad>.
-
-  $pipeline->output( '+Local::CustomLoad' );
-
-=head3 set
-
-B<set> assigns a value to an output field. The L<ETL::Pipeline::Output> class
-defines the valid field names.
-
-B<set> accepts two parameters...
-
-=over
-
-=item field
-
-=item value
-
-=back
-
-B<set> places I<value> into the output I<field>.
-
-=head3 write_record
-
-B<write_record> outputs the current record. It is normally called by
-L</process>. The pipeline makes it available in case you need to do something
-special. B<write_record> takes no parameters.
-
-=cut
-
-has '_output' => (
-	does     => 'ETL::Pipeline::Output',
-	handles  => {set => 'set', write_record => 'write_record'},
-	init_arg => undef,
-	is       => 'rw',
-);
-
-
-sub output {
-	my $self = shift;
-
-	return $self->_output( $self->_object_of_class( 'Output', @_ ) ) if (scalar @_);
-	return $self->_output;
-}
-
-
-=head2 The rest of the pipeline
-
-=head3 process
-
-B<process> kicks off the entire data conversion process. It takes no
-parameters. All of the setup is done by the other methods.
-
-B<process> returns the B<ETL::Pipeline> object so you can do things like
-this...
-
-  ETL::Pipeline->new( {...} )->process->chain( ... )->process;
-
-=cut
-
-sub process {
-	my $self = shift;
-
-	my ($success, $error) = $self->is_valid;
-	croak $error unless $success;
-
-	# Configure the input and output objects. I expect them to "die" if they
-	# encounter errors. Always configure the input first. The output may use
-	# information from it.
-	$self->_input->configure;
-	$self->_output->configure;
-
-	# The actual ETL process...
-	my $constants = $self->_constants;
-	my $mapping   = $self->_mapping  ;
-
-	$self->progress( 'start' );
-	while ($self->_input->next_record) {
-		# User defined, record level logic...
-		        $self->execute_code_ref( $self->debug   );
-		last if $self->execute_code_ref( $self->stop_if );
-		next if $self->execute_code_ref( $self->skip_if );
-
-		# "constants" values...
-		while (my ($field, $value) = each %$constants) {
-			$self->_output->set( $field, $value );
-		}
-
-		# "mapping" values...
-		while (my ($to, $from) = each %$mapping) {
-			my $value;
-			if (ref( $from ) eq 'CODE') {
-				$value = $self->execute_code_ref( $from );
-			} else {
-				$value = $self->_input->get( $from );
-			}
-
-			# Yes, execujte_code_ref checks if the filter is defined. But I need
-			# to know the difference between undef from the filter and undef
-			# because there is no filter. I don't want to alter the value if
-			# there is no filter. But I do if a filter returns undef.
-			$value = $self->execute_code_ref( $self->filter, $value )
-				if defined( $self->filter );
-
-			$self->_output->set( $to, $value );
-		}
-
-		# "output"...
-		$self->_output->write_record;
-	} continue { $self->progress( '' ); }
-	$self->progress( 'end' );
-
-	# Close the input and output in the opposite order we created them. This
-	# safely unwinds any dependencies.
-	$self->_output->finish;
-	$self->_input->finish;
-
-	# Return the pipeline object so that we can chain calls. Useful shorthand
-	# when running multiple pipelines.
-	return $self;
-}
-
-
-=head3 work_in
-
-The working directory sets the default place for finding files. All searches
-start here and only descend subdirectories. Temporary or output files go into
-this directory as well.
-
-B<work_in> has two forms: C<work_in( 'C:\Data' );> or
-C<< work_in( search => 'C:\Data', iname => 'Ficticious' ); >>.
-
-The first form specifies the exact directory path. In our example, the working
-directory is F<C:\Data>.
-
-The second form searches the file system for a matching directory. Take this
-example...
-
-  $etl->work_in( search => 'C:\Data', iname => 'Ficticious' );
-
-It scans the F<C:\Data> directory for a subdirectory named F<Fictious>, like
-this: F<C:\Data\Ficticious>. The search is B<not> recursive. It locates files
-in the B<search> folder.
-
-=over
-
-=item search
-
-Search inside this directory for a matching subdirectory. The search is not
-recursive.
-
-=item iname
-
-Look for a subdirectory that matches this name. Wildcards and regular
-expressions are supported. Searches are case insensitive.
-
-=back
-
-B<work_in> automatically resets L</data_in>.
-
-=cut
-
-has '_work_in' => (
-	coerce   => 1,
-	init_arg => undef,
-	is       => 'rw',
-	isa      => Dir,
-	trigger  => \&_trigger_work_in,
-);
-
-
-sub work_in {
-	my $self = shift;
-
-	if (scalar( @_ ) == 1) {
-		return $self->_work_in( shift );
-	} elsif(scalar( @_ ) > 1) {
-		my %options = @_;
-
-		if (defined $options{matching}) {
-			my $search = hascontent( $options{search} )
-				? $options{search}
-				: $self->_default_search
-			;
-			my $next = Path::Class::Rule
-				->new
-				->max_depth( 1 )
-				->min_depth( 1 )
-				->iname( $options{iname} )
-				->directory
-				->iter( $search )
-			;
-			my $match = $next->();
-			croak 'No matching directories' unless defined $match;
-			return $self->_work_in( $match );
-		} else { return $self->_work_in( $options{search} ); }
-	} else {
-		return $self->_work_in;
-	}
-}
-
-
-sub _trigger_work_in {
-	my $self = shift;
-	my $new  = shift;
-
-	# Force absolute paths. Changing the value will fire this trigger again.
-	# I only want to change "_data_in" once.
-	if (defined( $new ) && $new->is_relative) {
-		$self->_work_in( $new->cleanup->absolute );
-	} else {
-		$self->_data_in( $new );
-	}
-}
 
 
 =head3 data_in
@@ -863,117 +313,52 @@ sub data_in {
 			my $match = $next->();
 			croak 'No matching directories' unless defined $match;
 			return $self->_data_in( $match );
-		} else {
-			return $self->_data_in( $self->_work_in );
-		}
-	} else {
-		return $self->_data_in;
-	}
+		} else { return $self->_data_in( $self->_work_in ); }
+	} else { return $self->_data_in; }
 }
 
 
-=head3 session
+=head3 input
 
-B<ETL::Pipeline> supports sessions. A session allows input and output objects
-to share information along a chain. For example, imagine 3 Excel files being
-loaded into an Access database. All 3 files go into the same Access database.
-The first pipeline creates the database and saves its path in the session. That
-pipeline chains with a second pipeline. The second pipeline retrieves the
-Access filename from the session.
+B<input> sets and returns the L<ETL::Pipeline::Input> object. This object reads
+the data. With no parameters, B<input> returns the current
+L<ETL::Pipeline::Input> object.
 
-The B<session> method provides access to session level variables. As you write
-your own L<ETL::Pipeline::Output> classes, they can use session variables for
-sharing information.
+  my $source = $etl->input();
 
-The first parameter is the variable name. If you pass only the variable name,
-B<session> returns the value.
+Set the input source by calling B<input> with parameters...
 
-  my $database = $etl->session( 'access_file' );
-  my $identifier = $etl->session( 'session_identifier' );
+  $etl->input( 'Excel', find => qr/\.xlsx/i );
 
-A second parameter is the value.
+The first parameter is a class name. B<input> looks for a Perl module matching
+this name in the C<ETL::Pipeline::Input> namespace. In this example, the actual
+class name becomes C<ETL::Pipeline::Input::Excel>.
 
-  $etl->session( access_file => 'C:\ExcelData.accdb' );
+The rest of the parameters are passed directly to the C<new> method of that
+class.
 
-You can set multiple variables in one call.
+B<Technical Note:> Want to use a custom class from B<Local> instead of
+B<ETL::Pipeline::Input>? Put a B<+> (plus sign) in front of the class name.
+For example, this command uses the input class B<Local::CustomExtract>.
 
-  $etl->session( access_file => 'C:\ExcelData.accdb', name => 'Abe' );
-
-When retrieving an array or hash reference, B<session> automatically
-derefernces it if called in a list context. In a scalar context, B<session>
-returns the reference.
-
-  # Returns the list of names as a list.
-  foreach my $name ($etl->session( 'name_list' )) { ... }
-
-  # Returns a list reference instead of a list.
-  my $reference = $etl->session( 'name_list' );
-
-=head3 session_has
-
-B<session_has> checks for a specific session variable. It returns I<true> if
-the variable exists and I<false> if it doesn't.
-
-B<session_has> only checks existence. It does not tell you if the value is
-defined.
-
-  if ($etl->session_has( 'access_file' )) { ... }
+  $etl->input( '+Local::CustomExtract' );
 
 =cut
 
-has '_session' => (
-	default => sub { {} },
-	handles => {
-		_get_variable => 'get',
-		session_has   => 'exists',
-		_set_variable => 'set',
-	},
+has '_input' => (
+	does     => 'ETL::Pipeline::Input',
 	init_arg => undef,
 	is       => 'rw',
-	isa      => 'HashRef[Any]',
-	traits   => [qw/Hash/],
 );
 
 
-sub session {
+sub input {
 	my $self = shift;
 
-	if (scalar( @_ ) > 1) {
-		my %parameters = @_;
-		while (my ($key, $value) = each %parameters) {
-			$self->_set_variable( $key, $value );
-		}
-	}
-
-	my $key = shift;
-	if (wantarray) {
-		my $result = $self->_get_variable( $key );
-		if    (ref( $result ) eq 'ARRAY') { return @$result; }
-		elsif (ref( $result ) eq 'HASH' ) { return %$result; }
-		else                              { return  $result; }
-	} else { return $self->_get_variable( $key ); }
+	return $self->_input( $self->_object_of_class( 'Input', @_ ) ) if (scalar @_);
+	return $self->_input;
 }
 
-
-# Alternate design: Use attributes for session level information.
-# Result: Discarded
-#
-# Instead of keeping session variables in a hash, the class would have an
-# attribute corresponding to the session data it can keep. Since
-# ETL::Pipeline::Input and ETL::Pipeline::Output objects have access to the
-# the pipeline, they can share data through the attributes.
-#
-# For any session information, the developer must subclass ETL::Pipeline. The
-# ETL::Pipeline::Input or ETL::Pipeline::Output classes would be tied to that
-# specific subclass. And if you needed to combine two sets of session
-# variables, well that just means another class type. That's very confusing.
-#
-# Attributes make development of new input and output classes very difficult.
-# The hash is simple. It decouples the input/output classes from pipeline.
-# That keeps customization simpler.
-
-
-=head2 Other methods & attributes
 
 =head3 is_valid
 
@@ -1006,126 +391,680 @@ sub is_valid {
 }
 
 
-=head3 progress
+=head3 $ETL::Pipeline::log
 
-This method displays the current upload progress. It is called automatically
-by L</process>.
+This package variable shows progress to the user. The variable holds a code
+reference. The code reference is executed by the L</status> method.
 
-B<progress> takes one parameter - a status...
+The default value writes messages to the screen (standard output). If you want
+to use log files, then write your own subroutine and assign this variable to it.
+The same would also work for a GUI front end.
 
-=over
+Why isn't it a method or attribute? Because overriding this behaviour should be
+global to all pipelines. This is not the kind of functionality that changes
+between pipelines.
 
-=item start
+The code reference receives two or three parameters - the B<ETL::Pipeline>
+object, the message type, and the optional message text.
 
-The ETL process is just beginning. B<progress> displays the input file name,
-if L</input> supports the L<ETL::Pipeline::Input::File> role. Otherwise,
-B<progress> displays the L<ETL::Pipeline::Input> class name.
-
-=item end
-
-The ETL process is complete.
-
-=item (blank)
-
-B<progress> displays a count every 50 records, so you know that it's working.
-
-=back
+You should never execute this code directly. Call the L</status> method instead.
+That method executes the code reference with all the right parameters.
 
 =cut
 
-sub progress {
-	my ($self, $mark) = @_;
+my $log = sub {
+	my ($etl, $type, $message) = @_;
+	$type = uc( $type );
 
-	if (nocontent( $mark )) {
-		my $count = $self->_input->record_number;
-		say "Processed record #$count..." unless $count % 50;
-	} elsif ($mark eq 'start') {
+	if ($type eq 'START') {
 		my $name;
-		if ($self->_input->does( 'Data::Pipeline::Input::File' )) {
-			$name = $self->_input->path->relative( $self->_work_in );
+		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
+			$name = $etl->_input->file->relative( $etl->_work_in );
 		} else {
-			$name = ref( $self->_input );
+			$name = ref( $etl->_input );
 			$name =~ s/^ETL::Pipeline::Input:://;
 		}
 		say "Processing '$name'...";
-	} elsif ($mark eq 'end') {
-		say 'Finished, cleaning up...';
+	} elsif ($type eq 'END') {
+		my $name;
+		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
+			$name = $etl->_input->file->relative( $etl->_work_in );
+		} else {
+			$name = ref( $etl->_input );
+			$name =~ s/^ETL::Pipeline::Input:://;
+		}
+		say "Finished '$name'!";
+	} elsif ($type eq 'STATUS') {
+		my $count = $etl->count;
+		say "Processed record #$count..." unless $count % 50;
 	} else {
-		say $mark;
+		say "$type: $message";
+	}
+};
+
+
+=head3 mapping
+
+B<mapping> ties the input fields with the output fields. Hash keys are output
+field names. The L</output> class defines acceptable field names. The hash
+values can be...
+
+=over
+
+=item A string
+
+=item A regular expression reference (with C<qr/.../>)
+
+=item A code reference
+
+=back
+
+Strings and regular expressions are input field names. A string should be an
+exact match. A regular expression will find the first field whose name matches.
+
+A code reference is executed in a scalar context. It's return value goes into
+the output field. The subroutine receives two parameters - the current
+B<ETL::Pipeline> object and the entire input record.
+
+With no parameters, B<mapping> returns the current hash reference. If you pass
+in a hash reference, B<mapping> replaces the current hash with this new one. If
+you pass in a list of key value pairs, B<mapping> adds them to the current hash.
+
+  # Get the current mapping...
+  my $transformation = $etl->mapping;
+
+  # Add the output field "Name" with data from input column "A"...
+  $etl->mapping( Name => 'A' );
+
+  # Change "Name" to get data from "Full Name" or "FullName"...
+  $etl->mapping( Name => qr/Full\s*Name/i );
+
+  # "Name" gets the lower case of input column "A"...
+  $etl->mapping( Name => sub {
+    my ($etl, $record) = @_;
+    return lc $record{A};
+  } );
+
+  # Replace the entire mapping so only "Name" is output...
+  $etl->mapping( {Name => 'C'} );
+
+Want to save a literal value? Use L</constants> instead.
+
+=head4 Field names
+
+Files like Excel or CSV are flat. Others, such as XML, can have sub-records.
+To accomodate all of them, input field names are formatted like file system
+paths. A forward slash - B</> - separates each level. For example, C</One/Two>
+grabs the field named C<Two> from inside the sub-record stored in C<One>.
+
+The leading B</> is optional. C<One/Two> is the same as C</One/Two>. That way
+field names for flat files like Excel can be used without the B</>.
+
+The L</record> method will traverse the record hash reference using each piece
+of the path as a key. If you need to include a slash in a field name, then
+escape it with a forward slash - B<\> - like this...
+
+  mapping => {Name => '/One/Two\/Three/Four'},
+
+This example traverses three keys - I<One>, I<Two/Three>, and I<Four>.
+
+The field name may also be a regular expression. The code will find all fields
+that match the expression, joined with a semi-colon and space - B<; >. You can
+change the separator by making the mapping value an ARRAY reference. The first
+element is the regular expression or field name. The second element is the
+separator string.
+
+Regular expressions cannot traverse sub-records. They only apply to the top
+level key names.
+
+=head3 has_mapping
+
+Returns a true value if this pipeline has one or more field mappings defined. A
+false value means no mappings are present.
+
+=cut
+
+has '_mapping' => (
+	handles  => {_add_mapping => 'set', has_mapping => 'count'},
+	init_arg => 'mapping',
+	is       => 'rw',
+	isa      => 'HashRef',
+	traits   => [qw/Hash/],
+);
+
+
+sub mapping {
+	my $self = shift;
+	my @pairs = @_;
+
+	if (scalar( @pairs ) == 1 && ref( $pairs[0] ) eq 'HASH') {
+		return $self->_mapping( $pairs[0] );
+	} elsif (scalar @pairs) {
+		return $self->_add_mapping( @pairs );
+	} else {
+		return $self->_mapping;
 	}
 }
 
 
-=head3 execute_code_ref
+=head3 on_record
 
-This method runs arbitrary Perl code. B<ETL::Pipeline> itself,
-L<input sources|ETL::Pipeline::Input>, and
-L<output destinations|ETL::Pipeline::Output> call this method.
+Executes a customized subroutine on every record before any mapping. The code
+can modify the record and your changes will feed into the mapping. You can use
+B<on_record> for filtering, debugging, or just about anything.
 
-The first parameter is the code reference. Any additional parameters are
-passed directly to the code reference.
+B<on_record> accepts a code reference. L</record> executes this code for every
+input record.
 
-The code reference receives the B<ETL::Pipeline> object as its first parameter,
-plus any additional parameters. B<execute_code_ref> also puts the
-B<ETL::Pipeline> object into C<$_>;
+The code reference receives two parameters - the C<ETL::Pipeline> object and the
+input record. The record is passed as a hash reference. If B<on_record> returns
+a false value, L</record> will never send this record to the output destination.
+It's as if this record never existed.
+
+  ETL::Pipeline->new( {
+    ...
+    on_record => sub {
+      my ($etl, $record) = @_;
+      foreach my $field (keys %$record) {
+        my $value = $record->{$field};
+        $record->{$field} = ($value eq 'NA' ? '' : $value);
+      }
+    },
+    ...
+  } )->process;
+
+  # -- OR --
+  $etl->on_record( sub {
+    my ($etl, $record) = @_;
+    foreach my $field (keys %$record) {
+      my $value = $record->{$field};
+      $record->{$field} = ($value eq 'NA' ? '' : $value);
+    }
+  } );
+
+B<Note:> L</record> automatically removes leading and trailing whitespace. You
+do not need B<on_record> for that.
 
 =cut
 
-sub execute_code_ref {
-	my $self = shift;
-	my $code = shift;
-
-	if (defined( $code ) && ref( $code ) eq 'CODE') {
-		local $_;
-		$_ = $self;
-		return $code->( $self, @_ );
-	} else { return undef; }
-}
-
-
-=head2 For overriding in a subclass
-
-=head3 _default_search
-
-L</work_in> searches inside this directory if you do not specify a B<search>
-parameter. It defaults to the current directory. Override this in the subclass
-with the correct B<default> for your environment.
-
-=cut
-
-has '_default_search' => (
-	default  => '.',
-	init_arg => undef,
-	is       => 'ro',
-	isa      => 'Str',
+has 'on_record' => (
+	is  => 'rw',
+	isa => 'Maybe[CodeRef]',
 );
 
 
-=head3 _object_of_class
+=head3 output
 
-This private method creates the L<ETL::Pipeline::Input> and
-L<ETL::Pipeline::Output> objects. It allows me to centralize the error
-handling. The program dies if there's an error. It means that something is
-wrong with the corresponding class. And I don't want to hide those errors.
-You can only fix errors if you know about them.
+B<output> sets and returns the L<ETL::Pipeline::Output> object. This object
+writes records to their final destination. With no parameters, B<output> returns
+the current L<ETL::Pipeline::Output> object.
 
-Override or modify this method if you want to perform extra checks.
+Set the output destination by calling B<output> with parameters...
 
-The first parameter is a string with either I<Input> or I<Output>.
-B<_object_of_class> appends this value onto C<ETL::Pipeline>. For example,
-I<'Input'> becomes C<ETL::Pipeline::Input>.
+  $etl->output( 'SQL', table => 'NewData' );
 
-The rest of the parameters are passed directly into the constructor for
-the class B<_object_of_class> instantiates.
+The first parameter is a class name. B<output> looks for a Perl module
+matching this name in the C<ETL::Pipeline::Output> namespace. In this example,
+the actual class name becomes C<ETL::Pipeline::Output::SQL>.
+
+The rest of the parameters are passed directly to the C<new> method of that
+class.
+
+B<Technical Note:> Want to use a custom class from B<Local> instead of
+B<ETL::Pipeline::Output>? Put a B<+> (plus sign) in front of the class name.
+For example, this command uses the input class B<Local::CustomLoad>.
+
+  $etl->output( '+Local::CustomLoad' );
 
 =cut
 
+has '_output' => (
+	does     => 'ETL::Pipeline::Output',
+	init_arg => undef,
+	is       => 'rw',
+);
+
+
+sub output {
+	my $self = shift;
+
+	return $self->_output( $self->_object_of_class( 'Output', @_ ) ) if (scalar @_);
+	return $self->_output;
+}
+
+
+=head3 process
+
+B<process> kicks off the entire data conversion process. It takes no
+parameters. All of the setup is done by the other methods.
+
+B<process> returns the B<ETL::Pipeline> object so you can do things like
+this...
+
+  ETL::Pipeline->new( {...} )->process->chain( ... )->process;
+
+=cut
+
+sub process {
+	my $self = shift;
+
+	# Make sure we have all the required information.
+	my ($success, $error) = $self->is_valid;
+	croak $error unless $success;
+
+	# Kick off the process. The input source loops over the records. It calls
+	# the "record" method, described below.
+	$self->_output->open( $self );
+	$self->status( 'START' );
+	$self->_input->run( $self );
+	$self->status( 'END' );
+	$self->_output->close( $self );
+
+	# Return the pipeline object so that we can chain calls. Useful shorthand
+	# when running multiple pipelines.
+	return $self;
+}
+
+
+=head3 record
+
+The input source calls this method for each data record. This is where
+L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
+L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
+output destination.
+
+=cut
+
+sub record {
+	my ($self, $record) = @_;
+
+	# Increase the record count. That way the count always shows the current
+	# record number.
+	$self->_increment_count;
+
+	# Remove leading and trailing whitespace from all fields. We always want to
+	# do this. Otherwise we end up with weird looking text. I do this first so
+	# that all the customized code sees is the filtered data.
+	$record{$_} = trim( $record{$_} ) foreach (keys %$record);
+
+	# Run the custom record filter, if there is one. If the filter returns
+	# "false", then we bypass this entire record.
+	my $code     = $self->on_record;
+	my $continue = 1;
+
+	$continue = $code->( $self, $record ) if defined $code;
+	return unless $continue;
+
+	# Insert constants into the output. Do this before the mapping. The mapping
+	# will always override constants. I want data from the input.
+	my %save = %{$self->_constants};
+
+	# This is the transform step. It converts the input record into an output
+	# record.
+	while (my ($to, $from) = each %$mapping) {
+		my $seperator = '; ';
+		if (ref( $from ) eq 'ARRAY') {
+			$seperator = $from->[1];
+			$from = $from->[0];	# Do this LAST!
+		}
+
+		my $value;
+		if (ref( $from ) eq 'CODE') {
+			local $_;
+			$_ = $record;
+			$value = $code->( $self, $record );
+		} elsif (ref( $from ) eq 'REGEXP') {
+			my @matches;
+			while (my ($key, $value) = each %$record) {
+				push( @matches, $value ) if $key =~ m/$from/;
+			}
+			return join $seperator, @matches;
+		} else {
+			$from = substr( $from, 1 ) if $from =~ m|^/|;
+
+			my $node = $record;
+			foreach my $key (split |(?<!\\)/|, $from) {
+				if (ref( $node ) eq 'HASH') {
+					$node = $node->{$key};
+					last unless defined $node;
+				} else {
+					$node = undef;
+					last;
+				}
+			}
+			$value = defined( $node )
+				? $self->traverse( $node, undef, $seperator )
+				: undef
+			;
+		}
+
+		$save{$to} = $value;
+	}
+
+	# We're done with this record. Finish up.
+	$self->_output->write( $self, \%save );
+	$self->status( 'STATUS' );
+}
+
+
+=head3 session
+
+B<ETL::Pipeline> supports sessions. A session allows input and output objects
+to share information along a chain. For example, imagine 3 Excel files being
+loaded into an Access database. All 3 files go into the same Access database.
+The first pipeline creates the database and saves its path in the session. That
+pipeline chains with a second pipeline. The second pipeline retrieves the
+Access filename from the session.
+
+The B<session> method provides access to session level variables. As you write
+your own L<ETL::Pipeline::Output> classes, they can use session variables for
+sharing information.
+
+The first parameter is the variable name. If you pass only the variable name,
+B<session> returns the value.
+
+  my $database = $etl->session( 'access_file' );
+  my $identifier = $etl->session( 'session_identifier' );
+
+A second parameter is the value.
+
+  $etl->session( access_file => 'C:\ExcelData.accdb' );
+
+You can set multiple variables in one call.
+
+  $etl->session( access_file => 'C:\ExcelData.accdb', name => 'Abe' );
+
+If you pass in a hash referece, it completely replaces the current session with
+the new values.
+
+When retrieving an array or hash reference, B<session> automatically
+derefernces it if called in a list context. In a scalar context, B<session>
+returns the reference.
+
+  # Returns the list of names as a list.
+  foreach my $name ($etl->session( 'name_list' )) { ... }
+
+  # Returns a list reference instead of a list.
+  my $reference = $etl->session( 'name_list' );
+
+=head3 session_has
+
+B<session_has> checks for a specific session variable. It returns I<true> if
+the variable exists and I<false> if it doesn't.
+
+B<session_has> only checks existence. It does not tell you if the value is
+defined.
+
+  if ($etl->session_has( 'access_file' )) { ... }
+
+=cut
+
+# Alternate design: Use attributes for session level information.
+# Result: Discarded
+#
+# Instead of keeping session variables in a hash, the class would have an
+# attribute corresponding to the session data it can keep. Since
+# ETL::Pipeline::Input and ETL::Pipeline::Output objects have access to the
+# the pipeline, they can share data through the attributes.
+#
+# For any session information, the developer must subclass ETL::Pipeline. The
+# ETL::Pipeline::Input or ETL::Pipeline::Output classes would be tied to that
+# specific subclass. And if you needed to combine two sets of session
+# variables, well that just means another class type. That's very confusing.
+#
+# Attributes make development of new input and output classes very difficult.
+# The hash is simple. It decouples the input/output classes from pipeline.
+# That keeps customization simpler.
+
+
+has '_session' => (
+	default => sub { {} },
+	handles => {
+		_add_session => 'set',
+		_get_session => 'get',
+		session_has  => 'exists',
+	},
+	init_arg => undef,
+	is       => 'rw',
+	isa      => 'HashRef[Any]',
+	traits   => [qw/Hash/],
+);
+
+
+sub session {
+	my $self = shift;
+
+	if (scalar( @_ ) > 1) {
+		my %parameters = @_;
+		while (my ($key, $value) = each %parameters) {
+			$self->_add_session( $key, $value );
+		}
+	} else {
+		my $key = shift;
+		if (ref( $key ) eq 'HASH') {
+			return $self->_session( $key );
+		} elsif (wantarray) {
+			my $result = $self->_get_session( $key );
+			if    (ref( $result ) eq 'ARRAY') { return @$result; }
+			elsif (ref( $result ) eq 'HASH' ) { return %$result; }
+			else                              { return  $result; }
+		} else { return $self->_get_session( $key ); }
+	}
+}
+
+
+=head3 status
+
+This method displays a status message. B<ETL::Pipeline> calls this method to
+report on the progress of pipeline. It takes one or two parameters - the message
+type (required) and the message itself (optional).
+
+The type can be anything. These are the ones that B<ETL::Pipeline> uses...
+
+=over
+
+=item END
+
+The pipeline has finished. The input source is closed. The output destination
+is still open. It will be closed immediately after. There is no message text.
+
+=item ERROR
+
+Report an error message to the user. These are not necessarily fatal errors.
+
+=item INFO
+
+An informational message to the user.
+
+=item START
+
+The pipeline is just starting. The output destination is open. But the input
+source is not. There is no message text.
+
+=item STATUS
+
+Progress update. This is sent every after every input record.
+
+=back
+
+This method merely passes the parameters through to L</$ETL::Pipeline::log>. See
+L</$ETL::Pipeline::log> for more information about displaying messages.
+
+=cut
+
+sub status {
+	my ($self, $type, $message) = @_;
+	return $ETL::Pipeline::log->( $self, $type, $message )
+		if ref( $ETL::Pipeline::log ) eq 'CODE';
+}
+
+
+=head3 traverse
+
+This helper method will recursively iterate over a sub-record. You can use it
+in code references or your own helper routines. The method flattens out the
+data into a single, scalar value. Note that it grabs B<all> values all the way
+down the data structure.
+
+The method takes 1, 2, or 3 parameters - the top node that is traversed, an
+optional regular expression to match keys of any hash reference, and an
+optional seperator string. The default seperator is B<; >.
+
+The matching parameter is applied to keys of I<every> hash reference. It will
+prune nodes that do not match.
+
+=cut
+
+sub traverse {
+	my ($self, $top, $match, $seperator) = @_;
+	return join $seperator // '; ', $self->_traverse( $top, $match );
+}
+
+
+# Recursive subroutine to traverse deep data structures. It returns a raw list
+# that "traverse" joins together.
+sub _traverse {
+	my ($self, $top, $match) = @_;
+
+	if (!defined $top) {
+		return undef;
+	} elsif (ref( $top ) eq 'ARRAY') {
+		my @values;
+		push @values, $self->_traverse( $_, $match ) foreach @$top;
+		return @values;
+	} elsif (ref( $top ) eq 'HASH') {
+		my @values;
+		while (my ($key, $value) = each %$top) {
+			push @values, $self->_traverse( $value, $match )
+				if !defined( $match ) || $key =~ m/$match/;
+		}
+		return @values;
+	} else { return $top; }
+}
+
+
+=head3 work_in
+
+The working directory sets the default place for finding files. All searches
+start here and only descend subdirectories. Temporary or output files go into
+this directory as well.
+
+B<work_in> has two forms: C<work_in( 'C:\Data' );> or
+C<< work_in( root => 'C:\Data', iname => 'Ficticious' ); >>.
+
+The first form specifies the exact directory path. In our example, the working
+directory is F<C:\Data>.
+
+The second form searches the file system for a matching directory. Take this
+example...
+
+  $etl->work_in( root => 'C:\Data', iname => 'Ficticious' );
+
+It scans the F<C:\Data> directory for a subdirectory named F<Fictious>, like
+this: F<C:\Data\Ficticious>. The search is B<not> recursive. It locates files
+in the B<root> folder.
+
+B<work_in> accepts any of the tests provided by L<Path::Iterator::Rule>. The
+values of these arguments are passed directly into the test. For boolean tests
+(e.g. readable, exists, etc.), pass an C<undef> value.
+
+B<work_in> automatically applies the C<directory> filter. Do not set it
+yourself.
+
+C<iname> is the most common one that I use. It matches the file name, supports
+wildcards and regular expressions, and is case insensitive.
+
+  # Search using a regular expression...
+  $etl->input( 'Excel', iname => qr/\.xlsx$/ );
+
+  # Search using a file glob...
+  $etl->input( 'Excel', iname => '*.xlsx' );
+
+The code throws an error if no directory matches the criteria. Only the first
+match is used.
+
+B<work_in> automatically resets L</data_in>.
+
+=cut
+
+has '_work_in' => (
+	coerce   => 1,
+	init_arg => undef,
+	is       => 'rw',
+	isa      => Dir,
+	trigger  => \&_trigger_work_in,
+);
+
+
+sub work_in {
+	my $self = shift;
+
+	if (scalar( @_ ) == 1) {
+		return $self->_work_in( shift );
+	} elsif(scalar( @_ ) > 1) {
+		my %options = @_;
+
+		my $root = $options{root};
+		delete $options{root};
+
+		if (scalar %options) {
+			my $search = hascontent( $root ) ? $root : '.';
+
+			my $rule = Path::Class::Rule->new;
+			foreach my $name (@criteria) {
+				my $value = $arguments->{$name};
+				eval "\$rule->$name( \$value )";
+				confess $@ unless $@ eq '';
+			}
+			my $next = $rule->directory->iter( $root );
+			my $match = $next->();
+			croak 'No matching directories' unless defined $match;
+			return $self->_work_in( $match );
+		} else { return $self->_work_in( $root ); }
+	} else { return $self->_work_in; }
+}
+
+
+sub _trigger_work_in {
+	my $self = shift;
+	my $new  = shift;
+
+	# Force absolute paths. Changing the value will fire this trigger again.
+	# I only want to change "_data_in" once.
+	if (defined( $new ) && $new->is_relative) {
+		$self->_work_in( $new->cleanup->absolute );
+	} else {
+		$self->_data_in( $new );
+	}
+}
+
+
+#----------------------------------------------------------------------
+# Internal methods and attributes.
+
+# This private method creates the ETL::Pipeline::Input and ETL::Pipeline::Output
+# objects. It allows me to centralize the error handling. The program dies if
+# there's an error. It means that something is wrong with the corresponding
+# class. And I don't want to hide those errors. You can only fix errors if you
+# know about them.
+#
+# Override or modify this method if you want to perform extra checks.
+#
+# The first parameter is a string with either "Input" or "Output".
+# The method appends this value onto "ETL::Pipeline". For example, "Input"
+# becomes "ETL::Pipeline::Input".
+#
+# The rest of the parameters are passed directly into the constructor for the
+# class this method instantiates.
 sub _object_of_class {
 	my $self = shift;
 	my $action = shift;
 
 	my @arguments = @_;
-	@arguments = @{$arguments[0]} if (scalar( @arguments ) == 1 && ref( $arguments[0] ) eq 'ARRAY');
+	@arguments = @{$arguments[0]} if
+		scalar( @arguments ) == 1
+		&& ref( $arguments[0] ) eq 'ARRAY'
+	;
 
 	my $class = shift @arguments;
 	if ($class =~ m/^\+/) {
@@ -1143,64 +1082,6 @@ sub _object_of_class {
 }
 
 
-
-
-
-=head2 Other Methods & Attributes
-
-=head3 record_number
-
-The B<record_number> attribute tells you how many total records have been read
-by L</next_record>. The count includes headers and L</skip_if> records.
-
-The first record is always B<1>.
-
-B<ETL::Pipeline::Input> automatically increments the counter after
-L</next_record>. The L</next_record> method should not change B<record_number>.
-
-=head3 decrement_record_number
-
-This method decreases L</record_number> by one. It can be used to I<back out>
-header records from the count.
-
-  $input->decrement_record_number;
-
-=head3 increment_record_number
-
-This method increases L</record_number> by one.
-
-  $input->increment_record_number;
-
-=cut
-
-has 'record_number' => (
-	default => '0',
-	handles => {
-		decrement_record_number => 'dec',
-		increment_record_number => 'inc',
-	},
-	is      => 'ro',
-	isa     => 'Int',
-	traits  => [qw/Counter/],
-);
-
-around 'next_record' => sub {
-	my $original = shift;
-	my $self     = shift;
-
-	my $result = $self->$original( @_ );
-	$self->increment_record_number if $result;
-	return $result;
-};
-
-
-
-
-
-
-
-
-
 =head1 ADVANCED TOPICS
 
 =head2 Multiple input sources
@@ -1213,50 +1094,31 @@ The L</chain> method works like this...
 
   ETL::Pipeline->new( {
     work_in   => {search => 'C:\Data', find => qr/Ficticious/},
-    input     => ['Excel', find => 'main.xlsx'               ],
+    input     => ['Excel', iname => 'main.xlsx'              ],
     mapping   => {Name => 'A', Address => 'B', ID => 'C'     },
     constants => {Type => 1, Information => 'Demographic'    },
     output    => ['SQL', table => 'NewData'                  ],
   } )->process->chain( {
-    input     => ['Excel', find => 'notes.xlsx'         ],
+    input     => ['Excel', iname => 'notes.xlsx'        ],
     mapping   => {User => 'A', Text => 'B', Date => 'C' },
     constants => {Type => 2, Information => 'Note'      },
-    output    => ['SQL', table => 'NewData'             ],
+    output    => ['SQL', table => 'OtherData'           ],
   } )->process;
 
 When the first pipeline finishes, it creates a new object with the same
-L</work_in>. The code then calls L</process> on the new object. You can also
-use the B<chain> constructor argument...
-
-  my $pipeline1 = ETL::Pipeline->new( {
-    work_in   => {search => 'C:\Data', find => qr/Ficticious/},
-    input     => ['Excel', find => 'main.xlsx'               ],
-    mapping   => {Name => 'A', Address => 'B', ID => 'C'     },
-    constants => {Type => 1, Information => 'Demographic'    },
-    output    => ['SQL', table => 'NewData'                  ],
-  } )->process;
-  my $pipeline2 = ETL::Pipeline->new( {
-    input     => ['Excel', find => 'notes.xlsx'         ],
-    chain     => $pipeline1,
-    mapping   => {User => 'A', Text => 'B', Date => 'C' },
-    constants => {Type => 2, Information => 'Note'      },
-    output    => ['SQL', table => 'NewData'             ],
-  } )->process;
-
-In both of these styles, the second pipeline copies L</work_in> from the first
-pipeline. There is no difference between the L</chain> method or B<chain>
-constructor argument. Pick the one that best suits your programming style.
+L</work_in>. The code then calls L</process> on the new object. The second
+pipeline copies L</work_in> from the first pipeline.
 
 =head2 Writing an input source
 
-B<ETL::Pipeline> provides some basic, generic input sources. Invariable, you
+B<ETL::Pipeline> provides some basic, generic input sources. Inevitably, you
 will come across data that doesn't fit one of these. No problem.
 B<ETL::Pipeline> lets you create your own input sources.
 
 An input source is a L<Moose> class that implements the L<ETL::Pipeline::Input>
-role. The role requires that you define certain methods. B<ETL::Pipeline> makes
-use of those methods. Name your class B<ETL::Pipeline::Input::*> and the
-L</input> method can find it automatically.
+role. The role requires that you define the L<ETL::Pipeline::Input/run> method.
+B<ETL::Pipeline> calls that method. Name your class B<ETL::Pipeline::Input::*>
+and the L</input> method can find it automatically.
 
 See L<ETL::Pipeline::Input> for more details.
 
@@ -1268,10 +1130,9 @@ And that something intimately ties into your specific business. You will have
 to write at least one output destination to do anything useful.
 
 An output destination is a L<Moose> class that implements the
-L<ETL::Pipeline::Output> role. The role defines required methods and a simple
-hash for storing the new record in memory. B<ETL::Pipeline> makes use of the
-methods. Name your class B<ETL::Pipeline::Output::*> and the L</output> method
-can find it automatically.
+L<ETL::Pipeline::Output> role. The role defines required methods.
+B<ETL::Pipeline> calls those methods. Name your class
+B<ETL::Pipeline::Output::*> and the L</output> method can find it automatically.
 
 See L<ETL::Pipeline::Output> for more details.
 
@@ -1298,7 +1159,9 @@ L<ETL::Pipeline::Input>, L<ETL::Pipeline::Output>
 
 =head2 Input Source Formats
 
-L<ETL::Pipeline::Input::Excel>, L<ETL::Pipeline::Input::DelimitedText>
+L<ETL::Pipeline::Input::Excel>, L<ETL::Pipeline::Input::DelimitedText>,
+L<ETL::Pipeline::Input::JsonFiles>, L<ETL::Pipeline::Input::Xml>,
+L<ETL::Pipeline::Input::XmlFiles>
 
 =head1 REPOSITORY
 
@@ -1310,7 +1173,7 @@ Robert Wohlfarth <robert.j.wohlfarth@vumc.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2019  Robert Wohlfarth
+Copyright (c) 2021  Robert Wohlfarth
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl 5.10.0. For more details, see the full text

@@ -93,43 +93,31 @@ sub BUILD {
 	} keys %$arguments;
 
 	# Configure the file search.
-	my $rule = Path::Class::Rule->new;
+	my $rule = $self->_rule;
 	$rule->file;
 	foreach my $name (@criteria) {
 		my $value = $arguments->{$name};
 		eval "\$rule->$name( \$value )";
 		confess $@ unless $@ eq '';
 	}
+}
+
+
+before 'run' => sub {
+	my ($self, $etl) = @_;
 
 	# Find the first file that matches all of the criteria.
-	my $iterator = $rule->iter( $self->data_in );
+	my $iterator = $self->_rule->iter( $etl->data_in );
 	my $potential = $iterator->();
 
 	if (!defined( $potential )) {
-		carp 'No files matched the search criteria';
+		croak 'No files matched the search criteria';
 	} elsif (!-r $potential) {
-		carp "You do not have permission to read '$potential'";
+		croak "You do not have permission to read '$potential'";
 	} else {
 		$self->_set_file( $potential );
 	}
 }
-
-
-=head3 data_in
-
-Optional. Path where data files reside. Defaults to L<ETL::Pipeline/data_in>.
-
-The default is actually set inside L<ETL::Pipeline/run> when it instantiates
-the input source. If the script doesn't set B<data_in>, then
-L<ETL::Pipeline/run> adds it.
-
-=cut
-
-has 'data_in' => (
-	coerce => 1,
-	is     => 'ro',
-	isa    => Dir,
-);
 
 
 =head3 file
@@ -192,10 +180,20 @@ has 'skipping' => (
 );
 
 
+#-------------------------------------------------------------------------------
+# Internal methods and attributes
+
+has '_rule' => (
+	default => sub { Path::Class::Rule->new },
+	is      => 'ro',
+	isa     => 'Path::Class::Rule',
+);
+
+
 =head1 SEE ALSO
 
-L<Path::Iterator::Rule>, L<ETL::Pipeline>, L<ETL::Pipeline::Input>,
-L<ETL::Pipeline::Input::File::List>
+L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File::List>,
+L<Path::Iterator::Rule>
 
 =head1 AUTHOR
 
