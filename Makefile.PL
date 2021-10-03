@@ -11,6 +11,7 @@ all_from 'lib/ETL/Pipeline.pm';
 repository 'https://github.com/rbwohlfarth/ETL-Pipeline';
 
 requires 'Carp';
+requires 'Data::DPath';
 requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';

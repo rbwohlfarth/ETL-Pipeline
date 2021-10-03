@@ -34,6 +34,7 @@ use 5.014000;
 use warnings;
 
 use Carp;
+use Data::DPath qw/dpath/;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
@@ -98,6 +99,8 @@ of the pipe (input) and useful information comes out the other (output). An
 B<ETL::Pipeline> object represents a complete pipeline.
 
 =head1 METHODS & ATTRIBUTES
+
+=head2 Managing the pipeline
 
 =head3 new
 
@@ -252,25 +255,6 @@ sub constants {
 }
 
 
-=head3 count
-
-This attribute tells you how many records have been read from the input source.
-This value is incremented before any filtering. So it even counts records that
-are bypassed by L</on_record>.
-
-The first record is always number B<1>.
-
-=cut
-
-has 'count' => (
-	default => '0',
-	handles => {_increment_count => 'inc'},
-	is      => 'ro',
-	isa     => 'Int',
-	traits  => [qw/Counter/],
-);
-
-
 =head3 data_in
 
 The working directory (L</work_in>) usually contains the raw data files. In
@@ -360,111 +344,18 @@ sub input {
 }
 
 
-=head3 is_valid
-
-This method returns true or false. True means that the pipeline is ready to
-go. False, of course, means that there's a problem. In a list context,
-B<is_invalid> returns the false value and an error message. On success, the
-error message is C<undef>.
-
-=cut
-
-sub is_valid {
-	my $self = shift;
-	my $error = '';
-
-	if (!defined $self->_work_in) {
-		$error = 'The working folder was not set';
-	} elsif (!defined $self->_input) {
-		$error = 'The "input" object was not set';
-	} elsif (!defined $self->_output) {
-		$error = 'The "output" object was not set';
-	} elsif (!$self->has_mapping && !$self->has_constants) {
-		$error = 'The mapping was not set';
-	}
-
-	if (wantarray) {
-		return (($error eq '' ? 1 : 0), $error);
-	} else {
-		return ($error eq '' ? 1 : 0);
-	}
-}
-
-
-=head3 $ETL::Pipeline::log
-
-This package variable shows progress to the user. The variable holds a code
-reference. The code reference is executed by the L</status> method.
-
-The default value writes messages to the screen (standard output). If you want
-to use log files, then write your own subroutine and assign this variable to it.
-The same would also work for a GUI front end.
-
-Why isn't it a method or attribute? Because overriding this behaviour should be
-global to all pipelines. This is not the kind of functionality that changes
-between pipelines.
-
-The code reference receives two or three parameters - the B<ETL::Pipeline>
-object, the message type, and the optional message text.
-
-You should never execute this code directly. Call the L</status> method instead.
-That method executes the code reference with all the right parameters.
-
-=cut
-
-my $log = sub {
-	my ($etl, $type, $message) = @_;
-	$type = uc( $type );
-
-	if ($type eq 'START') {
-		my $name;
-		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
-			$name = $etl->_input->file->relative( $etl->_work_in );
-		} else {
-			$name = ref( $etl->_input );
-			$name =~ s/^ETL::Pipeline::Input:://;
-		}
-		say "Processing '$name'...";
-	} elsif ($type eq 'END') {
-		my $name;
-		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
-			$name = $etl->_input->file->relative( $etl->_work_in );
-		} else {
-			$name = ref( $etl->_input );
-			$name =~ s/^ETL::Pipeline::Input:://;
-		}
-		say "Finished '$name'!";
-	} elsif ($type eq 'STATUS') {
-		my $count = $etl->count;
-		say "Processed record #$count..." unless $count % 50;
-	} else {
-		say "$type: $message";
-	}
-};
-
-
 =head3 mapping
 
 B<mapping> ties the input fields with the output fields. Hash keys are output
 field names. The L</output> class defines acceptable field names. The hash
-values can be...
+values can be anything accepted by the L</get> method. See L</get> for more
+information.
 
-=over
-
-=item A string
-
-=item A regular expression reference (with C<qr/.../>)
-
-=item A code reference
-
-=back
-
-Strings and regular expressions are input field names. A string should be an
-exact match. A regular expression will find the first field whose name matches.
-
-A code reference is executed in a scalar context. It's return value goes into
-the output field. The subroutine receives two parameters - the current
-B<ETL::Pipeline> object and the entire input record.
+If L</get> returns an ARRAY reference (aka multiple values), they will be
+concatenated in the output with a semi-colon between values - B<; >. You can
+override the seperator by setting the value to an ARRAY reference. The first
+element is a regular field name for L</get>. The second element is a new
+seperator string.
 
 With no parameters, B<mapping> returns the current hash reference. If you pass
 in a hash reference, B<mapping> replaces the current hash with this new one. If
@@ -489,33 +380,6 @@ you pass in a list of key value pairs, B<mapping> adds them to the current hash.
   $etl->mapping( {Name => 'C'} );
 
 Want to save a literal value? Use L</constants> instead.
-
-=head4 Field names
-
-Files like Excel or CSV are flat. Others, such as XML, can have sub-records.
-To accomodate all of them, input field names are formatted like file system
-paths. A forward slash - B</> - separates each level. For example, C</One/Two>
-grabs the field named C<Two> from inside the sub-record stored in C<One>.
-
-The leading B</> is optional. C<One/Two> is the same as C</One/Two>. That way
-field names for flat files like Excel can be used without the B</>.
-
-The L</record> method will traverse the record hash reference using each piece
-of the path as a key. If you need to include a slash in a field name, then
-escape it with a forward slash - B<\> - like this...
-
-  mapping => {Name => '/One/Two\/Three/Four'},
-
-This example traverses three keys - I<One>, I<Two/Three>, and I<Four>.
-
-The field name may also be a regular expression. The code will find all fields
-that match the expression, joined with a semi-colon and space - B<; >. You can
-change the separator by making the mapping value an ARRAY reference. The first
-element is the regular expression or field name. The second element is the
-separator string.
-
-Regular expressions cannot traverse sub-records. They only apply to the top
-level key names.
 
 =head3 has_mapping
 
@@ -666,87 +530,6 @@ sub process {
 }
 
 
-=head3 record
-
-The input source calls this method for each data record. This is where
-L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
-L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
-output destination.
-
-=cut
-
-sub record {
-	my ($self, $record) = @_;
-
-	# Increase the record count. That way the count always shows the current
-	# record number.
-	$self->_increment_count;
-
-	# Remove leading and trailing whitespace from all fields. We always want to
-	# do this. Otherwise we end up with weird looking text. I do this first so
-	# that all the customized code sees is the filtered data.
-	$record{$_} = trim( $record{$_} ) foreach (keys %$record);
-
-	# Run the custom record filter, if there is one. If the filter returns
-	# "false", then we bypass this entire record.
-	my $code     = $self->on_record;
-	my $continue = 1;
-
-	$continue = $code->( $self, $record ) if defined $code;
-	return unless $continue;
-
-	# Insert constants into the output. Do this before the mapping. The mapping
-	# will always override constants. I want data from the input.
-	my %save = %{$self->_constants};
-
-	# This is the transform step. It converts the input record into an output
-	# record.
-	while (my ($to, $from) = each %$mapping) {
-		my $seperator = '; ';
-		if (ref( $from ) eq 'ARRAY') {
-			$seperator = $from->[1];
-			$from = $from->[0];	# Do this LAST!
-		}
-
-		my $value;
-		if (ref( $from ) eq 'CODE') {
-			local $_;
-			$_ = $record;
-			$value = $code->( $self, $record );
-		} elsif (ref( $from ) eq 'REGEXP') {
-			my @matches;
-			while (my ($key, $value) = each %$record) {
-				push( @matches, $value ) if $key =~ m/$from/;
-			}
-			return join $seperator, @matches;
-		} else {
-			$from = substr( $from, 1 ) if $from =~ m|^/|;
-
-			my $node = $record;
-			foreach my $key (split |(?<!\\)/|, $from) {
-				if (ref( $node ) eq 'HASH') {
-					$node = $node->{$key};
-					last unless defined $node;
-				} else {
-					$node = undef;
-					last;
-				}
-			}
-			$value = defined( $node )
-				? $self->traverse( $node, undef, $seperator )
-				: undef
-			;
-		}
-
-		$save{$to} = $value;
-	}
-
-	# We're done with this record. Finish up.
-	$self->_output->write( $self, \%save );
-	$self->status( 'STATUS' );
-}
-
-
 =head3 session
 
 B<ETL::Pipeline> supports sessions. A session allows input and output objects
@@ -853,96 +636,6 @@ sub session {
 }
 
 
-=head3 status
-
-This method displays a status message. B<ETL::Pipeline> calls this method to
-report on the progress of pipeline. It takes one or two parameters - the message
-type (required) and the message itself (optional).
-
-The type can be anything. These are the ones that B<ETL::Pipeline> uses...
-
-=over
-
-=item END
-
-The pipeline has finished. The input source is closed. The output destination
-is still open. It will be closed immediately after. There is no message text.
-
-=item ERROR
-
-Report an error message to the user. These are not necessarily fatal errors.
-
-=item INFO
-
-An informational message to the user.
-
-=item START
-
-The pipeline is just starting. The output destination is open. But the input
-source is not. There is no message text.
-
-=item STATUS
-
-Progress update. This is sent every after every input record.
-
-=back
-
-This method merely passes the parameters through to L</$ETL::Pipeline::log>. See
-L</$ETL::Pipeline::log> for more information about displaying messages.
-
-=cut
-
-sub status {
-	my ($self, $type, $message) = @_;
-	return $ETL::Pipeline::log->( $self, $type, $message )
-		if ref( $ETL::Pipeline::log ) eq 'CODE';
-}
-
-
-=head3 traverse
-
-This helper method will recursively iterate over a sub-record. You can use it
-in code references or your own helper routines. The method flattens out the
-data into a single, scalar value. Note that it grabs B<all> values all the way
-down the data structure.
-
-The method takes 1, 2, or 3 parameters - the top node that is traversed, an
-optional regular expression to match keys of any hash reference, and an
-optional seperator string. The default seperator is B<; >.
-
-The matching parameter is applied to keys of I<every> hash reference. It will
-prune nodes that do not match.
-
-=cut
-
-sub traverse {
-	my ($self, $top, $match, $seperator) = @_;
-	return join $seperator // '; ', $self->_traverse( $top, $match );
-}
-
-
-# Recursive subroutine to traverse deep data structures. It returns a raw list
-# that "traverse" joins together.
-sub _traverse {
-	my ($self, $top, $match) = @_;
-
-	if (!defined $top) {
-		return undef;
-	} elsif (ref( $top ) eq 'ARRAY') {
-		my @values;
-		push @values, $self->_traverse( $_, $match ) foreach @$top;
-		return @values;
-	} elsif (ref( $top ) eq 'HASH') {
-		my @values;
-		while (my ($key, $value) = each %$top) {
-			push @values, $self->_traverse( $value, $match )
-				if !defined( $match ) || $key =~ m/$match/;
-		}
-		return @values;
-	} else { return $top; }
-}
-
-
 =head3 work_in
 
 The working directory sets the default place for finding files. All searches
@@ -1037,6 +730,362 @@ sub _trigger_work_in {
 		$self->_data_in( $new );
 	}
 }
+
+
+=head2 Used in mapping
+
+These methods may be used by code references in the L</mapping> attribute. They
+will return information about/from the current record.
+
+=head3 count
+
+This attribute tells you how many records have been read from the input source.
+This value is incremented before any filtering. So it even counts records that
+are bypassed by L</on_record>.
+
+The first record is always number B<1>.
+
+=cut
+
+has 'count' => (
+	default => '0',
+	handles => {_increment_count => 'inc'},
+	is      => 'ro',
+	isa     => 'Int',
+	traits  => [qw/Counter/],
+);
+
+
+=head3 get
+
+Retrieve the value from the record for the given field name. This method accepts
+two parameters - a field name and the current record. It returns the exact value
+found at the matching node.
+
+=head4 Field names
+
+The field name can be a string, regular expression reference, or code reference.
+
+A string will try and match field names and aliases. When matching field names,
+the string is used as a L<Data::DPath>. L<Data::DPath> allows for some complex
+selections from data structures of any depth - like those from XML or JSON. For
+simplicity, B<get> automatically adds the leading B</> if needed. That way, you
+can use simple field names for flat data structures.
+
+When matching aliases, the string looks for an exact match. Aliases only work
+on the top level of the data structure. This should be sufficient since they're
+meant for flat files with column headers.
+
+When the field name is a regular expression, it also matches fields and aliases
+at the top level. You can do this with L<Data::DPath>. B<get> provides this
+shortcut because it's easier to read.
+
+When the field name is a code reference, B<get> executes the subroutine. The
+return value becomes the field value. A code reference is called in a scalar
+context. If you need to return multiple values, then return an ARRAY or HASH
+reference.
+
+The code reference receives two parameters - the B<ETL::Pipeline> object and the
+current record.
+
+=head4 Return value
+
+B<get> always returns a scalar value, but not always a string. The return value
+might be a string, ARRAY reference, or HASH reference.
+
+B<get> does not flatten out the nodes that it finds. It merely returns a
+reference to whatever is in the data structure at the named point. The calling
+code must account for the possibility of finding array or hashes or strings.
+
+=cut
+
+sub get {
+	my ($self, $field, $record) = @_;
+	my $value;
+
+	# Execute code reference.
+	if (ref( $field ) eq 'CODE') {
+		$value = $code->( $self, $record );
+	}
+
+	# Match field names to regular expression. Then match aliases. And finally
+	# merge the results together.
+	elsif (ref( $field ) eq 'REGEXP') {
+		$value = $record ~~ dpath "//*[key =~ /$field/]";
+
+		# Match aliases.
+		my @found;
+		foreach my $match ($self->_aliases) {
+			while (my ($alias, $name) = each %$match) {
+				if ($alias =~ m/$field/) {
+					$name = "/$name" unless $name =~ m|^/|;
+					push @found, $record ~~ dpath $name;
+				}
+			}
+		}
+
+		# Merge.
+		if (scalar @found) {
+			if (!defined $value) {
+				if (scalar( @found ) == 1) { $value = $found[0]; }
+				else                       { $value = \@found;   }
+			} elsif (ref( $value ) eq 'ARRAY') {
+				push @$value, @found;
+			} else {
+				$value = [$value, @found];
+			}
+		}
+	}
+
+	# Strings are field names. Match fields first, then aliases. And finally
+	# merge the results together.
+	else {
+		$field = "/$field" unless $field =~ m|^/|;
+		$value = $record ~~ dpath $field;
+
+		# Match aliases.
+		my @found;
+		foreach my $match ($self->_aliases) {
+			while (my ($alias, $name) = each %$match) {
+				if ($alias eq $field) {
+					$name = "/$name" unless $name =~ m|^/|;
+					push @found, $record ~~ dpath $name;
+				}
+			}
+		}
+
+		# Merge.
+		if (scalar @found) {
+			if (!defined $value) {
+				if (scalar( @found ) == 1) { $value = $found[0]; }
+				else                       { $value = \@found;   }
+			} elsif (ref( $value ) eq 'ARRAY') {
+				push @$value, @found;
+			} else {
+				$value = [$value, @found];
+			}
+		}
+	}
+
+	# Send back the final value.
+	return $value;
+}
+
+
+=head2 Used by input sources
+
+=head3 add_alias
+
+This method defines an alternate name for fields. The L</get> method can look up
+fields by this alternate name instead. Most often used by input sources from
+flat files such as Excel or CSV. Formats that may have column headers. An input
+source would read the column headers then call this method to save the alias
+for L</get>.
+
+I store the aliases as a list. It is possible for files to use the same column
+header more than once. By using a list, I ensure that data is not lost.
+
+The field name can be any valid L</Data::Dpath>. L</get> will add the leading
+slash - B</> - if needed.
+
+=cut
+
+has '_alias' => (
+	handles  => {_add_alias => 'push', _aliases => 'elements'},
+	init_arg => undef,
+	is       => 'ro',
+	isa      => 'ArrayRef[HashRef[Str]]',
+	traits   => [qw/Array/],
+);
+
+
+sub add_alias {
+	my ($self, $alias, $field) = @_;
+	$self->_add_alias( {$alias => $field} );
+}
+
+
+=head3 record
+
+The input source calls this method for each data record. This is where
+L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
+L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
+output destination.
+
+=cut
+
+sub record {
+	my ($self, $record) = @_;
+
+	# Increase the record count. That way the count always shows the current
+	# record number.
+	$self->_increment_count;
+
+	# Remove leading and trailing whitespace from all fields. We always want to
+	# do this. Otherwise we end up with weird looking text. I do this first so
+	# that all the customized code sees is the filtered data.
+	$record{$_} = trim( $record{$_} ) foreach (keys %$record);
+
+	# Run the custom record filter, if there is one. If the filter returns
+	# "false", then we bypass this entire record.
+	my $code     = $self->on_record;
+	my $continue = 1;
+
+	$continue = $code->( $self, $record ) if defined $code;
+	return unless $continue;
+
+	# Insert constants into the output. Do this before the mapping. The mapping
+	# will always override constants. I want data from the input.
+	my %save = %{$self->_constants};
+
+	# This is the transform step. It converts the input record into an output
+	# record.
+	while (my ($to, $from) = each %$mapping) {
+		my $seperator = '; ';
+		if (ref( $from ) eq 'ARRAY') {
+			$seperator = $from->[1];
+			$from = $from->[0];	# Do this LAST!
+		}
+
+		my @values = $self->get( $from, $record );
+		$save{$to} = join $seperator, @values;
+	}
+
+	# We're done with this record. Finish up.
+	$self->_output->write( $self, \%save );
+	$self->status( 'STATUS' );
+}
+
+
+=head3 status
+
+This method displays a status message. B<ETL::Pipeline> calls this method to
+report on the progress of pipeline. It takes one or two parameters - the message
+type (required) and the message itself (optional).
+
+The type can be anything. These are the ones that B<ETL::Pipeline> uses...
+
+=over
+
+=item END
+
+The pipeline has finished. The input source is closed. The output destination
+is still open. It will be closed immediately after. There is no message text.
+
+=item ERROR
+
+Report an error message to the user. These are not necessarily fatal errors.
+
+=item INFO
+
+An informational message to the user.
+
+=item START
+
+The pipeline is just starting. The output destination is open. But the input
+source is not. There is no message text.
+
+=item STATUS
+
+Progress update. This is sent every after every input record.
+
+=back
+
+This method merely passes the parameters through to L</$ETL::Pipeline::log>. See
+L</$ETL::Pipeline::log> for more information about displaying messages.
+
+=cut
+
+sub status {
+	my ($self, $type, $message) = @_;
+	return $ETL::Pipeline::log->( $self, $type, $message )
+		if ref( $ETL::Pipeline::log ) eq 'CODE';
+}
+
+
+=head2 Other
+
+=head3 is_valid
+
+This method returns true or false. True means that the pipeline is ready to
+go. False, of course, means that there's a problem. In a list context,
+B<is_invalid> returns the false value and an error message. On success, the
+error message is C<undef>.
+
+=cut
+
+sub is_valid {
+	my $self = shift;
+	my $error = '';
+
+	if (!defined $self->_work_in) {
+		$error = 'The working folder was not set';
+	} elsif (!defined $self->_input) {
+		$error = 'The "input" object was not set';
+	} elsif (!defined $self->_output) {
+		$error = 'The "output" object was not set';
+	} elsif (!$self->has_mapping && !$self->has_constants) {
+		$error = 'The mapping was not set';
+	}
+
+	if (wantarray) {
+		return (($error eq '' ? 1 : 0), $error);
+	} else {
+		return ($error eq '' ? 1 : 0);
+	}
+}
+
+
+=head3 $ETL::Pipeline::log
+
+This package variable shows progress to the user. The variable holds a code
+reference. The code reference is executed by the L</status> method.
+
+The default value writes messages to the screen (standard output). If you want
+to use log files, then write your own subroutine and assign this variable to it.
+The same would also work for a GUI front end.
+
+Why isn't it a method or attribute? Because overriding this behaviour should be
+global to all pipelines. This is not the kind of functionality that changes
+between pipelines.
+
+The code reference receives two or three parameters - the B<ETL::Pipeline>
+object, the message type, and the optional message text.
+
+You should never execute this code directly. Call the L</status> method instead.
+That method executes the code reference with all the right parameters.
+
+=cut
+
+my $log = sub {
+	my ($etl, $type, $message) = @_;
+	$type = uc( $type );
+
+	if ($type eq 'START') {
+		my $name;
+		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
+			$name = $etl->_input->file->relative( $etl->_work_in );
+		} else {
+			$name = ref( $etl->_input );
+			$name =~ s/^ETL::Pipeline::Input:://;
+		}
+		say "Processing '$name'...";
+	} elsif ($type eq 'END') {
+		my $name;
+		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
+			$name = $etl->_input->file->relative( $etl->_work_in );
+		} else {
+			$name = ref( $etl->_input );
+			$name =~ s/^ETL::Pipeline::Input:://;
+		}
+		say "Finished '$name'!";
+	} elsif ($type eq 'STATUS') {
+		my $count = $etl->count;
+		say "Processed record #$count..." unless $count % 50;
+	} else {
+		say "$type: $message";
+	}
+};
 
 
 #----------------------------------------------------------------------
