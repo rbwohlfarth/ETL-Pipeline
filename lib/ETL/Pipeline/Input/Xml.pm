@@ -78,8 +78,7 @@ sub run {
 	my $parser = XML::Bare->new( file => "$path" );
 	my $xml = $parser->parse;
 
-	# Find the node that is an array of records. This comes from the "root"
-	# attribute.
+	# Find the node that is an array of records.
 	my $list = $xml;
 	$list = $list->{$_} foreach (split '/', $self->records_at);
 	$list = [$list] unless ref( $list ) eq 'ARRAY';

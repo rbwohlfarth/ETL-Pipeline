@@ -777,8 +777,8 @@ on the top level of the data structure. This should be sufficient since they're
 meant for flat files with column headers.
 
 When the field name is a regular expression, it also matches fields and aliases
-at the top level. You can do this with L<Data::DPath>. B<get> provides this
-shortcut because it's easier to read.
+at the top level. You can do the same thing with the L<Data::DPath> syntax.
+B<get> provides this shortcut because it's easier to read.
 
 When the field name is a code reference, B<get> executes the subroutine. The
 return value becomes the field value. A code reference is called in a scalar
@@ -802,6 +802,10 @@ code must account for the possibility of finding array or hashes or strings.
 sub get {
 	my ($self, $field, $record) = @_;
 	my $value;
+
+	# Use the current record from the attribute unless the programmer explicilty
+	# sent in a record. This allows "get" to work on sub-records.
+	$record = $self->this unless defined $record;
 
 	# Execute code reference.
 	if (ref( $field ) eq 'CODE') {
@@ -872,6 +876,24 @@ sub get {
 }
 
 
+=head3 this
+
+The current record. The L</record> method sets B<this> before it does anything
+else. L</get> will use B<this> if you don't pass in a record. It makes a
+convenient shortcut so you don't have to pass the record into every call.
+
+B<this> is a hash reference.
+
+=cut
+
+has 'this' => (
+	default => sub { {} },
+	is      => 'ro',
+	isa     => 'Maybe[HashRef[Any]]',
+	writer  => '_set_this',
+);
+
+
 =head2 Used by input sources
 
 =head3 add_alias
@@ -916,6 +938,10 @@ output destination.
 
 sub record {
 	my ($self, $record) = @_;
+
+	# Save the current record so that other methods and helper functions can
+	# access it without the programmer passing it around.
+	$self->_set_this( $record );
 
 	# Increase the record count. That way the count always shows the current
 	# record number.

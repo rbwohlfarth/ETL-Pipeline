@@ -12,48 +12,75 @@ subtest 'Simple pipeline' => sub {
 		output    => 'UnitTest',
 	} );
 	$etl->process;
-
 	pass( 'Script ran' );
 
-	is( $etl->output->number_of_records, 3, 'Three records' );
+	is( $etl->count, 2, 'Two records' );
 	subtest 'First record' => sub {
 		my $record = $etl->output->get_record( 0 );
 		my @keys   = keys %$record;
 		is( scalar( @keys )    , 4               , '4 fields'       );
-		is( $record->{un      }, 'Header1'       , 'Found Header1'  );
-		is( $record->{deux    }, 'Header2'       , 'Found Header2'  );
-		is( $record->{trois   }, 'Header3'       , 'Found Header3'  );
+		is( $record->{un      }, 'Field1'        , 'Found Field1'  );
+		is( $record->{deux    }, 'Field2'        , 'Found Field2'  );
+		is( $record->{trois   }, 'Field3'        , 'Found Field3'  );
 		is( $record->{constant}, 'String literal', 'Found constant' );
 	};
 	subtest 'Second record' => sub {
 		my $record = $etl->output->get_record( 1 );
 		my @keys   = keys %$record;
 		is( scalar( @keys )    , 4               , '4 fields'       );
-		is( $record->{un      }, 'Field1'        , 'Found Field1'   );
-		is( $record->{deux    }, 'Field2'        , 'Found Field2'   );
-		is( $record->{trois   }, 'Field3'        , 'Found Field3'   );
+		is( $record->{un      }, 'Field6'        , 'Found Field6'   );
+		is( $record->{deux    }, 'Field7'        , 'Found Field7'   );
+		is( $record->{trois   }, 'Field8'        , 'Found Field8'   );
 		is( $record->{constant}, 'String literal', 'Found constant' );
 	};
 };
 
-subtest 'work_in' => sub {
-	my $etl = ETL::Pipeline->new;
-
-	$etl->work_in( 't' );
-	is( $etl->work_in->basename, 't', 'Fixed directory' );
-	is( $etl->data_in->basename, 't', 'data_in set' );
-
-	$etl->work_in( matching => 't' );
-	is( $etl->work_in->basename, 't', 'Search current directory' );
-
-	$etl->work_in( search => 't', matching => '*' );
-	is( $etl->work_in->basename, 'DataFiles', 'File glob' );
-
-	$etl->work_in( search => 't', matching => qr/^DataFiles$/i );
-	is( $etl->work_in->basename, 'DataFiles', 'Regular expression' );
-
-	$etl->work_in( search => 't/DataFiles', matching => '*' );
-	is( $etl->work_in->basename, 'FileListing', 'Alphabetical order' );
+subtest 'chain' => sub {
+	subtest 'Everything' => sub {
+		my $one = ETL::Pipeline->new( {
+			work_in   => 't',
+			data_in   => 'DataFiles',
+			input     => 'UnitTest',
+			mapping   => {un => 1},
+			constants => {deux => 2},
+			output    => 'UnitTest'
+		} );
+		$one->session( good => 1 );
+		my $two = $one->chain();
+		ok( !$two->is_valid, 'Not valid' );
+		is( $two->work_in->basename, 't', 'work_in' );
+		is( $two->data_in->basename, 'DataFiles', 'data_in' );
+		is( $two->session( 'good' ), 1, 'session' );
+	};
+	subtest 'No work_in' => sub {
+		my $one = ETL::Pipeline->new( {
+			input     => 'UnitTest',
+			mapping   => {un => 1},
+			constants => {deux => 2},
+			output    => 'UnitTest'
+		} );
+		$one->session( good => 1 );
+		my $two = $one->chain();
+		ok( !$two->is_valid, 'Not valid' );
+		is( $two->work_in, undef, 'work_in' );
+		is( $two->data_in, undef, 'data_in' );
+		is( $two->session( 'good' ), 1, 'session' );
+	};
+	subtest 'No session' => sub {
+		my $one = ETL::Pipeline->new( {
+			work_in   => 't',
+			data_in   => 'DataFiles',
+			input     => 'UnitTest',
+			mapping   => {un => 1},
+			constants => {deux => 2},
+			output    => 'UnitTest'
+		} );
+		my $two = $one->chain();
+		ok( !$two->is_valid, 'Not valid' );
+		is( $two->work_in->basename, 't', 'work_in' );
+		is( $two->data_in->basename, 'DataFiles', 'data_in' );
+		ok( !$two->session_has( 'good' ), 'session' );
+	};
 };
 
 subtest 'data_in' => sub {
@@ -75,40 +102,6 @@ subtest 'Fixed module names' => sub {
 
 	$etl->output( '+Output' );
 	ok( defined( $etl->output ), 'Output' );
-};
-
-subtest 'execute_code_ref' => sub {
-	my $etl = ETL::Pipeline->new;
-	my $x;
-
-	$etl->execute_code_ref( sub { $x = $_ } );
-	is( ref( $x ), 'ETL::Pipeline', 'Pipeline in $_' );
-
-	$etl->execute_code_ref( sub { $x = shift } );
-	is( ref( $x ), 'ETL::Pipeline', 'Pipeline in parameters' );
-
-	$etl->execute_code_ref( sub { shift; $x = shift }, 2 );
-	is( $x, 2, 'Parameters passed' );
-
-	is( $etl->execute_code_ref( sub { 4 } ), 4, 'Return value' );
-	is( $etl->execute_code_ref( 'abc' ), undef, 'Not code reference' );
-
-	subtest 'In pipeline' => sub {
-		$etl->work_in( 't' );
-		$etl->input( 'UnitTest' );
-		$etl->mapping( un => sub { $_->get( 0 ) } );
-		$etl->output( 'UnitTest' );
-		$etl->process;
-
-		subtest 'First record' => sub {
-			my $record = $etl->output->get_record( 0 );
-			is( $record->{un}, 'Header1', 'mapping' );
-		};
-		subtest 'Second record' => sub {
-			my $record = $etl->output->get_record( 1 );
-			is( $record->{un}, 'Field1', 'mapping' );
-		};
-	};
 };
 
 subtest 'is_valid' => sub {
@@ -188,6 +181,107 @@ subtest 'is_valid' => sub {
 	};
 };
 
+subtest 'mapping' => sub {
+	subtest 'Match field names' => sub {
+		subtest 'Data path' => sub {
+			my ($pipeline, $record);
+			my $etl = ETL::Pipeline->new( {
+				work_in => 't',
+				input   => 'UnitTest',
+				mapping => {un => '/0'},
+				output  => 'UnitTest',
+			} )->process;
+
+			my $output = $etl->output->get_record( 0 );
+			is( $record->{un}, 'Field1', 'Field 1' );
+		};
+		subtest 'Regular expression' => sub {
+			my ($pipeline, $record);
+			my $etl = ETL::Pipeline->new( {
+				work_in => 't',
+				input   => 'UnitTest',
+				mapping => {un => qr/0/},
+				output  => 'UnitTest',
+			} )->process;
+
+			my $output = $etl->output->get_record( 0 );
+			is( $record->{un}, 'Field1', 'Field 1' );
+		};
+	};
+	subtest 'Match alias' => sub {
+		subtest 'Bare field name' => sub {
+			my ($pipeline, $record);
+			my $etl = ETL::Pipeline->new( {
+				work_in => 't',
+				input   => 'UnitTest',
+				mapping => {un => 'Header1'},
+				output  => 'UnitTest',
+			} )->process;
+
+			my $output = $etl->output->get_record( 0 );
+			is( $record->{un}, 'Field1', 'Field 1' );
+		};
+		subtest 'Regular expression' => sub {
+			my ($pipeline, $record);
+			my $etl = ETL::Pipeline->new( {
+				work_in => 't',
+				input   => 'UnitTest',
+				mapping => {un => qr/der1/},
+				output  => 'UnitTest',
+			} )->process;
+
+			my $output = $etl->output->get_record( 0 );
+			is( $record->{un}, 'Field1', 'Field 1' );
+		};
+	};
+	subtest 'Code reference' => sub {
+		my ($pipeline, $record);
+		my $etl = ETL::Pipeline->new( {
+			work_in => 't',
+			input   => 'UnitTest',
+			mapping => {un => sub { ($pipeline, $record) = @_; return 'abc';}},
+			output  => 'UnitTest',
+		} )->process;
+
+		is( ref( $pipeline ), 'ETL::Pipeline', 'Pipeline in parameters' );
+		is( ref( $record   ), 'HASH'         , 'Record in parameters'   );
+
+		my $output = $etl->output->get_record( 0 );
+		is( $record->{un}, 'abc', 'Return value saved' );
+	};
+};
+
+subtest 'on_record' => sub {
+	subtest 'Skip records' => sub {
+		my $etl = ETL::Pipeline->new( {
+			work_in   => 't',
+			input     => 'UnitTest',
+			mapping   => {un => 0, deux => 1, trois => 2},
+			on_record => sub { return (shift->count == 1 ? 1 : 0); },
+			output    => 'UnitTest',
+		} )->process;
+
+		is( $etl->count, 1, 'Loaded 1 of 2 records' );
+
+		my @data = $etl->output->get_record( 0 );
+		is( $data[0]->{un}, 'Field1', 'Record 1' );
+	};
+	subtest 'Change record content' => sub {
+		my $etl = ETL::Pipeline->new( {
+			work_in   => 't',
+			input     => 'UnitTest',
+			mapping   => {un => 0, deux => 1, trois => 2},
+			on_record => sub { my ($p, $r) = @_; $r->{0} = uc( $r->{0} ); },
+			output    => 'UnitTest',
+		} )->process;
+
+		is( $etl->count, 2, 'Loaded 2 records' );
+
+		my @data = $etl->output->get_record( 0 );
+		is( $data[0]->{un}, 'FIELD1', 'Value changed' );
+	};
+};
+
 subtest 'session' => sub {
 	my $etl = ETL::Pipeline->new;
 
@@ -225,102 +319,24 @@ subtest 'session' => sub {
 	};
 };
 
-subtest 'chain' => sub {
-	subtest 'Everything' => sub {
-		my $one = ETL::Pipeline->new( {
-			work_in   => 't',
-			data_in   => 'DataFiles',
-			input     => 'UnitTest',
-			mapping   => {un => 1},
-			constants => {deux => 2},
-			output    => 'UnitTest'
-		} );
-		$one->session( good => 1 );
-		my $two = $one->chain();
-		ok( !$two->is_valid, 'Not valid' );
-		is( $two->work_in->basename, 't', 'work_in' );
-		is( $two->data_in->basename, 'DataFiles', 'data_in' );
-		is( $two->session( 'good' ), 1, 'session' );
-	};
-	subtest 'No work_in' => sub {
-		my $one = ETL::Pipeline->new( {
-			input     => 'UnitTest',
-			mapping   => {un => 1},
-			constants => {deux => 2},
-			output    => 'UnitTest'
-		} );
-		$one->session( good => 1 );
-		my $two = $one->chain();
-		ok( !$two->is_valid, 'Not valid' );
-		is( $two->work_in, undef, 'work_in' );
-		is( $two->data_in, undef, 'data_in' );
-		is( $two->session( 'good' ), 1, 'session' );
-	};
-	subtest 'No session' => sub {
-		my $one = ETL::Pipeline->new( {
-			work_in   => 't',
-			data_in   => 'DataFiles',
-			input     => 'UnitTest',
-			mapping   => {un => 1},
-			constants => {deux => 2},
-			output    => 'UnitTest'
-		} );
-		my $two = $one->chain();
-		ok( !$two->is_valid, 'Not valid' );
-		is( $two->work_in->basename, 't', 'work_in' );
-		is( $two->data_in->basename, 'DataFiles', 'data_in' );
-		ok( !$two->session_has( 'good' ), 'session' );
-	};
-};
+subtest 'work_in' => sub {
+	my $etl = ETL::Pipeline->new;
 
-subtest 'Delegations' => sub {
-	my $etl = ETL::Pipeline->new( {
-		work_in => 't',
-		input   => 'UnitTest',
-		mapping => {un => sub {
-			my $etl = shift;
-			$etl->set( 'fake', $etl->record_number );
-			return $etl->get( 1 );
-		}},
-		output => 'UnitTest',
-	} );
-	$etl->process;
+	$etl->work_in( 't' );
+	is( $etl->work_in->basename, 't', 'Fixed directory' );
+	is( $etl->data_in->basename, 't', 'data_in set' );
 
-	my $record = $etl->output->get_record( 0 );
-	is( $record->{un}, 'Header2', 'get' );
-	is( $record->{fake}, 1, 'record_number' );
-	pass( 'set' );
-};
+	$etl->work_in( iname => 't' );
+	is( $etl->work_in->basename, 't', 'Search current directory' );
 
-subtest 'stop_if' => sub {
-	my $etl = ETL::Pipeline->new( {
-		work_in => 't',
-		input   => 'UnitTest',
-		stop_if => sub { shift->get( 0 ) eq 'Field1' },
-		mapping => {un => 0, deux => 1, trois => 2},
-		output  => 'UnitTest',
-	} );
-	$etl->process;
-	is( $etl->output->record_number, 1, 'Stopped on first record' );
-};
+	$etl->work_in( search => 't', iname => '*' );
+	is( $etl->work_in->basename, 'DataFiles', 'File glob' );
 
-subtest 'skip_if' => sub {
-	my $etl = ETL::Pipeline->new( {
-		work_in => 't',
-		input   => 'UnitTest',
-		skip_if => sub { shift->get( 0 ) eq 'Field1' },
-		mapping => {un => 0, deux => 1, trois => 2},
-		output  => 'UnitTest',
-	} );
-	$etl->process;
+	$etl->work_in( root => 't', iname => qr/^DataFiles$/i );
+	is( $etl->work_in->basename, 'DataFiles', 'Regular expression' );
 
-	is( $etl->output->record_number, 2, 'Loaded 2 of 3 records' );
-
-	my @data = $etl->output->get_record( 0 );
-	is( $data[0]->{un}, 'Header1', 'Record 1' );
-
-	@data = $etl->output->get_record( 1 );
-	is( $data[0]->{un}, 'Field6', 'Record 2' );
+	$etl->work_in( root => 't/DataFiles', iname => '*' );
+	is( $etl->work_in->basename, 'FileListing', 'Alphabetical order' );
 };
 
 done_testing();
