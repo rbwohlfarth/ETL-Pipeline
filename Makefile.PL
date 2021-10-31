@@ -12,6 +12,7 @@ repository 'https://github.com/rbwohlfarth/ETL-Pipeline';
 
 requires 'Carp';
 requires 'Data::DPath';
+requires 'Data::Traverse';
 requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';

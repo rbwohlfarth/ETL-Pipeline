@@ -22,6 +22,8 @@ no_index:
     - t
 requires:
   Carp: 0
+  Data::DPath: 0
+  Data::Traverse: 0
   List::AllUtils: 0
   Moose: 0
   Moose::Role: 0
@@ -34,9 +36,9 @@ requires:
   Spreadsheet::XLSX: 0
   String::Util: 0
   Text::CSV: 0
-  XML::XPath: 0
+  XML::Bare: 0
   perl: 5.14.0
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/rbwohlfarth/ETL-Pipeline
-version: '2.03'
+version: '3.00'

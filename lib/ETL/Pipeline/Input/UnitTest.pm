@@ -66,14 +66,14 @@ sub run {
 		3 => 'Field3',
 		4 => 'Field4',
 		5 => 'Field5',
-	}, 'Row 1' );
+	} );
 	$etl->record( {
 		1 => 'Field6',
 		2 => 'Field7',
 		3 => 'Field8',
 		4 => 'Field9',
 		5 => 'Field0',
-	}, 'Row 2' );
+	} );
 }
 
 

@@ -92,7 +92,7 @@ subtest 'ETL::Pipeline::Input::File' => sub {
 			constants => {un => 1},
 			input     => ['DelimitedText', iname => 'DelimitedText.txt'],
 			output    => 'UnitTest',
-			skipping  => sub { my ($etl $line) = @_; return ($line =~ m/^Header/ ? 1 : 0); },
+			skipping  => sub { my ($etl, $line) = @_; return ($line =~ m/^Header/ ? 1 : 0); },
 			work_in   => 't/DataFiles',
 		} )->process;
 		is( $etl->output->number_of_records, 1, 'Code skipped headers' );

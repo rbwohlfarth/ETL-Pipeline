@@ -35,6 +35,7 @@ use warnings;
 
 use Carp;
 use Data::DPath qw/dpath/;
+use Data::Traverse qw/traverse/;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
@@ -697,15 +698,12 @@ sub work_in {
 	} elsif(scalar( @_ ) > 1) {
 		my %options = @_;
 
-		my $root = $options{root};
+		my $root = $options{root} // '.';
 		delete $options{root};
 
 		if (scalar %options) {
-			my $search = hascontent( $root ) ? $root : '.';
-
 			my $rule = Path::Class::Rule->new;
-			foreach my $name (@criteria) {
-				my $value = $arguments->{$name};
+			while (my ($name, $value) = each %options) {
 				eval "\$rule->$name( \$value )";
 				confess $@ unless $@ eq '';
 			}
@@ -809,65 +807,45 @@ sub get {
 
 	# Execute code reference.
 	if (ref( $field ) eq 'CODE') {
-		$value = $code->( $self, $record );
+		$value = $field->( $self, $record );
 	}
 
-	# Match field names to regular expression. Then match aliases. And finally
-	# merge the results together.
+	# Match field names to regular expression. Then match aliases.
 	elsif (ref( $field ) eq 'REGEXP') {
-		$value = $record ~~ dpath "//*[key =~ /$field/]";
-
-		# Match aliases.
-		my @found;
+		my @found = dpath( "//*[key =~ /$field/]" )->match( $record );
 		foreach my $match ($self->_aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias =~ m/$field/) {
 					$name = "/$name" unless $name =~ m|^/|;
-					push @found, $record ~~ dpath $name;
+					push @found, dpath( $name )->match( $record );
 				}
 			}
 		}
-
-		# Merge.
-		if (scalar @found) {
-			if (!defined $value) {
-				if (scalar( @found ) == 1) { $value = $found[0]; }
-				else                       { $value = \@found;   }
-			} elsif (ref( $value ) eq 'ARRAY') {
-				push @$value, @found;
-			} else {
-				$value = [$value, @found];
-			}
+		if (scalar( @found ) == 1) {
+			$value = $found[0];
+		} else {
+			$value = \@found;
 		}
 	}
 
-	# Strings are field names. Match fields first, then aliases. And finally
-	# merge the results together.
+	# Strings are field names. Match fields first, then aliases.
 	else {
 		$field = "/$field" unless $field =~ m|^/|;
-		$value = $record ~~ dpath $field;
+		my @found = dpath( $field )->match( $record );
 
-		# Match aliases.
-		my @found;
 		foreach my $match ($self->_aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias eq $field) {
 					$name = "/$name" unless $name =~ m|^/|;
-					push @found, $record ~~ dpath $name;
+					push @found, dpath( $name )->match( $record );
 				}
 			}
 		}
 
-		# Merge.
-		if (scalar @found) {
-			if (!defined $value) {
-				if (scalar( @found ) == 1) { $value = $found[0]; }
-				else                       { $value = \@found;   }
-			} elsif (ref( $value ) eq 'ARRAY') {
-				push @$value, @found;
-			} else {
-				$value = [$value, @found];
-			}
+		if (scalar( @found ) == 1) {
+			$value = $found[0];
+		} else {
+			$value = \@found;
 		}
 	}
 
@@ -950,7 +928,7 @@ sub record {
 	# Remove leading and trailing whitespace from all fields. We always want to
 	# do this. Otherwise we end up with weird looking text. I do this first so
 	# that all the customized code sees is the filtered data.
-	$record{$_} = trim( $record{$_} ) foreach (keys %$record);
+	traverse { trim( m/HASH/ ? $b : $a ) } $record;
 
 	# Run the custom record filter, if there is one. If the filter returns
 	# "false", then we bypass this entire record.
@@ -962,10 +940,19 @@ sub record {
 
 	# Insert constants into the output. Do this before the mapping. The mapping
 	# will always override constants. I want data from the input.
-	my %save = %{$self->_constants};
+	#
+	# I had used a regular hash. Perl kept re-using the same memory location.
+	# The records were overwriting each other. Switched to a hash reference so I
+	# can force Perl to allocate new memory for every record.
+	my $save = {};
+	if ($self->has_constants) {
+		my $constants = $self->_constants;
+		%$save = %$constants;
+	}
 
 	# This is the transform step. It converts the input record into an output
 	# record.
+	my $mapping = $self->mapping;
 	while (my ($to, $from) = each %$mapping) {
 		my $seperator = '; ';
 		if (ref( $from ) eq 'ARRAY') {
@@ -974,11 +961,11 @@ sub record {
 		}
 
 		my @values = $self->get( $from, $record );
-		$save{$to} = join $seperator, @values;
+		$save->{$to} = join $seperator, @values;
 	}
 
 	# We're done with this record. Finish up.
-	$self->_output->write( $self, \%save );
+	$self->_output->write( $self, $save );
 	$self->status( 'STATUS' );
 }
 

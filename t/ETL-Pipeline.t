@@ -8,7 +8,7 @@ subtest 'Simple pipeline' => sub {
 		work_in   => 't',
 		input     => 'UnitTest',
 		constants => {constant => 'String literal'},
-		mapping   => {un => 0, deux => 1, trois => 2},
+		mapping   => {un => 1, deux => 2, trois => 3},
 		output    => 'UnitTest',
 	} );
 	$etl->process;
@@ -97,7 +97,7 @@ subtest 'Fixed module names' => sub {
 	unshift @INC, './t/Modules';
 	my $etl = ETL::Pipeline->new;
 
-	$etl->input( '+FileInput' );
+	$etl->input( '+Input' );
 	ok( defined( $etl->input ), 'Input' );
 
 	$etl->output( '+Output' );
@@ -188,24 +188,24 @@ subtest 'mapping' => sub {
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
-				mapping => {un => '/0'},
+				mapping => {un => '/1'},
 				output  => 'UnitTest',
 			} )->process;
 
 			my $output = $etl->output->get_record( 0 );
-			is( $record->{un}, 'Field1', 'Field 1' );
+			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 		subtest 'Regular expression' => sub {
 			my ($pipeline, $record);
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
-				mapping => {un => qr/0/},
+				mapping => {un => qr/1/},
 				output  => 'UnitTest',
 			} )->process;
 
 			my $output = $etl->output->get_record( 0 );
-			is( $record->{un}, 'Field1', 'Field 1' );
+			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 	};
 	subtest 'Match alias' => sub {
@@ -219,7 +219,7 @@ subtest 'mapping' => sub {
 			} )->process;
 
 			my $output = $etl->output->get_record( 0 );
-			is( $record->{un}, 'Field1', 'Field 1' );
+			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 		subtest 'Regular expression' => sub {
 			my ($pipeline, $record);
@@ -231,7 +231,7 @@ subtest 'mapping' => sub {
 			} )->process;
 
 			my $output = $etl->output->get_record( 0 );
-			is( $record->{un}, 'Field1', 'Field 1' );
+			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 	};
 	subtest 'Code reference' => sub {
@@ -239,7 +239,7 @@ subtest 'mapping' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
 			input   => 'UnitTest',
-			mapping => {un => sub { ($pipeline, $record) = @_; return 'abc';}},
+			mapping => {un => sub { ($pipeline, $record) = @_; return 'abc'; }},
 			output  => 'UnitTest',
 		} )->process;
 
@@ -247,7 +247,7 @@ subtest 'mapping' => sub {
 		is( ref( $record   ), 'HASH'         , 'Record in parameters'   );
 
 		my $output = $etl->output->get_record( 0 );
-		is( $record->{un}, 'abc', 'Return value saved' );
+		is( $output->{un}, 'abc', 'Return value saved' );
 	};
 };
 
@@ -329,7 +329,7 @@ subtest 'work_in' => sub {
 	$etl->work_in( iname => 't' );
 	is( $etl->work_in->basename, 't', 'Search current directory' );
 
-	$etl->work_in( search => 't', iname => '*' );
+	$etl->work_in( root => 't', iname => '*' );
 	is( $etl->work_in->basename, 'DataFiles', 'File glob' );
 
 	$etl->work_in( root => 't', iname => qr/^DataFiles$/i );
