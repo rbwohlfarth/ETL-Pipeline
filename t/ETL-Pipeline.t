@@ -184,7 +184,6 @@ subtest 'is_valid' => sub {
 subtest 'mapping' => sub {
 	subtest 'Match field names' => sub {
 		subtest 'Data path' => sub {
-			my ($pipeline, $record);
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
@@ -196,11 +195,10 @@ subtest 'mapping' => sub {
 			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 		subtest 'Regular expression' => sub {
-			my ($pipeline, $record);
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
-				mapping => {un => qr/1/},
+				mapping => {un => qr/^1/},
 				output  => 'UnitTest',
 			} )->process;
 
@@ -210,7 +208,6 @@ subtest 'mapping' => sub {
 	};
 	subtest 'Match alias' => sub {
 		subtest 'Bare field name' => sub {
-			my ($pipeline, $record);
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
@@ -222,7 +219,6 @@ subtest 'mapping' => sub {
 			is( $output->{un}, 'Field1', 'Field 1' );
 		};
 		subtest 'Regular expression' => sub {
-			my ($pipeline, $record);
 			my $etl = ETL::Pipeline->new( {
 				work_in => 't',
 				input   => 'UnitTest',
@@ -235,7 +231,6 @@ subtest 'mapping' => sub {
 		};
 	};
 	subtest 'Code reference' => sub {
-		my ($pipeline, $record);
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
 			input   => 'UnitTest',
@@ -256,29 +251,30 @@ subtest 'on_record' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in   => 't',
 			input     => 'UnitTest',
-			mapping   => {un => 0, deux => 1, trois => 2},
+			mapping   => {un => 1, deux => 2, trois => 3},
 			on_record => sub { return (shift->count == 1 ? 1 : 0); },
 			output    => 'UnitTest',
 		} )->process;
 
-		is( $etl->count, 1, 'Loaded 1 of 2 records' );
+		is( $etl->output->number_of_records, 1, 'Loaded 1 of 2 records' );
+		is( $etl->count                    , 2, 'Count bypassed record' );
 
-		my @data = $etl->output->get_record( 0 );
-		is( $data[0]->{un}, 'Field1', 'Record 1' );
+		my $output = $etl->output->get_record( 0 );
+		is( $output->{un}, 'Field1', 'Record 1' );
 	};
 	subtest 'Change record content' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in   => 't',
 			input     => 'UnitTest',
-			mapping   => {un => 0, deux => 1, trois => 2},
-			on_record => sub { my ($p, $r) = @_; $r->{0} = uc( $r->{0} ); },
+			mapping   => {un => 1, deux => 2, trois => 3},
+			on_record => sub { my ($p, $r) = @_; $r->{1} = uc( $r->{1} ); },
 			output    => 'UnitTest',
 		} )->process;
 
-		is( $etl->count, 2, 'Loaded 2 records' );
+		is( $etl->count, 2, 'Loaded 2 of 2 records' );
 
-		my @data = $etl->output->get_record( 0 );
-		is( $data[0]->{un}, 'FIELD1', 'Value changed' );
+		my $output = $etl->output->get_record( 0 );
+		is( $output->{un}, 'FIELD1', 'Value changed' );
 	};
 };
 

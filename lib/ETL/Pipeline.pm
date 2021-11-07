@@ -786,6 +786,13 @@ reference.
 The code reference receives two parameters - the B<ETL::Pipeline> object and the
 current record.
 
+=head4 Current record
+
+The current record is optional. B<get> will use L</this> if you do not pass in a
+record. By accepting a record, you can use B<get> on sub-records. So by default,
+B<get> returns a value from the top record. Use the second parameter to retrieve
+values from a sub-record.
+
 =head4 Return value
 
 B<get> always returns a scalar value, but not always a string. The return value
@@ -799,7 +806,7 @@ code must account for the possibility of finding array or hashes or strings.
 
 sub get {
 	my ($self, $field, $record) = @_;
-	my $value;
+	my @found = ();
 
 	# Use the current record from the attribute unless the programmer explicilty
 	# sent in a record. This allows "get" to work on sub-records.
@@ -807,50 +814,41 @@ sub get {
 
 	# Execute code reference.
 	if (ref( $field ) eq 'CODE') {
-		$value = $field->( $self, $record );
+		@found = $field->( $self, $record );
 	}
 
 	# Match field names to regular expression. Then match aliases.
-	elsif (ref( $field ) eq 'REGEXP') {
-		my @found = dpath( "//*[key =~ /$field/]" )->match( $record );
+	elsif (ref( $field ) eq 'Regexp') {
+		@found = dpath( "//*[key =~ /$field/]" )->match( $record );
 		foreach my $match ($self->_aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias =~ m/$field/) {
 					$name = "/$name" unless $name =~ m|^/|;
-					push @found, dpath( $name )->match( $record );
+					my @more = dpath( $name )->match( $record );
+					push @found, @more;
 				}
 			}
-		}
-		if (scalar( @found ) == 1) {
-			$value = $found[0];
-		} else {
-			$value = \@found;
 		}
 	}
 
 	# Strings are field names. Match fields first, then aliases.
 	else {
-		$field = "/$field" unless $field =~ m|^/|;
-		my @found = dpath( $field )->match( $record );
+		my $path = $field =~ m|^/| ? $field : "/$field";
+		@found = dpath( $path )->match( $record );
 
 		foreach my $match ($self->_aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias eq $field) {
 					$name = "/$name" unless $name =~ m|^/|;
-					push @found, dpath( $name )->match( $record );
+					my @more = dpath( $name )->match( $record );
+					push @found, @more;
 				}
 			}
-		}
-
-		if (scalar( @found ) == 1) {
-			$value = $found[0];
-		} else {
-			$value = \@found;
 		}
 	}
 
 	# Send back the final value.
-	return $value;
+	return (scalar( @found ) == 1 ? $found[0] : \@found);
 }
 
 
