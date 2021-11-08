@@ -623,7 +623,8 @@ sub session {
 		while (my ($key, $value) = each %parameters) {
 			$self->_add_session( $key, $value );
 		}
-	} else {
+		return $_[1];
+	} elsif (scalar( @_ ) == 1) {
 		my $key = shift;
 		if (ref( $key ) eq 'HASH') {
 			return $self->_session( $key );
@@ -633,7 +634,7 @@ sub session {
 			elsif (ref( $result ) eq 'HASH' ) { return %$result; }
 			else                              { return  $result; }
 		} else { return $self->_get_session( $key ); }
-	}
+	} else { return undef; }
 }
 
 

@@ -286,7 +286,7 @@ subtest 'session' => sub {
 		is( $etl->session( 'bad' ), undef, 'get' );
 	};
 	subtest 'Single value' => sub {
-		is( $etl->session( good =>, 3 ), 3, 'set' );
+		is( $etl->session( good => 3 ), 3, 'set' );
 		is( $etl->session( 'good' ), 3, 'get' );
 		ok( $etl->session_has( 'good' ), 'exists' );
 	};
@@ -325,13 +325,16 @@ subtest 'work_in' => sub {
 	$etl->work_in( iname => 't' );
 	is( $etl->work_in->basename, 't', 'Search current directory' );
 
-	$etl->work_in( root => 't', iname => '*' );
+	$etl->work_in( root => 't', iname => 'DataFiles' );
+	is( $etl->work_in->basename, 'DataFiles', 'Search other directory' );
+
+	$etl->work_in( root => 't', iname => 'Data*' );
 	is( $etl->work_in->basename, 'DataFiles', 'File glob' );
 
 	$etl->work_in( root => 't', iname => qr/^DataFiles$/i );
 	is( $etl->work_in->basename, 'DataFiles', 'Regular expression' );
 
-	$etl->work_in( root => 't/DataFiles', iname => '*' );
+	$etl->work_in( root => 't/DataFiles', iname => 'F*' );
 	is( $etl->work_in->basename, 'FileListing', 'Alphabetical order' );
 };
 
