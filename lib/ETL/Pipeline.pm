@@ -36,6 +36,7 @@ use warnings;
 use Carp;
 use Data::DPath qw/dpath/;
 use Data::Traverse qw/traverse/;
+use List::AllUtils qw/any/;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
@@ -703,12 +704,12 @@ sub work_in {
 		delete $options{root};
 
 		if (scalar %options) {
-			my $rule = Path::Class::Rule->new;
+			my $rule = Path::Class::Rule->new->directory;
 			while (my ($name, $value) = each %options) {
-				eval "\$rule->$name( \$value )";
+				eval "\$rule = \$rule->$name( \$value )";
 				confess $@ unless $@ eq '';
 			}
-			my $next = $rule->directory->iter( $root );
+			my $next = $rule->iter( $root );
 			my $match = $next->();
 			croak 'No matching directories' unless defined $match;
 			return $self->_work_in( $match );
@@ -821,7 +822,7 @@ sub get {
 	# Match field names to regular expression. Then match aliases.
 	elsif (ref( $field ) eq 'Regexp') {
 		@found = dpath( "//*[key =~ /$field/]" )->match( $record );
-		foreach my $match ($self->_aliases) {
+		foreach my $match ($self->aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias =~ m/$field/) {
 					$name = "/$name" unless $name =~ m|^/|;
@@ -837,7 +838,7 @@ sub get {
 		my $path = $field =~ m|^/| ? $field : "/$field";
 		@found = dpath( $path )->match( $record );
 
-		foreach my $match ($self->_aliases) {
+		foreach my $match ($self->aliases) {
 			while (my ($alias, $name) = each %$match) {
 				if ($alias eq $field) {
 					$name = "/$name" unless $name =~ m|^/|;
@@ -849,7 +850,7 @@ sub get {
 	}
 
 	# Send back the final value.
-	return (scalar( @found ) == 1 ? $found[0] : \@found);
+	return (scalar( @found ) <= 1 ? $found[0] : \@found);
 }
 
 
@@ -890,7 +891,12 @@ slash - B</> - if needed.
 =cut
 
 has '_alias' => (
-	handles  => {_add_alias => 'push', _aliases => 'elements'},
+	default => sub { [] },
+	handles => {
+		_add_alias  => 'push',
+		aliases     => 'elements',
+		has_aliases => 'count',
+	},
 	init_arg => undef,
 	is       => 'ro',
 	isa      => 'ArrayRef[HashRef[Str]]',
@@ -960,7 +966,13 @@ sub record {
 		}
 
 		my @values = $self->get( $from, $record );
-		$save->{$to} = join $seperator, @values;
+		if (scalar( @values ) <= 1) {
+			$save->{$to} = $values[0];
+		} elsif (any { defined } @values) {
+			$save->{$to} = join $seperator, grep { defined } @values;
+		} else {
+			$save->{$to} = undef;
+		}
 	}
 
 	# We're done with this record. Finish up.

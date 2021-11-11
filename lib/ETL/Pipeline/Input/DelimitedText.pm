@@ -65,8 +65,8 @@ sub BUILD {
 	my $arguments = shift;
 
 	my %options;
-	while (my ($key, $value) = each %$arguments) {
-		$options{$key} = $value unless $self->meta->has_attribute( $key );
+	foreach my $key (Text::CSV::known_attributes) {
+		$options{$key} = $arguments->{$key} if exists $arguments->{$key};
 	}
 	$self->_csv_options( \%options );
 }
@@ -75,8 +75,11 @@ sub BUILD {
 =head3 skipping
 
 Optional. If you use a code reference for B<skipping>, this input source sends a
-line of plain text as the parameter. The text is B<not> parsed into fields. I
-assume that you're skipping report headers, not formatted data.
+line of plain text. The text is B<not> parsed into fields. I assume that you're
+skipping report headers, not formatted data.
+
+If you pass an integer, the input source completely skips over that many lines.
+It reads and discards the lines without parsing.
 
 =head2 Methods
 
@@ -116,14 +119,14 @@ sub run {
 	unless ($self->no_column_names) {
 		my $fields;
 		if (defined $line) {
-			$fields = $csv->parse( $line );
+			$fields = [$csv->parse( $line )];
 			$line = undef;
 		} else {
 			$fields = $csv->getline( $handle );
 		}
 
 		if (defined $fields) {
-			while (my ($index, $value) each @$fields) {
+			while (my ($index, $value) = each @$fields) {
 				$etl->add_alias( $value, $index )
 			}
 		}
@@ -138,17 +141,17 @@ sub run {
 		} else {
 			$fields = $csv->getline( $handle );
 		}
-		my $at = $csv->input_line_number();
 
 		if (defined $fields) {
 			my %record;
-			while (my ($index, $value) each @$fields) {
+			while (my ($index, $value) = each @$fields) {
 				$record{$index} = $value;
 			}
-			$etl->record( \%record, "CSV file '$path', line $at" );
-		} elsif (!$self->csv->eof) {
-			my ($code, $message, $position) = $self->csv->error_diag;
-			croak "CSV file '$path', error $code: $message at character $position (line $at)";
+			$etl->record( \%record );
+		} elsif (!$csv->eof) {
+			my $at = $csv->record_number;
+			my ($code, $message, $position) = $csv->error_diag;
+			croak "CSV file '$path', error $code: $message at character $position (record $at)";
 		}
 	}
 

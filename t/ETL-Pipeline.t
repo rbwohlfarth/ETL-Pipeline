@@ -244,6 +244,17 @@ subtest 'mapping' => sub {
 		my $output = $etl->output->get_record( 0 );
 		is( $output->{un}, 'abc', 'Return value saved' );
 	};
+	subtest 'Not found' => sub {
+		my $etl = ETL::Pipeline->new( {
+			work_in => 't',
+			input   => 'UnitTest',
+			mapping => {un => '/invalid'},
+			output  => 'UnitTest',
+		} )->process;
+
+		my $output = $etl->output->get_record( 0 );
+		is( $output->{un}, undef, 'No value returned' );
+	};
 };
 
 subtest 'on_record' => sub {

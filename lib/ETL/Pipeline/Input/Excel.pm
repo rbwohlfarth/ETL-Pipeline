@@ -86,7 +86,9 @@ has 'password' => (
 =head3 skipping
 
 Optional. If you use a code reference for B<skipping>, this input source sends a
-hash reference of each row. You can access the columns by number or letter.
+hash reference. You can access the columns by number or letter.
+
+If you pass an integer, the input source completely skips over that many lines.
 
 =head2 Methods
 
@@ -149,7 +151,15 @@ sub run {
 		while ($start <= $worksheet->{MaxRow}) {
 			my %record;
 			foreach my $column ($worksheet->{MinCol} .. $worksheet->{MaxCol}) {
-				$record{$column} = $cells->[$row][$column]->value;
+				$record{$column} = $cells->[$start][$column]->value;
+			}
+			foreach my $alias ($etl->aliases) {
+				while (my ($name, $column) = each %$alias) {
+					$record{$name} = $record{$column} if
+						exists( $record{$column} )
+						&& !exists( $record{$name} )
+					;
+				}
 			}
 			last if !$skip->( \%record );
 			$start++;
@@ -167,11 +177,11 @@ sub run {
 
 	# Load the data.
 	foreach my $row ($start .. $worksheet->{MaxRow}) {
-		my %record;
+		my $record = {};
 		foreach my $column ($worksheet->{MinCol} .. $worksheet->{MaxCol}) {
-			$record{$column} = $cells->[$row][$column]->value;
+			$record->{$column} = $cells->[$row][$column]->value;
 		}
-		$etl->record( \%record, "Excel file '$path', row $row" );
+		$etl->record( $record );
 	}
 }
 

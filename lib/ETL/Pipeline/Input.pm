@@ -139,12 +139,12 @@ Some important things to remember about C<run>...
 
 =back
 
-If your code encounters an error, B<run> can call L<ETL::Pipeline/error> with
-the error message. L<ETL::Pipeline/error> automatically includes the record
-count with the error message. You should add any other troubleshooting
+If your code encounters an error, B<run> can call L<ETL::Pipeline/status> with
+the error message. L<ETL::Pipeline/status> should automatically include the
+record count with the error message. You should add any other troubleshooting
 information such as file names or key fields.
 
-  $etl->error( "Error message here for id $id" );
+  $etl->status( "ERROR", "Error message here for id $id" );
 
 For fatal errors, I recommend using the C<croak> command from L<Carp>.
 

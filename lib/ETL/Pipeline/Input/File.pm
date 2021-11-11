@@ -80,29 +80,29 @@ L<ETL::Pipeline::Input::File::List> instead.
 
 =cut
 
-sub BUILD {
+sub BUILD {}
+
+
+after 'BUILD' => sub {
 	my $self = shift;
 	my $arguments = shift;
 
-	# Filter out attributes for this class. They are not file search criteria.
-	# Except for "file", which is search criteria and an attribute. From here,
-	# we treat it as criteria. The "file" attribute is set internally.
-	my @criteria = grep {
-		$_ ne 'file'
-		&& !$self->meta->has_attribute( $_ )
-	} keys %$arguments;
-
-	# Configure the file search.
-	my $rule = $self->_rule;
-	$rule->file;
-	foreach my $name (@criteria) {
-		my $value = $arguments->{$name};
-		eval "\$rule->$name( \$value )";
-		confess $@ unless $@ eq '';
+	# Build and cache a rule object to find the input file. A script may define
+	# the input source BEFORE it sets "work_in". Doing it this way guarantees
+	# that we always use the most current "work_in".
+	my $rule = Path::Class::Rule->new->file;
+	foreach (my ($name, $value) = each %$arguments) {
+		if ($name ne 'file' && $rule->can( $name )) {
+			eval "\$rule = \$rule->$name( \$value )";
+			confess $@ unless $@ eq '';
+		}
 	}
-}
+	$self->_rule( $rule );
+};
 
 
+# Execute the actual search AFTER everything is set in stone. This lets a script
+# create the input source before it calls "work_in".
 before 'run' => sub {
 	my ($self, $etl) = @_;
 
@@ -117,7 +117,7 @@ before 'run' => sub {
 	} else {
 		$self->_set_file( $potential );
 	}
-}
+};
 
 
 =head3 file
@@ -171,6 +171,10 @@ Excel files will send a data row as a hash. But a CSV file would send a single
 line of plain text with no parsing. See the input source to find out exactly
 what it sends.
 
+If your input source implements B<skipping>, you can pass whatever parameters
+you want. For consistency, I recommend passing the raw data. If you are jumping
+over report headers, they may not be formatted.
+
 =cut
 
 has 'skipping' => (
@@ -184,9 +188,8 @@ has 'skipping' => (
 # Internal methods and attributes
 
 has '_rule' => (
-	default => sub { Path::Class::Rule->new },
-	is      => 'ro',
-	isa     => 'Path::Class::Rule',
+	is  => 'rw',
+	isa => 'Path::Class::Rule',
 );
 
 
