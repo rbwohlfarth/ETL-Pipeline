@@ -766,19 +766,20 @@ found at the matching node.
 
 The field name can be a string, regular expression reference, or code reference.
 
-A string will try and match field names and aliases. When matching field names,
-the string is used as a L<Data::DPath>. L<Data::DPath> allows for some complex
-selections from data structures of any depth - like those from XML or JSON. For
-simplicity, B<get> automatically adds the leading B</> if needed. That way, you
-can use simple field names for flat data structures.
+A string matches both field names and aliases. The string is used as a
+L<Data::DPath>. L<Data::DPath> allows for some complex selections from data
+structures of any depth - like those from XML or JSON. For simplicity, B<get>
+automatically adds the leading B</> if needed. That way, you can use simple
+field names for flat data structures.
 
-When matching aliases, the string looks for an exact match. Aliases only work
-on the top level of the data structure. This should be sufficient since they're
-meant for flat files with column headers.
+A string can match more than just a hard coded field name. It can be any
+expression accepted by L<Data::DPath> - even those with regular expressions
+embedded in the path string. While B<get> makes the most common cases very easy,
+you can always use the full range of L<Data::DPath> on complex structures.
 
-When the field name is a regular expression, it also matches fields and aliases
-at the top level. You can do the same thing with the L<Data::DPath> syntax.
-B<get> provides this shortcut because it's easier to read.
+When the field name is a regular expression, it matches fields and aliases at
+the top level. You can do the same thing with the L<Data::DPath> syntax. B<get>
+provides this shortcut because it's easier to read.
 
 When the field name is a code reference, B<get> executes the subroutine. The
 return value becomes the field value. A code reference is called in a scalar
@@ -802,7 +803,7 @@ might be a string, ARRAY reference, or HASH reference.
 
 B<get> does not flatten out the nodes that it finds. It merely returns a
 reference to whatever is in the data structure at the named point. The calling
-code must account for the possibility of finding array or hashes or strings.
+code must account for the possibility of finding an array or hash or string.
 
 =cut
 
@@ -811,7 +812,8 @@ sub get {
 	my @found = ();
 
 	# Use the current record from the attribute unless the programmer explicilty
-	# sent in a record. This allows "get" to work on sub-records.
+	# sent in a record. By sending in a record, "get" works on sub-records. But
+	# the default behaviour is what you would expect.
 	$record = $self->this unless defined $record;
 
 	# Execute code reference.
@@ -819,34 +821,15 @@ sub get {
 		@found = $field->( $self, $record );
 	}
 
-	# Match field names to regular expression. Then match aliases.
+	# Match field names to regular expression.
 	elsif (ref( $field ) eq 'Regexp') {
 		@found = dpath( "//*[key =~ /$field/]" )->match( $record );
-		foreach my $match ($self->aliases) {
-			while (my ($alias, $name) = each %$match) {
-				if ($alias =~ m/$field/) {
-					$name = "/$name" unless $name =~ m|^/|;
-					my @more = dpath( $name )->match( $record );
-					push @found, @more;
-				}
-			}
-		}
 	}
 
-	# Strings are field names. Match fields first, then aliases.
+	# Strings are field names.
 	else {
 		my $path = $field =~ m|^/| ? $field : "/$field";
 		@found = dpath( $path )->match( $record );
-
-		foreach my $match ($self->aliases) {
-			while (my ($alias, $name) = each %$match) {
-				if ($alias eq $field) {
-					$name = "/$name" unless $name =~ m|^/|;
-					my @more = dpath( $name )->match( $record );
-					push @found, @more;
-				}
-			}
-		}
 	}
 
 	# Send back the final value.
@@ -906,8 +889,24 @@ has '_alias' => (
 
 sub add_alias {
 	my ($self, $alias, $field) = @_;
+
+	# Save the mapping.
 	$self->_add_alias( {$alias => $field} );
+
+	# Count instances so I can put values for repeated names in an ARRAY.
+	my $count = $self->_alias_name;
+	$count->{$alias}++;
 }
+
+
+has '_alias_name' => (
+	default => sub { {} },
+	handles => {_alias_name_count => 'get'},
+	init_arg => undef,
+	is       => 'ro',
+	isa      => 'HashRef[Int]',
+	traits   => [qw/Hash/],
+);
 
 
 =head3 record
@@ -921,6 +920,25 @@ output destination.
 
 sub record {
 	my ($self, $record) = @_;
+
+	# Set aliases for fields. This way Data::Path can do all of the work
+	# retrieving values. That lets us use complex queries, such as regular
+	# expression matches that return more than one column.
+	#
+	# What if two fields have the same header (aka alias)? I count the unique
+	# alias names as they're added. If more than one matches, I assign an ARRAY
+	# reference to the alias and put the multiple values in the ARRAY.
+	foreach my $item ($self->aliases) {
+		while (my ($alias, $field) = each %$item) {
+			if ($self->_alias_name_count( $alias ) > 1) {
+				$record->{$alias} = [] unless exists $record->{$alias};
+				my $list = $record->{$alias};
+				push @$list, $record->{$field};
+			} else {
+				$record->{$alias} = $record->{$field};
+			}
+		}
+	}
 
 	# Save the current record so that other methods and helper functions can
 	# access it without the programmer passing it around.

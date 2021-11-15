@@ -106,21 +106,26 @@ after 'BUILD' => sub {
 before 'run' => sub {
 	my ($self, $etl) = @_;
 
-	# Find the first file that matches all of the criteria.
-	my $iterator = $self->_rule->iter( $etl->data_in );
-	my $potential = $iterator->();
-
-	if (!defined( $potential )) {
-		croak 'No files matched the search criteria';
-	} elsif (!-r $potential) {
-		croak "You do not have permission to read '$potential'";
+	if (defined $self->path) {
+		$self->_set_path( $self->path->absolute( $etl->data_in ) )
+			if $self->path->is_relative;
 	} else {
-		$self->_set_file( $potential );
+		# Find the first file that matches all of the criteria.
+		my $iterator = $self->_rule->iter( $etl->data_in );
+		my $potential = $iterator->();
+
+		if (!defined( $potential )) {
+			croak 'No files matched the search criteria';
+		} elsif (!-r $potential) {
+			croak "You do not have permission to read '$potential'";
+		} else {
+			$self->_set_path( $potential );
+		}
 	}
 };
 
 
-=head3 file
+=head3 path
 
 Optional. When passed to L<ETL::Pipeline/input>, this file becomes the input
 source. No search or matching is performed. If you specify a relative path, it
@@ -136,15 +141,15 @@ search criteria. It should be used by your input source class as the file name.
   $etl->input( 'Excel', file => 'C:\Data.xlsx' );
 
   # Inside the input source class...
-  open my $io, '<', $self->file;
+  open my $io, '<', $self->path;
 
 =cut
 
-has 'file' => (
+has 'path' => (
 	coerce => 1,
 	is     => 'ro',
 	isa    => File,
-	writer => '_set_file',
+	writer => '_set_path',
 );
 
 

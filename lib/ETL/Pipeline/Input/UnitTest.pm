@@ -59,6 +59,8 @@ sub run {
 	$etl->add_alias( 'Header2'    , 2 );
 	$etl->add_alias( 'Header3'    , 3 );
 	$etl->add_alias( '  Header4  ', 4 );
+	$etl->add_alias( 'Header6'    , 6 );
+	$etl->add_alias( 'Header6'    , 7 );
 
 	$etl->record( {
 		1 => 'Field1',
@@ -66,13 +68,21 @@ sub run {
 		3 => 'Field3',
 		4 => 'Field4',
 		5 => 'Field5',
+		6 => 'Field6',
+		7 => 'Field7',
+		8 => 'Field8',
+		9 => 'Field9',
 	} );
 	$etl->record( {
-		1 => 'Field6',
-		2 => 'Field7',
-		3 => 'Field8',
-		4 => 'Field9',
-		5 => 'Field0',
+		1 => 'Field11',
+		2 => 'Field12',
+		3 => 'Field13',
+		4 => 'Field14',
+		5 => 'Field15',
+		6 => 'Field16',
+		7 => 'Field17',
+		8 => 'Field18',
+		9 => 'Field19',
 	} );
 }
 

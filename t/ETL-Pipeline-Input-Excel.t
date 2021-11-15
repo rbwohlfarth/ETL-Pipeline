@@ -1,332 +1,205 @@
 use ETL::Pipeline;
 use Test::More;
 
-subtest 'XLSX format' => sub {
-	subtest 'Retrieving data' => sub {
-		sub retrievingData {
-			my ($etl, $record) = @_;
+subtest 'XLS file' => sub {
+	my $etl = ETL::Pipeline->new( {
+		input   => ['Excel', path => 'Excel2003.xls'],
+		mapping => {
+			One      => 0,
+			Two      => 1,
+			Three    => 2,
+			Four     => 3,
+			Five     => 4,
+			Six      => 'A',
+			Seven    => 'B',
+			Eight    => 'C',
+			Nine     => 'D',
+			Ten      => 'E',
+			Eleven   => 'Header1',
+			Twelve   => 'Header2',
+			Thirteen => 'Header3',
+			Fourteen => 'Header4',
+			Fifteen  => 'Header5',
+		},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->output->number_of_records, 1, 'All records processed' );
 
-			return unless $etl->count == 1;
-
-			subtest '$record' => sub {
-				is( $record->{1}, 'Field1', 'Field 1' );
-				is( $record->{2}, 'Field2', 'Field 2' );
-				is( $record->{3}, 'Field3', 'Field 3' );
-				is( $record->{4}, 'Field4', 'Field 4' );
-				is( $record->{5}, 'Field5', 'Field 5' );
-			};
-			subtest 'get' => sub {
-				is( $etl->get( 1 ), 'Field1', 'Field 1' );
-				is( $etl->get( 2 ), 'Field2', 'Field 2' );
-				is( $etl->get( 3 ), 'Field3', 'Field 3' );
-				is( $etl->get( 4 ), 'Field4', 'Field 4' );
-				is( $etl->get( 5 ), 'Field5', 'Field 5' );
-			};
-			subtest 'By column letter' => sub  {
-				is( $etl->get( 'A' ), 'Field1', 'Column A' );
-				is( $etl->get( 'B' ), 'Field2', 'Column B' );
-				is( $etl->get( 'C' ), 'Field3', 'Column C' );
-				is( $etl->get( 'D' ), 'Field4', 'Column D' );
-				is( $etl->get( 'E' ), 'Field5', 'Column E' );
-			};
-			subtest 'By header' => sub {
-				is( $etl->get( 'Header1' ), 'Field1', 'Header 1' );
-				is( $etl->get( 'Header2' ), 'Field2', 'Header 2' );
-				is( $etl->get( 'Header3' ), 'Field3', 'Header 3' );
-				is( $etl->get( 'Header4' ), 'Field4', 'Header 4' );
-				is( $etl->get( 'Header5' ), 'Field5', 'Header 5' );
-			};
-		}
-		my $etl = ETL::Pipeline->new( {
-			constants => {un => 1},
-			input     => ['Excel', iname => 'Excel2007.xlsx'],
-			on_record => \&retrievingData,
-			output    => 'UnitTest',
-			work_in   => 't/DataFiles',
-		} )->process;
-		is( $etl->output->number_of_records, 1, 'All records processed' );
+	my $output = $etl->output->get_record( 0 );
+	subtest 'Field number' => sub {
+		is( $output->{One  }, 'Field1', 'Field 1' );
+		is( $output->{Two  }, 'Field2', 'Field 2' );
+		is( $output->{Three}, 'Field3', 'Field 3' );
+		is( $output->{Four }, 'Field4', 'Field 4' );
+		is( $output->{Five }, 'Field5', 'Field 5' );
 	};
-	subtest 'worksheet' => sub {
-		subtest 'By name' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => [
-					'Excel',
-					iname           => 'Excel2007.xlsx',
-					no_column_names => 1,
-					worksheet       => 'Sheet2',
-				],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			my $record = $etl->output->get_record;
-			is( $record{1}, 'Sheet2', 'Correct sheet' );
-		};
-		subtest 'By regular expression' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => [
-					'Excel',
-					iname           => 'Excel2007.xlsx',
-					no_column_names => 1,
-					worksheet       => qr/t2$/,
-				],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			my $record = $etl->output->get_record;
-			is( $record{1}, 'Sheet2', 'Correct sheet' );
-		};
+	subtest 'Column letter' => sub  {
+		is( $output->{Six  }, 'Field1', 'Column A' );
+		is( $output->{Seven}, 'Field2', 'Column B' );
+		is( $output->{Eight}, 'Field3', 'Column C' );
+		is( $output->{Nine }, 'Field4', 'Column D' );
+		is( $output->{Ten  }, 'Field5', 'Column E' );
 	};
-	subtest 'ETL::Pipeline::Input::File::Table' => sub {
-		subtest 'no_column_names' => sub {
-			sub noColumnNames {
-				my ($etl, $record) = @_;
-
-				return unless $etl->count == 1;
-
-				subtest '$record' => sub {
-					is( $record->{1}, 'Field1', 'Field 1' );
-					is( $record->{2}, 'Field2', 'Field 2' );
-					is( $record->{3}, 'Field3', 'Field 3' );
-					is( $record->{4}, 'Field4', 'Field 4' );
-					is( $record->{5}, 'Field5', 'Field 5' );
-				};
-				subtest 'get' => sub {
-					is( $etl->get( 1 ), 'Field1', 'Field 1' );
-					is( $etl->get( 2 ), 'Field2', 'Field 2' );
-					is( $etl->get( 3 ), 'Field3', 'Field 3' );
-					is( $etl->get( 4 ), 'Field4', 'Field 4' );
-					is( $etl->get( 5 ), 'Field5', 'Field 5' );
-				};
-				subtest 'By column letter' => sub  {
-					is( $etl->get( 'A' ), 'Field1', 'Column A' );
-					is( $etl->get( 'B' ), 'Field2', 'Column B' );
-					is( $etl->get( 'C' ), 'Field3', 'Column C' );
-					is( $etl->get( 'D' ), 'Field4', 'Column D' );
-					is( $etl->get( 'E' ), 'Field5', 'Column E' );
-				};
-				subtest 'By header' => sub {
-					ok( !defined( $etl->get( 'Header1' ) ), 'Header 1' );
-					ok( !defined( $etl->get( 'Header2' ) ), 'Header 2' );
-					ok( !defined( $etl->get( 'Header3' ) ), 'Header 3' );
-					ok( !defined( $etl->get( 'Header4' ) ), 'Header 4' );
-					ok( !defined( $etl->get( 'Header5' ) ), 'Header 5' );
-				};
-			}
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx', no_column_names => 1],
-				on_record => \&noColumnNames,
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( scalar( @{$etl->_alias} ), 0, 'No aliases' );
-		};
-	};
-	subtest 'ETL::Pipeline::Input::File' => sub {
-		subtest 'skipping' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => 1,
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'One row skipped' );
-
-			$etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => sub { shift->{1} =~ m/^Header/ ? 1 : 0 },
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'Code by number skipped headers' );
-
-			$etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => sub { shift->{'A'} =~ m/^Header/ ? 1 : 0 },
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'Code by letter skipped headers' );
-		};
-		subtest 'file' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx'],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->input->file->basename, 'Excel2007.xlsx', 'File path set' );
-		};
+	subtest 'Field name' => sub {
+		is( $output->{Eleven  }, 'Field1', 'Header 1' );
+		is( $output->{Twelve  }, 'Field2', 'Header 2' );
+		is( $output->{Thirteen}, 'Field3', 'Header 3' );
+		is( $output->{Fourteen}, 'Field4', 'Header 4' );
+		is( $output->{Fifteen }, 'Field5', 'Header 5' );
 	};
 };
+subtest 'XLSX file' => sub {
+	my $etl = ETL::Pipeline->new( {
+		input   => ['Excel', path => 'Excel2007.xlsx'],
+		mapping => {
+			One      => 0,
+			Two      => 1,
+			Three    => 2,
+			Four     => 3,
+			Five     => 4,
+			Six      => 'A',
+			Seven    => 'B',
+			Eight    => 'C',
+			Nine     => 'D',
+			Ten      => 'E',
+			Eleven   => 'Header1',
+			Twelve   => 'Header2',
+			Thirteen => 'Header3',
+			Fourteen => 'Header4',
+			Fifteen  => 'Header5',
+		},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->output->number_of_records, 1, 'All records processed' );
 
-subtest 'XLS format' => sub {
-	subtest 'Retrieving data' => sub {
-		sub retrievingData {
-			my ($etl, $record) = @_;
-
-			return unless $etl->count == 1;
-
-			subtest '$record' => sub {
-				is( $record->{1}, 'Field1', 'Field 1' );
-				is( $record->{2}, 'Field2', 'Field 2' );
-				is( $record->{3}, 'Field3', 'Field 3' );
-				is( $record->{4}, 'Field4', 'Field 4' );
-				is( $record->{5}, 'Field5', 'Field 5' );
-			};
-			subtest 'get' => sub {
-				is( $etl->get( 1 ), 'Field1', 'Field 1' );
-				is( $etl->get( 2 ), 'Field2', 'Field 2' );
-				is( $etl->get( 3 ), 'Field3', 'Field 3' );
-				is( $etl->get( 4 ), 'Field4', 'Field 4' );
-				is( $etl->get( 5 ), 'Field5', 'Field 5' );
-			};
-			subtest 'By column letter' => sub  {
-				is( $etl->get( 'A' ), 'Field1', 'Column A' );
-				is( $etl->get( 'B' ), 'Field2', 'Column B' );
-				is( $etl->get( 'C' ), 'Field3', 'Column C' );
-				is( $etl->get( 'D' ), 'Field4', 'Column D' );
-				is( $etl->get( 'E' ), 'Field5', 'Column E' );
-			};
-			subtest 'By header' => sub {
-				is( $etl->get( 'Header1' ), 'Field1', 'Header 1' );
-				is( $etl->get( 'Header2' ), 'Field2', 'Header 2' );
-				is( $etl->get( 'Header3' ), 'Field3', 'Header 3' );
-				is( $etl->get( 'Header4' ), 'Field4', 'Header 4' );
-				is( $etl->get( 'Header5' ), 'Field5', 'Header 5' );
-			};
-		}
-		my $etl = ETL::Pipeline->new( {
-			constants => {un => 1},
-			input     => ['Excel', iname => 'Excel2003.xls'],
-			on_record => \&retrievingData,
-			output    => 'UnitTest',
-			work_in   => 't/DataFiles',
-		} )->process;
-		is( $etl->output->number_of_records, 1, 'All records processed' );
+	my $output = $etl->output->get_record( 0 );
+	subtest 'Field number' => sub {
+		is( $output->{One  }, 'Field1', 'Field 1' );
+		is( $output->{Two  }, 'Field2', 'Field 2' );
+		is( $output->{Three}, 'Field3', 'Field 3' );
+		is( $output->{Four }, 'Field4', 'Field 4' );
+		is( $output->{Five }, 'Field5', 'Field 5' );
 	};
-	subtest 'worksheet' => sub {
-		subtest 'By name' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => [
-					'Excel',
-					iname           => 'Excel2003.xls',
-					no_column_names => 1,
-					worksheet       => 'Sheet2',
-				],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			my $record = $etl->output->get_record;
-			is( $record{1}, 'Sheet2', 'Correct sheet' );
-		};
-		subtest 'By regular expression' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => [
-					'Excel',
-					iname           => 'Excel2003.xls',
-					no_column_names => 1,
-					worksheet       => qr/t2$/,
-				],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			my $record = $etl->output->get_record;
-			is( $record{1}, 'Sheet2', 'Correct sheet' );
-		};
+	subtest 'Column letter' => sub  {
+		is( $output->{Six  }, 'Field1', 'Column A' );
+		is( $output->{Seven}, 'Field2', 'Column B' );
+		is( $output->{Eight}, 'Field3', 'Column C' );
+		is( $output->{Nine }, 'Field4', 'Column D' );
+		is( $output->{Ten  }, 'Field5', 'Column E' );
 	};
-	subtest 'ETL::Pipeline::Input::File::Table' => sub {
-		subtest 'no_column_names' => sub {
-			sub noColumnNames {
-				my ($etl, $record) = @_;
-
-				return unless $etl->count == 1;
-
-				subtest '$record' => sub {
-					is( $record->{1}, 'Field1', 'Field 1' );
-					is( $record->{2}, 'Field2', 'Field 2' );
-					is( $record->{3}, 'Field3', 'Field 3' );
-					is( $record->{4}, 'Field4', 'Field 4' );
-					is( $record->{5}, 'Field5', 'Field 5' );
-				};
-				subtest 'get' => sub {
-					is( $etl->get( 1 ), 'Field1', 'Field 1' );
-					is( $etl->get( 2 ), 'Field2', 'Field 2' );
-					is( $etl->get( 3 ), 'Field3', 'Field 3' );
-					is( $etl->get( 4 ), 'Field4', 'Field 4' );
-					is( $etl->get( 5 ), 'Field5', 'Field 5' );
-				};
-				subtest 'By column letter' => sub  {
-					is( $etl->get( 'A' ), 'Field1', 'Column A' );
-					is( $etl->get( 'B' ), 'Field2', 'Column B' );
-					is( $etl->get( 'C' ), 'Field3', 'Column C' );
-					is( $etl->get( 'D' ), 'Field4', 'Column D' );
-					is( $etl->get( 'E' ), 'Field5', 'Column E' );
-				};
-				subtest 'By header' => sub {
-					ok( !defined( $etl->get( 'Header1' ) ), 'Header 1' );
-					ok( !defined( $etl->get( 'Header2' ) ), 'Header 2' );
-					ok( !defined( $etl->get( 'Header3' ) ), 'Header 3' );
-					ok( !defined( $etl->get( 'Header4' ) ), 'Header 4' );
-					ok( !defined( $etl->get( 'Header5' ) ), 'Header 5' );
-				};
-			}
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2003.xls', no_column_names => 1],
-				on_record => \&noColumnNames,
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( scalar( @{$etl->_alias} ), 0, 'No aliases' );
-		};
+	subtest 'Field name' => sub {
+		is( $output->{Eleven  }, 'Field1', 'Header 1' );
+		is( $output->{Twelve  }, 'Field2', 'Header 2' );
+		is( $output->{Thirteen}, 'Field3', 'Header 3' );
+		is( $output->{Fourteen}, 'Field4', 'Header 4' );
+		is( $output->{Fifteen }, 'Field5', 'Header 5' );
 	};
-	subtest 'ETL::Pipeline::Input::File' => sub {
-		subtest 'skipping' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2003.xls', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => 1,
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'One row skipped' );
+};
+subtest 'worksheet' => sub {
+	my $etl = ETL::Pipeline->new( {
+		input   => ['Excel', path => 'Excel2007.xlsx', no_column_names => 1, worksheet => 'Sheet2'],
+		mapping => {1 => 'A'},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{1}, 'Sheet2', 'By name' );
 
-			$etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2003.xls', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => sub { shift->{1} =~ m/^Header/ ? 1 : 0 },
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'Code by number skipped headers' );
+	my $etl = ETL::Pipeline->new( {
+		input   => ['Excel', path => 'Excel2007.xlsx', no_column_names => 1, worksheet => qr/t2$/],
+		mapping => {1 => 'A'},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{1}, 'Sheet2', 'By regular expression' );
+};
+subtest 'no_column_names' => sub {
+	my $etl = ETL::Pipeline->new( {
+		input   => ['Excel', path => 'Excel2007.xlsx', no_column_names => 1],
+		mapping => {
+			One      => 0,
+			Two      => 1,
+			Three    => 2,
+			Four     => 3,
+			Five     => 4,
+			Six      => 'A',
+			Seven    => 'B',
+			Eight    => 'C',
+			Nine     => 'D',
+			Ten      => 'E',
+			Eleven   => 'Header1',
+			Twelve   => 'Header2',
+			Thirteen => 'Header3',
+			Fourteen => 'Header4',
+			Fifteen  => 'Header5',
+		},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->has_aliases, 5, 'No headers' );
 
-			$etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2007.xlsx', no_column_names => 1],
-				output    => 'UnitTest',
-				skipping  => sub { shift->{'A'} =~ m/^Header/ ? 1 : 0 },
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->output->number_of_records, 1, 'Code by letter skipped headers' );
-		};
-		subtest 'file' => sub {
-			my $etl = ETL::Pipeline->new( {
-				constants => {un => 1},
-				input     => ['Excel', iname => 'Excel2003.xls'],
-				output    => 'UnitTest',
-				work_in   => 't/DataFiles',
-			} )->process;
-			is( $etl->input->file->basename, 'Excel2003.xls', 'File path set' );
-		};
+	my $output = $etl->output->get_record( 0 );
+	subtest 'Field number' => sub {
+		is( $output->{One  }, 'Header1', 'Field 1' );
+		is( $output->{Two  }, 'Header2', 'Field 2' );
+		is( $output->{Three}, 'Header3', 'Field 3' );
+		is( $output->{Four }, 'Header4', 'Field 4' );
+		is( $output->{Five }, 'Header5', 'Field 5' );
 	};
+	subtest 'Column letter' => sub  {
+		is( $output->{Six  }, 'Header1', 'Column A' );
+		is( $output->{Seven}, 'Header2', 'Column B' );
+		is( $output->{Eight}, 'Header3', 'Column C' );
+		is( $output->{Nine }, 'Header4', 'Column D' );
+		is( $output->{Ten  }, 'Header5', 'Column E' );
+	};
+	subtest 'Field name' => sub {
+		is( $output->{Eleven  }, undef, 'Header 1' );
+		is( $output->{Twelve  }, undef, 'Header 2' );
+		is( $output->{Thirteen}, undef, 'Header 3' );
+		is( $output->{Fourteen}, undef, 'Header 4' );
+		is( $output->{Fifteen }, undef, 'Header 5' );
+	};
+};
+subtest 'skipping' => sub {
+	my $etl = ETL::Pipeline->new( {
+		input => ['Excel',
+			path            => 'Excel2007.xlsx',
+			no_column_names => 1,
+			skipping        => 1,
+		],
+		mapping => {One => 'A'},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->output->number_of_records, 1, 'Number' );
+
+	$etl = ETL::Pipeline->new( {
+		input => ['Excel',
+			path => 'Excel2007.xlsx',
+			no_column_names => 1,
+			skipping => sub { shift->{1} =~ m/^Header/ ? 1 : 0 },
+		],
+		mapping => {One => 'A'},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->output->number_of_records, 1, 'Code, field number' );
+
+	$etl = ETL::Pipeline->new( {
+		input => ['Excel',
+			path => 'Excel2007.xlsx',
+			no_column_names => 1,
+			skipping => sub { shift->{'A'} =~ m/^Header/ ? 1 : 0 },
+		],
+		mapping => {One => 'A'},
+		output  => 'UnitTest',
+		work_in => 't/DataFiles',
+	} )->process;
+	is( $etl->output->number_of_records, 1, 'Code, column letter' );
 };
 
 done_testing();

@@ -96,7 +96,7 @@ sub run {
 	my ($self, $etl) = @_;
 
 	my $csv = Text::CSV->new( $self->_csv_options );
-	my $path = $self->file;
+	my $path = $self->path;
 
 	# Open the file.
 	my $handle = $path->openr();

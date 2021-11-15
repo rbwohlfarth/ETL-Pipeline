@@ -108,7 +108,7 @@ sub run {
 	# Open the file.
 
 	# Create the correct workbook object based on the file format.
-	my $path = $self->file;
+	my $path = $self->path;
 	my $workbook;
 
 	if ("$path" =~ m/\.xls$/i) {
