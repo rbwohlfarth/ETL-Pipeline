@@ -1105,8 +1105,8 @@ my $log = sub {
 
 	if ($type eq 'START') {
 		my $name;
-		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
-			$name = $etl->_input->file->relative( $etl->_work_in );
+		if ($etl->_input->can( 'path' )) {
+			$name = $etl->_input->path->relative( $etl->_work_in );
 		} else {
 			$name = ref( $etl->_input );
 			$name =~ s/^ETL::Pipeline::Input:://;
@@ -1114,8 +1114,8 @@ my $log = sub {
 		say "Processing '$name'...";
 	} elsif ($type eq 'END') {
 		my $name;
-		if ($etl->_input->does( 'ETL::Pipeline::Input::File' )) {
-			$name = $etl->_input->file->relative( $etl->_work_in );
+		if ($etl->_input->can( 'path' )) {
+			$name = $etl->_input->path->relative( $etl->_work_in );
 		} else {
 			$name = ref( $etl->_input );
 			$name =~ s/^ETL::Pipeline::Input:://;

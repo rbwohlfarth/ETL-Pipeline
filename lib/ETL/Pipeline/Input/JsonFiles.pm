@@ -83,12 +83,10 @@ sub run {
 	my ($self, $etl) = @_;
 
 	my $parser = JSON->new->utf8;
-
-	my $path = $self->file;
-	while (defined $path) {
+	while (my $path = $self->next_path( $etl )) {
 		my $text = $path->slurp;	# Force scalar context, otherwise slurp breaks it into lines.
 		my $json = $parser->decode( $text );
-		die "JSON file '$path', unable to parse" unless defined $json;
+		croak "JSON file '$path', unable to parse" unless defined $json;
 
 		# Find the node that is an array of records. This comes from the
 		# "records_at" attribute.
@@ -96,18 +94,12 @@ sub run {
 		$list = $list->{$_} foreach (grep { $_ ne '' } split '/', $self->records_at);
 		$list = [$list] unless ref( $list ) eq 'ARRAY';
 
-		# Process each record. And that's it.
-		# This code sends the JSON text representation of the record as part
-		# of the record ID. There isn't a way to figure out which line in the
-		# file a record comes from. I thought this would help us search the
-		# file manually when there are problems.
+		# Process each record. And that's it. The record is a Perl data
+		# structure corresponding with the JSON structure.
 		foreach my $record (@$list) {
 			my $output = $parser->encode( $record );
-			$etl->record( $record, "JSON file '$path', $output" );
+			$etl->record( $record );
 		}
-
-		# Get the next matching file.
-		$path = $self->next_file;
 	}
 }
 

@@ -47,7 +47,7 @@ use 5.014000;
 
 use Carp;
 use Moose::Role;
-use MooseX::Types::Path::Class qw/Dir File/;
+use MooseX::Types::Path::Class qw/File/;
 use Path::Class::Rule;
 
 

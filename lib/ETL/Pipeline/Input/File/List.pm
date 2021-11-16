@@ -11,22 +11,34 @@ ETL::Pipeline::Input::File::List - Role for input sources with multiple files
   with 'ETL::Pipeline::Input';
   with 'ETL::Pipeline::Input::File::List';
   ...
+  sub run {
+    my ($self, $etl) = @_;
+    ...
+	while (my $path = $self->next_path( $etl )) {
+	  ...
+	}
+  }
 
 =head1 DESCRIPTION
 
-This is a role used by input sources. It defines standard attributes and
-methods for processing multiple input files of the same format. The role uses
-L<Path::Class::Rule> to search for matching files.
+This is a role used by input sources. It defines everything you need to process
+multiple input files of the same format. The role uses L<Path::Class::Rule> to
+locate matching files.
+
+Your input source calls the L</next_path> method in a loop. That's it. The role
+automatically processes constructor arguments that match L<Path::Class::Rule>
+criteria. It then builds a list of matching files the first time your code calls
+L</next_path>.
 
 =cut
 
 package ETL::Pipeline::Input::File::List;
-use Moose;
 
 use 5.014000;
+
 use Carp;
-use MooseX::Types::Path::Class qw/Dir/;
-use Path::Class;
+use Moose::Role;
+use MooseX::Types::Path::Class;
 use Path::Class::Rule;
 
 
@@ -59,89 +71,109 @@ sub BUILD {
 	my $self = shift;
 	my $arguments = shift;
 
-	# Configure the file search.
-	my @criteria = grep {
-		$_ ne 'file'
-		&& !$self->meta->has_attribute( $_ )
-	} keys %$arguments;
-	my $search = Path::Class::Rule->new;
-	foreach my $name (@criteria) {
-		my $value = $arguments->{$name};
-		eval "\$search->$name( \$value )";
-		croak $@ unless $@ eq '';
+	my %criteria;
+	my $rule = Path::Class::Rule->new;
+	foreach (my ($name, $value) = each %$arguments) {
+		$criteria{$name} = $value if $name ne 'file' && $rule->can( $name );
 	}
-	$search->file;
-	$self->_iterator( $search->iter( $self->data_in ) );
+	$self->_criteria( \%criteria );
 }
 
 
-=head3 data_in
-
-Optional. Path where data files reside. Defaults to L<ETL::Pipeline/data_in>.
-
-The default is actually set inside L<ETL::Pipeline/run> when it instantiates
-the input source. If the script doesn't set B<data_in>, then
-L<ETL::Pipeline/run> adds it.
-
-=cut
-
-has 'data_in' => (
-	coerce => 1,
-	is     => 'ro',
-	isa    => Dir,
-);
-
-
-=head3 file
+=head3 path
 
 L<Path::Class::File> object for the currently selected file. This is first file
-that matches the criteria. When you call L</next_file>, it finds the next match
-and sets B<file>.
+that matches the criteria. When you call L</next_path>, it finds the next match
+and sets B<path>.
 
-So B<file> always points to the current file. It should be used by your input
+So B<path> always points to the current file. It should be used by your input
 source class as the file name.
 
   # Inside the input source class...
-  $self->next_file();
-  open my $io, '<', $self->file;
+  $self->next_path();
+  open my $io, '<', $self->path;
 
 C<undef> means no more matches.
 
 =cut
 
-has 'file' => (
+has 'path' => (
 	coerce => 1,
 	is     => 'rw',
-	isa    => Maybe[File],
+	isa    => 'Path::Class::File|Undef',
 );
 
 
 =head2 Methods
 
-=head3 next_file
+=head3 next_path
 
-Looks for the next match in the list and sets the L</file> attribute. It also
-returns the matching file.
+Looks for the next match in the list and sets the L</path> attribute. It also
+returns the matching path. Your input source class should setup a loop calling
+this method. Inside the loop, process each file.
 
-Your input source class should call this method when it reaches the end of each
-file. This moves to the next file in the list.
+B<next_path> takes one parameter - the L<ETL::Pipeline> object. The method
+matches files in L<ETL::Pipeline/data_in>.
 
 =cut
 
-sub next_file {
-	my ($self) = @_;
-	return $self->file( $self->_iterator->() );
+sub next_path {
+	my ($self, $etl) = @_;
+
+	if (defined $self->_file_list) {
+		# Get the next file from the list. We'll return "undef" if you query
+		# beyond the end of the list.
+		$self->_next_file;
+	} else {
+		# Build the list the first time through.
+		my $rule = Path::Class::Rule->new->file;
+		foreach my $pair ($self->_search_criteria) {
+			my $name  = $pair->[0];
+			my $value = $pair->[1];
+
+			eval "\$rule = \$rule->$name( \$value )";
+			croak $@ unless $@ eq '';
+		}
+		my @matches = $rule->all( $etl->data_in );
+		$self->_file_list( \@matches );
+	}
+	return $self->path( $self->_file( $self->_file_index ) );
 }
 
 
 #-------------------------------------------------------------------------------
 # Internal methods and attributes
 
-# "Path::Class::Rule" creates an iterator that returns each file in turn. This
-# attribute holds it for "next_record".
-has '_iterator' => (
-	is  => 'rw',
-	isa => 'CodeRef',
+# Search criteria for the file list. I capture the criteria from the constructor
+# but don't build the iterator until the loop kicks off. Since the search
+# depends on "data_in", this allows the user to setup the pipeline in whatever
+# order they want and it will do the right thing.
+has '_criteria' => (
+	handles => {_search_criteria => 'kv'},
+	is      => 'rw',
+	isa     => 'HashRef[Any]',
+	traits  => [qw/Hash/],
+);
+
+
+# Index into "_file_list" for the current file. This counter is used to loop
+# through the list by calling "next_path".
+has '_file_index' => (
+	default => 0,
+	handles => {_next_file => 'inc'},
+	is      => 'ro',
+	isa     => 'Int',
+	traits  => [qw/Counter/],
+);
+
+
+# List of files that match the search criteria. The list is built at the
+# beginning of the pipeline. So your pipeline can't add files on the fly.
+has '_file_list' => (
+	handles => {_file => 'get'},
+	is      => 'rw',
+	isa     => 'ArrayRef[Any]',
+	traits  => [qw/Array/],
 );
 
 

@@ -82,8 +82,7 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $etl) = @_;
 
-	my $path = $self->file;
-	while (defined $path) {
+	while (my $path = $self->next_path( $etl )) {
 		# Load the XML file and turn it into a Perl hash.
 		my $parser = XML::Bare->new( file => "$path" );
 		my $xml = $parser->parse;
@@ -99,9 +98,6 @@ sub run {
 			my $char  = $record->{_pos};
 			$etl->record( $record, "XML file '$path', record $count, file character $char" );
 		}
-
-		# Get the next matching file.
-		$path = $self->next_file;
 	}
 }
 
