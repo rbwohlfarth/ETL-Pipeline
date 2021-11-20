@@ -29,6 +29,7 @@ requires 'XML::Bare';
 
 test_requires 'Test::More' => '0.88';
 test_requires 'Test::Pod'  => '1.44';
+test_requires 'Try::Tiny';
 
 auto_manifest;
 auto_install;

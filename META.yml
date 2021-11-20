@@ -6,6 +6,7 @@ build_requires:
   ExtUtils::MakeMaker: 6.59
   Test::More: '0.88'
   Test::Pod: '1.44'
+  Try::Tiny: 0
 configure_requires:
   ExtUtils::MakeMaker: 6.59
 distribution_type: module

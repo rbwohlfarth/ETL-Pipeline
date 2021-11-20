@@ -80,24 +80,21 @@ L<ETL::Pipeline::Input::File::List> instead.
 
 =cut
 
+# BUILD in the consuming class will override this one. I add a fake BUILD in
+# case the class doesn't have one. The method modifier then runs the code to
+# extract search criteria from the constructor arguments. The modifier will
+# run even if the consuming class has its own BUILD.
+# https://www.perlmonks.org/?node_id=837369
 sub BUILD {}
-
 
 after 'BUILD' => sub {
 	my $self = shift;
 	my $arguments = shift;
 
-	# Build and cache a rule object to find the input file. A script may define
-	# the input source BEFORE it sets "work_in". Doing it this way guarantees
-	# that we always use the most current "work_in".
-	my $rule = Path::Class::Rule->new->file;
-	foreach (my ($name, $value) = each %$arguments) {
-		if ($name ne 'file' && $rule->can( $name )) {
-			eval "\$rule = \$rule->$name( \$value )";
-			confess $@ unless $@ eq '';
-		}
+	while (my ($name, $value) = each %$arguments) {
+		$self->_add_criteria( $name, $value )
+			if $name ne 'file' && Path::Class::Rule->can( $name );
 	}
-	$self->_rule( $rule );
 };
 
 
@@ -110,16 +107,24 @@ before 'run' => sub {
 		$self->_set_path( $self->path->absolute( $etl->data_in ) )
 			if $self->path->is_relative;
 	} else {
-		# Find the first file that matches all of the criteria.
-		my $iterator = $self->_rule->iter( $etl->data_in );
-		my $potential = $iterator->();
+		# Build the search rule from the criteria passed to the constructor.
+		my $rule = Path::Class::Rule->new->file;
+		foreach my $pair ($self->_search_criteria) {
+			my $name  = $pair->[0];
+			my $value = $pair->[1];
 
-		if (!defined( $potential )) {
+			eval "\$rule = \$rule->$name( \$value )";
+			croak $@ unless $@ eq '';
+		}
+		my @matches = $rule->all( $etl->data_in );
+
+		# Find the first file that matches all of the criteria.
+		if (scalar( @matches ) < 1) {
 			croak 'No files matched the search criteria';
-		} elsif (!-r $potential) {
-			croak "You do not have permission to read '$potential'";
+		} elsif (!-r $matches[0]) {
+			croak "You do not have permission to read '$matches[0]'";
 		} else {
-			$self->_set_path( $potential );
+			$self->_set_path( $matches[0] );
 		}
 	}
 };
@@ -135,10 +140,10 @@ Once the object has been created, this attribute holds the file that matched
 search criteria. It should be used by your input source class as the file name.
 
   # File inside of "data_in"...
-  $etl->input( 'Excel', file => 'Data.xlsx' );
+  $etl->input( 'Excel', path => 'Data.xlsx' );
 
   # Absolute path name...
-  $etl->input( 'Excel', file => 'C:\Data.xlsx' );
+  $etl->input( 'Excel', path => 'C:\Data.xlsx' );
 
   # Inside the input source class...
   open my $io, '<', $self->path;
@@ -192,9 +197,16 @@ has 'skipping' => (
 #-------------------------------------------------------------------------------
 # Internal methods and attributes
 
-has '_rule' => (
-	is  => 'rw',
-	isa => 'Path::Class::Rule',
+# Search criteria for the file list. I capture the criteria from the constructor
+# but don't build the iterator until the loop kicks off. Since the search
+# depends on "data_in", this allows the user to setup the pipeline in whatever
+# order they want and it will do the right thing.
+has '_criteria' => (
+	default => sub { {} },
+	handles => {_add_criteria => 'set', _search_criteria => 'kv'},
+	is      => 'ro',
+	isa     => 'HashRef[Any]',
+	traits  => [qw/Hash/],
 );
 
 

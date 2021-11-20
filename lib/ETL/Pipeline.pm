@@ -341,7 +341,7 @@ has '_input' => (
 sub input {
 	my $self = shift;
 
-	return $self->_input( $self->_object_of_class( 'Input', @_ ) ) if (scalar @_);
+	return $self->_input( $self->_object_of_class( 'Input', @_ ) ) if scalar @_;
 	return $self->_input;
 }
 
@@ -494,7 +494,7 @@ has '_output' => (
 sub output {
 	my $self = shift;
 
-	return $self->_output( $self->_object_of_class( 'Output', @_ ) ) if (scalar @_);
+	return $self->_output( $self->_object_of_class( 'Output', @_ ) ) if scalar @_;
 	return $self->_output;
 }
 
@@ -1158,10 +1158,11 @@ sub _object_of_class {
 	;
 
 	my $class = shift @arguments;
-	if ($class =~ m/^\+/) {
-		$class =~ s/^\+//;
-	} elsif ($class !~ m/^ETL::Pipeline::$action/) {
-		$class = "ETL::Pipeline::${action}::$class";
+	if (substr( $class, 0, 1 ) eq '+') {
+		$class = substr( $class, 1 );
+	} else {
+		my $base = "ETL::Pipeline::$action";
+		$class = "${base}::$class" if substr( $class, 0, length( $base ) ) ne $base;
 	}
 
 	my %attributes = @arguments;
