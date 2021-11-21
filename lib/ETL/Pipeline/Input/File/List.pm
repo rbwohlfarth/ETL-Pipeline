@@ -67,17 +67,22 @@ wildcards and regular expressions, and is case insensitive.
 
 =cut
 
-sub BUILD {
+# BUILD in the consuming class will override this one. I add a fake BUILD in
+# case the class doesn't have one. The method modifier then runs the code to
+# extract search criteria from the constructor arguments. The modifier will
+# run even if the consuming class has its own BUILD.
+# https://www.perlmonks.org/?node_id=837369
+sub BUILD {}
+
+after 'BUILD' => sub {
 	my $self = shift;
 	my $arguments = shift;
 
-	my %criteria;
-	my $rule = Path::Class::Rule->new;
-	foreach (my ($name, $value) = each %$arguments) {
-		$criteria{$name} = $value if $name ne 'file' && $rule->can( $name );
+	while (my ($name, $value) = each %$arguments) {
+		$self->_add_criteria( $name, $value )
+			if $name ne 'file' && Path::Class::Rule->can( $name );
 	}
-	$self->_criteria( \%criteria );
-}
+};
 
 
 =head3 path
@@ -120,7 +125,7 @@ matches files in L<ETL::Pipeline/data_in>.
 sub next_path {
 	my ($self, $etl) = @_;
 
-	if (defined $self->_file_list) {
+	if ($self->_list_built) {
 		# Get the next file from the list. We'll return "undef" if you query
 		# beyond the end of the list.
 		$self->_next_file;
@@ -134,8 +139,8 @@ sub next_path {
 			eval "\$rule = \$rule->$name( \$value )";
 			croak $@ unless $@ eq '';
 		}
-		my @matches = $rule->all( $etl->data_in );
-		$self->_file_list( \@matches );
+		$self->_matches( $rule->all( $etl->data_in ) );
+		$self->_list_built( 1 );
 	}
 	return $self->path( $self->_file( $self->_file_index ) );
 }
@@ -149,8 +154,9 @@ sub next_path {
 # depends on "data_in", this allows the user to setup the pipeline in whatever
 # order they want and it will do the right thing.
 has '_criteria' => (
-	handles => {_search_criteria => 'kv'},
-	is      => 'rw',
+	default => sub { {} },
+	handles => {_add_criteria => 'set', _search_criteria => 'kv'},
+	is      => 'ro',
 	isa     => 'HashRef[Any]',
 	traits  => [qw/Hash/],
 );
@@ -170,10 +176,21 @@ has '_file_index' => (
 # List of files that match the search criteria. The list is built at the
 # beginning of the pipeline. So your pipeline can't add files on the fly.
 has '_file_list' => (
-	handles => {_file => 'get'},
-	is      => 'rw',
+	default => sub { [] },
+	handles => {_file => 'get', _matches => 'push'},
+	is      => 'ro',
 	isa     => 'ArrayRef[Any]',
 	traits  => [qw/Array/],
+);
+
+
+# Since the list always exists, I needed a way to tell the difference between
+# "no matches" and "not built yet". That way, "next_record" can build the list
+# on the first pass.
+has '_list_built' => (
+	default => 0,
+	is      => 'rw',
+	isa     => 'Bool',
 );
 
 
