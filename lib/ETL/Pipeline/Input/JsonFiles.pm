@@ -6,12 +6,12 @@ ETL::Pipeline::Input::JsonFiles - Process JSON content from individual files
 
 =head1 SYNOPSIS
 
-  use Data::ETL;
-  working_folder search_in => 'C:\Data', find_folder => qr/Ficticious/;
-  extract_from 'JsonFiles', records_at => '/json';
-  transform_as ExternalID => '/File/A', PatientName => '/File/Patient';
-  load_into 'Access', file => 'review.accdb';
-  run;
+  use ETL::Pipeline;
+  ETL::Pipeline->new( {
+    input   => ['JsonFiles', iname => qr/\.json$/i, records_at => '/json'],
+    mapping => {First => '/File/A', Second => '/File/Patient'},
+    output  => ['UnitTest']
+  } )->process;
 
 =head1 DESCRIPTION
 
@@ -27,6 +27,7 @@ use 5.014000;
 use warnings;
 
 use Carp;
+use Data::DPath qw/dpath/;
 use JSON;
 use Moose;
 
@@ -42,7 +43,7 @@ our $VERSION = '2.00';
 
 Optional. The path to the record nodes, such as C</json/Record>. The
 last item in the list is the name of the root for each individual record. The
-default is B</json> - one record in the file.
+default is B</> - one record in the file.
 
 You might use this attribute in two cases...
 
@@ -53,6 +54,8 @@ You might use this attribute in two cases...
 =item 2. Shorthand to leave off extra nodes from every path. One record per file, but you don't want extra path parts on the beginning of every field.
 
 =back
+
+This can be any value accepted by L<Data::DPath>.
 
 =cut
 
@@ -90,16 +93,16 @@ sub run {
 
 		# Find the node that is an array of records. This comes from the
 		# "records_at" attribute.
-		my $list = $json;
-		$list = $list->{$_} foreach (grep { $_ ne '' } split '/', $self->records_at);
-		$list = [$list] unless ref( $list ) eq 'ARRAY';
+		#
+		# I assume that records are field/value pairs - a Perl hash. So if the
+		# DPath matches an array, it is an array of record. I need to
+		# de-reference that list to get to the actual records.
+		my @matches = dpath( $self->records_at )->match( $json );
+		my $list = (scalar( @matches ) == 1 && ref( $matches[0] ) eq 'ARRAY') ? $matches[0] : \@matches;
 
 		# Process each record. And that's it. The record is a Perl data
 		# structure corresponding with the JSON structure.
-		foreach my $record (@$list) {
-			my $output = $parser->encode( $record );
-			$etl->record( $record );
-		}
+		$etl->record( $_ ) foreach (@$list);
 	}
 }
 

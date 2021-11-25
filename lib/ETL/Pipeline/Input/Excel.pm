@@ -177,10 +177,11 @@ sub run {
 
 	# Load the data.
 	foreach my $row ($start .. $worksheet->{MaxRow}) {
+		$self->position( "row " . ($row + 1) );
+
 		my $record = {};
-		foreach my $column ($worksheet->{MinCol} .. $worksheet->{MaxCol}) {
-			$record->{$column} = $cells->[$row][$column]->value;
-		}
+		$record->{$_} = $cells->[$row][$_]->value
+			foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
 		$etl->record( $record );
 	}
 }

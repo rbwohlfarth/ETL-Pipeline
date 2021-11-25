@@ -27,6 +27,7 @@ use 5.014000;
 use warnings;
 
 use Carp;
+use Data::DPath qw/dpath/;
 use Moose;
 use XML::Bare;
 
@@ -43,6 +44,9 @@ our $VERSION = '3.00';
 Required. The path to the record nodes, such as C</XMLDATA/Root/Record>. The
 last item in the list is the name of the root for each individual record. The
 code loops over all of these nodes.
+
+This can be any value accepted by L<Data::DPath>. Fortunately, L<Data::Dpath>
+takes paths that look like XPath for XML.
 
 =cut
 
@@ -72,22 +76,27 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $etl) = @_;
 
-	my $path = $self->file;
+	my $path = $self->path;
 
 	# Load the XML file and turn it into a Perl hash.
 	my $parser = XML::Bare->new( file => "$path" );
 	my $xml = $parser->parse;
 
-	# Find the node that is an array of records.
-	my $list = $xml;
-	$list = $list->{$_} foreach (split '/', $self->records_at);
-	$list = [$list] unless ref( $list ) eq 'ARRAY';
+	# Find the node that is an array of records. dpath should return a list with
+	# one array reference. And that array has the actual records. But I check,
+	# just in case your XML is structured a little differently.
+	#
+	# XML should generate hashes - field/value pairs. In theory, there might be
+	# an XML file that sends back a single record as an array reference. Not
+	# likely when transfering data.
+	my @matches = dpath( $self->records_at )->match( $xml );
+	my $list = (scalar( @matches ) == 1 && ref( $matches[0] ) eq 'ARRAY') ? $matches[0] : \@matches;
 
 	# Process each record. And that's it.
 	foreach my $record (@$list) {
-		my $count = $record->{_i};
-		my $char  = $record->{_pos};
-		$etl->record( $record, "XML file '$path', record $count, file character $char" );
+		my $char = $record->{_pos};
+		$self->position( "file character $char" );
+		$etl->record( $record );
 	}
 }
 

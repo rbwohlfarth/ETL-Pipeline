@@ -118,7 +118,19 @@ our $VERSION = '3.00';
 
 =head1 METHODS & ATTRIBUTES
 
-=head3 run
+=head3 path (optional)
+
+If you define this, the standard logging will include it. The attribute is
+named for file inputs. But it can return any value that is meaningful to your
+users.
+
+=head3 position (optional)
+
+If you define this, the standard logging includes it with error or informational
+messages. It can be any value that helps users locate the correct place to
+troubleshoot.
+
+=head3 run (required)
 
 You define this method in the consuming class. It should open the file, read
 each record, call L<ETL::Pipeline/record> after each record, and close the file.

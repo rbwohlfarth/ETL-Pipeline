@@ -103,9 +103,38 @@ C<undef> means no more matches.
 =cut
 
 has 'path' => (
-	coerce => 1,
-	is     => 'rw',
-	isa    => 'Path::Class::File|Undef',
+	coerce  => 1,
+	is      => 'rw',
+	isa     => 'Path::Class::File|Undef',
+	trigger => \&_path_trigger,
+);
+
+
+sub _path_trigger {
+	my ($self, $old, $new) = @_;
+
+	if (defined $new) {
+		my $base = $new->basename;
+		$self->position( "file $base" );
+	} else { $self->position( '' ); }
+}
+
+
+=head3 position
+
+A string used in error messages with the current file name. The value is set
+automatically by L</next_path>. It is used by the standard logging. See
+L<ETL::Pipeline/$ETL::Pipeline::log>.
+
+The consuming class can append extra information, such as character positions,
+by setting this attribute.
+
+=cut
+
+has 'position' => (
+	default => '',
+	is      => 'rw',
+	isa     => 'Str',
 );
 
 
@@ -142,7 +171,11 @@ sub next_path {
 		$self->_matches( $rule->all( $etl->data_in ) );
 		$self->_list_built( 1 );
 	}
-	return $self->path( $self->_file( $self->_file_index ) );
+
+	# Set "position" to something more readable.
+	my $file = $self->path( $self->_file( $self->_file_index ) );
+	$self->position( 'file ' . $file->relative( $etl->work_in ) ) if defined $file;
+	return $file;
 }
 
 

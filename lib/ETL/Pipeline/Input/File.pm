@@ -14,20 +14,20 @@ ETL::Pipeline::Input::File - Role for file based input sources
 
   # In the ETL::Pipeline script...
   ETL::Pipeline->new( {
-    work_in   => {search => 'C:\Data', find => qr/Ficticious/},
-    input     => ['Excel', iname => qr/\.xlsx?$/             ],
-    mapping   => {Name => 'A', Address => 'B', ID => 'C'     },
-    constants => {Type => 1, Information => 'Demographic'    },
-    output    => ['SQL', table => 'NewData'                  ],
+    work_in   => {root => 'C:\Data', iname => qr/Ficticious/},
+    input     => ['Excel', iname => qr/\.xlsx?$/            ],
+    mapping   => {Name => 'A', Address => 'B', ID => 'C'    },
+    constants => {Type => 1, Information => 'Demographic'   },
+    output    => ['SQL', table => 'NewData'                 ],
   } )->process;
 
   # Or with a specific file...
   ETL::Pipeline->new( {
-    work_in   => {search => 'C:\Data', find => qr/Ficticious/},
-    input     => ['Excel', iname => 'ExportedData.xlsx'      ],
-    mapping   => {Name => 'A', Address => 'B', ID => 'C'     },
-    constants => {Type => 1, Information => 'Demographic'    },
-    output    => ['SQL', table => 'NewData'                  ],
+    work_in   => {root => 'C:\Data', iname => qr/Ficticious/},
+    input     => ['Excel', iname => 'ExportedData.xlsx'     ],
+    mapping   => {Name => 'A', Address => 'B', ID => 'C'    },
+    constants => {Type => 1, Information => 'Demographic'   },
+    output    => ['SQL', table => 'NewData'                 ],
   } )->process;
 
 =head1 DESCRIPTION
@@ -155,6 +155,24 @@ has 'path' => (
 	is     => 'ro',
 	isa    => File,
 	writer => '_set_path',
+);
+
+
+=head3 position
+
+The position of the current record in the file. This is optional. The consuming
+class may set this value in its L<run|ETL::Pipeline::Input/run> method. It can
+be any string that you want.
+
+The position is used by the standard logging. See
+L<ETL::Pipeline/$ETL::Pipeline::log>.
+
+=cut
+
+has 'position' => (
+	default => '',
+	is      => 'rw',
+	isa     => 'Str',
 );
 
 

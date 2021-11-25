@@ -671,10 +671,10 @@ C<iname> is the most common one that I use. It matches the file name, supports
 wildcards and regular expressions, and is case insensitive.
 
   # Search using a regular expression...
-  $etl->input( 'Excel', iname => qr/\.xlsx$/ );
+  $etl->work_in( iname => qr/\.xlsx$/, root => 'C:\Data' );
 
   # Search using a file glob...
-  $etl->input( 'Excel', iname => '*.xlsx' );
+  $etl->work_in( iname => '*.xlsx', root => 'C:\Data' );
 
 The code throws an error if no directory matches the criteria. Only the first
 match is used.
@@ -916,6 +916,10 @@ L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
 L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
 output destination.
 
+B<record> takes one parameter - he current record. The record can be any Perl
+data structure - hash, array, or scalar. B<record> uses L<Data::DPath> to
+traverse the structure.
+
 =cut
 
 sub record {
@@ -1125,7 +1129,13 @@ my $log = sub {
 		my $count = $etl->count;
 		say "Processed record #$count..." unless $count % 50;
 	} else {
-		say "$type: $message";
+		my $count = $etl->count;
+		if ($etl->_input->can( 'position' ) && hascontent( $etl->_input->position )) {
+			my $where = $etl->_input->position;
+			say "Record #$count $type: $message at $where";
+		} else {
+			say "Record #$count $type: $message";
+		}
 	}
 };
 
