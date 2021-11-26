@@ -165,6 +165,29 @@ For fatal errors, I recommend using the C<croak> command from L<Carp>.
 requires 'run';
 
 
+=head3 source
+
+The location in the input source of the current record. For example, for files
+this would be the file name and character position. The consuming class can set
+this value in its L<run|ETL::Pipeline::Input/run> method.
+
+L<Logging|ETL::Pipeline/log> uses this when displaying errors or informational
+messages. The value should be something that helps the user troubleshoot issues.
+It can be whatever is appropriate for the input source.
+
+B<NOTE:> Don't capitalize the first letter, unless it's supposed to be.
+L<Logging|ETL::Pipeline/log> will upper case the first letter if it's
+appropriate.
+
+=cut
+
+has 'source' => (
+	default => '',
+	is      => 'rw',
+	isa     => 'Str',
+);
+
+
 =head1 SEE ALSO
 
 L<ETL::Pipeline>, L<ETL::Pipeline::Input::File>, L<ETL::Pipeline::Output>

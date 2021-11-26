@@ -93,9 +93,9 @@ sub run {
 	my $list = (scalar( @matches ) == 1 && ref( $matches[0] ) eq 'ARRAY') ? $matches[0] : \@matches;
 
 	# Process each record. And that's it.
+	my $source = $self->source;
 	foreach my $record (@$list) {
-		my $char = $record->{_pos};
-		$self->position( "file character $char" );
+		$self->source( sprintf( '%s character %d', $source, $record->{_pos} ) );
 		$etl->record( $record );
 	}
 }

@@ -125,6 +125,8 @@ before 'run' => sub {
 			croak "You do not have permission to read '$matches[0]'";
 		} else {
 			$self->_set_path( $matches[0] );
+			$self->source( $matches[0]->relative( $etl->work_in )->stringify );
+			$etl->status( 'INFO', 'File name' );
 		}
 	}
 };
@@ -155,24 +157,6 @@ has 'path' => (
 	is     => 'ro',
 	isa    => File,
 	writer => '_set_path',
-);
-
-
-=head3 position
-
-The position of the current record in the file. This is optional. The consuming
-class may set this value in its L<run|ETL::Pipeline::Input/run> method. It can
-be any string that you want.
-
-The position is used by the standard logging. See
-L<ETL::Pipeline/$ETL::Pipeline::log>.
-
-=cut
-
-has 'position' => (
-	default => '',
-	is      => 'rw',
-	isa     => 'Str',
 );
 
 

@@ -176,8 +176,9 @@ sub run {
 	}
 
 	# Load the data.
+	my $source = $self->source;
 	foreach my $row ($start .. $worksheet->{MaxRow}) {
-		$self->position( "row " . ($row + 1) );
+		$self->source( sprintf( '%s at row %d', $source, $row + 1 ) );
 
 		my $record = {};
 		$record->{$_} = $cells->[$row][$_]->value

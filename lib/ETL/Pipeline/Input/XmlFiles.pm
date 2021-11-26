@@ -6,12 +6,12 @@ ETL::Pipeline::Input::XmlFiles - Process XML content from individual files
 
 =head1 SYNOPSIS
 
-  use Data::ETL;
-  working_folder search_in => 'C:\Data', find_folder => qr/Ficticious/;
-  extract_from 'XmlFiles', records_at => '/';
-  transform_as ExternalID => '/File/A', PatientName => '/File/Patient';
-  load_into 'Access', file => 'review.accdb';
-  run;
+  use ETL::Pipeline;
+  ETL::Pipeline->new( {
+    input   => ['XmlFiles', iname => qr/\.xlsx$/i, records_at => '/Xml'],
+    mapping => {First => '/File/A', Second => '/File/Patient'},
+    output  => ['UnitTest']
+  } )->process;
 
 =head1 DESCRIPTION
 
@@ -54,6 +54,9 @@ You might use this attribute in two cases...
 
 =back
 
+This can be any value accepted by L<Data::DPath>. Fortunately, L<Data::Dpath>
+takes paths that look like XPath for XML.
+
 =cut
 
 has 'records_at' => (
@@ -87,16 +90,21 @@ sub run {
 		my $parser = XML::Bare->new( file => "$path" );
 		my $xml = $parser->parse;
 
-		# Find the node that is an array of records.
-		my $list = $xml;
-		$list = $list->{$_} foreach (grep { $_ ne '' } split '/', $self->records_at);
-		$list = [$list] unless ref( $list ) eq 'ARRAY';
+		# Find the node that is an array of records. dpath should return a list
+		# with one array reference. And that array has the actual records. But I
+		# check, just in case your XML is structured a little differently.
+		#
+		# XML should generate hashes - field/value pairs. In theory, there might
+		# be an XML file that sends back a single record as an array reference.
+		# Not likely when transfering data.
+		my @matches = dpath( $self->records_at )->match( $xml );
+		my $list = (scalar( @matches ) == 1 && ref( $matches[0] ) eq 'ARRAY') ? $matches[0] : \@matches;
 
 		# Process each record. And that's it.
+		my $source = $self->source;
 		foreach my $record (@$list) {
-			my $count = $record->{_i};
-			my $char  = $record->{_pos};
-			$etl->record( $record, "XML file '$path', record $count, file character $char" );
+			$self->source( sprintf( '%s character %d', $source, $record->{_pos} ) );
+			$etl->record( $record );
 		}
 	}
 }

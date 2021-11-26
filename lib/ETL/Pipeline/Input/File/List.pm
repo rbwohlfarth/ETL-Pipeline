@@ -95,46 +95,20 @@ So B<path> always points to the current file. It should be used by your input
 source class as the file name.
 
   # Inside the input source class...
-  $self->next_path();
-  open my $io, '<', $self->path;
+  while ($self->next_path( $etl )) {
+    open my $io, '<', $self->path;
+    ...
+  }
 
 C<undef> means no more matches.
 
 =cut
 
 has 'path' => (
-	coerce  => 1,
-	is      => 'rw',
-	isa     => 'Path::Class::File|Undef',
-	trigger => \&_path_trigger,
-);
-
-
-sub _path_trigger {
-	my ($self, $old, $new) = @_;
-
-	if (defined $new) {
-		my $base = $new->basename;
-		$self->position( "file $base" );
-	} else { $self->position( '' ); }
-}
-
-
-=head3 position
-
-A string used in error messages with the current file name. The value is set
-automatically by L</next_path>. It is used by the standard logging. See
-L<ETL::Pipeline/$ETL::Pipeline::log>.
-
-The consuming class can append extra information, such as character positions,
-by setting this attribute.
-
-=cut
-
-has 'position' => (
-	default => '',
-	is      => 'rw',
-	isa     => 'Str',
+	coerce => 1,
+	is     => 'ro',
+	isa    => 'Path::Class::File|Undef',
+	writer => '_set_path',
 );
 
 
@@ -173,8 +147,13 @@ sub next_path {
 	}
 
 	# Set "position" to something more readable.
-	my $file = $self->path( $self->_file( $self->_file_index ) );
-	$self->position( 'file ' . $file->relative( $etl->work_in ) ) if defined $file;
+	my $file = $self->_set_path( $self->_file( $self->_file_index ) );
+
+	if (defined $file) {
+		$self->source( $file->relative( $etl->work_in )->stringify );
+		$etl->status( 'INFO', 'Next file' );
+	} else { $self->source( '' ); }
+
 	return $file;
 }
 

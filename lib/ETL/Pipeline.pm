@@ -1013,6 +1013,11 @@ The type can be anything. These are the ones that B<ETL::Pipeline> uses...
 
 =over
 
+=item DEBUG
+
+Messages used for debugging problems. You should only use these temporarily to
+look for specific issues. Otherwise they clog up the display for the end user.
+
 =item END
 
 The pipeline has finished. The input source is closed. The output destination
@@ -1037,15 +1042,38 @@ Progress update. This is sent every after every input record.
 
 =back
 
-This method merely passes the parameters through to L</$ETL::Pipeline::log>. See
-L</$ETL::Pipeline::log> for more information about displaying messages.
+=head4 Custom logging
+
+The default displays status updates on STDOUT. If you want to add log files or
+integrate with a GUI, then subclass B<ETL::Pipeline> and override this method.
+
+
 
 =cut
 
 sub status {
 	my ($self, $type, $message) = @_;
-	return $ETL::Pipeline::log->( $self, $type, $message )
-		if ref( $ETL::Pipeline::log ) eq 'CODE';
+	$type = uc( $type );
+
+	if ($type eq 'START') {
+		my $name;
+		say 'Processing...';
+	} elsif ($type eq 'END') {
+		my $name;
+		say 'Finished!';
+	} elsif ($type eq 'STATUS') {
+		my $count = $self->count;
+		say "Processed record #$count..." unless $count % 50;
+	} else {
+		my $count  = $self->count;
+		my $source = $self->_input->source;
+
+		if (hascontent( $source )) {
+			say "$type [record #$count at $source] $message";
+		} else {
+			say "$type [record #$count] $message";
+		}
+	}
 }
 
 
@@ -1080,64 +1108,6 @@ sub is_valid {
 		return ($error eq '' ? 1 : 0);
 	}
 }
-
-
-=head3 $ETL::Pipeline::log
-
-This package variable shows progress to the user. The variable holds a code
-reference. The code reference is executed by the L</status> method.
-
-The default value writes messages to the screen (standard output). If you want
-to use log files, then write your own subroutine and assign this variable to it.
-The same would also work for a GUI front end.
-
-Why isn't it a method or attribute? Because overriding this behaviour should be
-global to all pipelines. This is not the kind of functionality that changes
-between pipelines.
-
-The code reference receives two or three parameters - the B<ETL::Pipeline>
-object, the message type, and the optional message text.
-
-You should never execute this code directly. Call the L</status> method instead.
-That method executes the code reference with all the right parameters.
-
-=cut
-
-my $log = sub {
-	my ($etl, $type, $message) = @_;
-	$type = uc( $type );
-
-	if ($type eq 'START') {
-		my $name;
-		if ($etl->_input->can( 'path' )) {
-			$name = $etl->_input->path->relative( $etl->_work_in );
-		} else {
-			$name = ref( $etl->_input );
-			$name =~ s/^ETL::Pipeline::Input:://;
-		}
-		say "Processing '$name'...";
-	} elsif ($type eq 'END') {
-		my $name;
-		if ($etl->_input->can( 'path' )) {
-			$name = $etl->_input->path->relative( $etl->_work_in );
-		} else {
-			$name = ref( $etl->_input );
-			$name =~ s/^ETL::Pipeline::Input:://;
-		}
-		say "Finished '$name'!";
-	} elsif ($type eq 'STATUS') {
-		my $count = $etl->count;
-		say "Processed record #$count..." unless $count % 50;
-	} else {
-		my $count = $etl->count;
-		if ($etl->_input->can( 'position' ) && hascontent( $etl->_input->position )) {
-			my $where = $etl->_input->position;
-			say "Record #$count $type: $message at $where";
-		} else {
-			say "Record #$count $type: $message";
-		}
-	}
-};
 
 
 #----------------------------------------------------------------------
