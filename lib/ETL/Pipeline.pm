@@ -960,7 +960,10 @@ sub record {
 	my $continue = 1;
 
 	$continue = $code->( $self, $record ) if defined $code;
-	return unless $continue;
+	unless ($continue) {
+		$self->_increment_count;	# Record processed.
+		return;
+	}
 
 	# Insert constants into the output. Do this before the mapping. The mapping
 	# will always override constants. I want data from the input.
