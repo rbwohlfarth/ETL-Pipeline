@@ -522,7 +522,8 @@ sub process {
 	# the "record" method, described below.
 	$self->_output->open( $self );
 	$self->status( 'START' );
-	$self->_input->run( $self );
+	$self->input->run( $self );
+	$self->_decrement_count;	# "record" adds 1 at the end, so this goes one past the last record.
 	$self->status( 'END' );
 	$self->_output->close( $self );
 
@@ -748,8 +749,8 @@ The first record is always number B<1>.
 =cut
 
 has 'count' => (
-	default => '0',
-	handles => {_increment_count => 'inc'},
+	default => '1',
+	handles => {_decrement_count => 'dec', _increment_count => 'inc'},
 	is      => 'ro',
 	isa     => 'Int',
 	traits  => [qw/Counter/],
@@ -948,10 +949,6 @@ sub record {
 	# access it without the programmer passing it around.
 	$self->_set_this( $record );
 
-	# Increase the record count. That way the count always shows the current
-	# record number.
-	$self->_increment_count;
-
 	# Remove leading and trailing whitespace from all fields. We always want to
 	# do this. Otherwise we end up with weird looking text. I do this first so
 	# that all the customized code sees is the filtered data.
@@ -1000,6 +997,10 @@ sub record {
 	# We're done with this record. Finish up.
 	$self->_output->write( $self, $save );
 	$self->status( 'STATUS' );
+
+	# Increase the record count. Do this last so that any status messages from
+	# the input source reflect the correct record number.
+	$self->_increment_count;
 }
 
 
@@ -1066,7 +1067,7 @@ sub status {
 		say "Processed record #$count..." unless $count % 50;
 	} else {
 		my $count  = $self->count;
-		my $source = $self->_input->source;
+		my $source = $self->input->source;
 
 		if (hascontent( $source )) {
 			say "$type [record #$count at $source] $message";

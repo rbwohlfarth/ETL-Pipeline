@@ -27,6 +27,7 @@ use 5.014000;
 use warnings;
 
 use Carp;
+use Data::DPath qw/dpath/;
 use XML::Bare;
 use Moose;
 
