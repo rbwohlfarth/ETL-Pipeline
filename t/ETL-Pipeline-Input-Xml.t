@@ -10,7 +10,7 @@ my $etl = ETL::Pipeline->new( {
 is( $etl->count, 3, 'All records processed' );
 
 my $output = $etl->output->get_record( 0 );
-is(      $output->{One}  , '12345', 'Individual value' );
-is( ref( $output->{Two} ), 'ARRAY', 'Repeating node'   );
+is( $output->{One}, '12345', 'Individual value' );
+is( $output->{Two}, undef  , 'Repeating node'   );
 
 done_testing();

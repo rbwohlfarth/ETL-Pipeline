@@ -1001,10 +1001,9 @@ The input source controls the type.
 =cut
 
 has 'this' => (
-	default => sub { {} },
-	is      => 'ro',
-	isa     => 'Maybe[Any]',
-	writer  => '_set_this',
+	is     => 'ro',
+	isa    => 'Maybe[Any]',
+	writer => '_set_this',
 );
 
 
@@ -1082,7 +1081,8 @@ sub record {
 		if (ref( $values ) eq '') {
 			$save->{$to} = $values;
 		} elsif (ref( $values ) eq 'ARRAY') {
-			$save->{$to} = join $seperator, grep { defined $_ } @$values;
+			my @usable = grep { defined( $_ ) && ref( $_ ) eq '' } @$values;
+			$save->{$to} = scalar( @usable ) ? join( $seperator, @usable ) : undef;
 		} else {
 			$save->{$to} = undef;
 		}

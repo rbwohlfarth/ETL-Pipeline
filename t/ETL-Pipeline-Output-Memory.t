@@ -5,7 +5,7 @@ use Test::More;
 subtest 'list' => sub {
 	my $etl = ETL::Pipeline->new( {
 		input     => 'UnitTest',
-		mapping   => {value => '1'},
+		mapping   => {value => 0},
 		output    => 'Memory',
 		work_in => 't/DataFiles',
 	} )->process;
@@ -16,7 +16,7 @@ subtest 'list' => sub {
 subtest 'hash' => sub {
 	my $etl = ETL::Pipeline->new( {
 		input     => 'UnitTest',
-		mapping   => {key => '1', value => '2'},
+		mapping   => {key => 0, value => 1},
 		output    => ['Memory', key => 'key'],
 		work_in => 't/DataFiles',
 	} )->process;

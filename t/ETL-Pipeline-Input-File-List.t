@@ -8,7 +8,7 @@ subtest 'Single level' => sub {
 	subtest 'Exact name' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => 'Test 2.txt'],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListing',
 		} )->process;
@@ -20,7 +20,7 @@ subtest 'Single level' => sub {
 	subtest 'Wildcard' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => '*.txt'],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListing',
 		} )->process;
@@ -35,7 +35,7 @@ subtest 'Single level' => sub {
 	subtest 'Regular expression' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => qr/\.txt$/],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListing',
 		} )->process;
@@ -50,7 +50,7 @@ subtest 'Single level' => sub {
 
 	my $etl = ETL::Pipeline->new( {
 		input   => ['+Input', iname => '*.jpg'],
-		mapping => {One => '0'},
+		mapping => {One => 'base'},
 		output  => 'UnitTest',
 		work_in => 't/DataFiles/FileListing',
 	} )->process;
@@ -60,7 +60,7 @@ subtest 'Recursive search' => sub {
 	subtest 'Exact name' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => 'Test 3.txt'],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListingDepth',
 		} )->process;
@@ -72,7 +72,7 @@ subtest 'Recursive search' => sub {
 	subtest 'Wildcard' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => '*.txt'],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListingDepth',
 		} )->process;
@@ -86,7 +86,7 @@ subtest 'Recursive search' => sub {
 	subtest 'Regular expression' => sub {
 		my $etl = ETL::Pipeline->new( {
 			input   => ['+Input', iname => qr/\.txt$/],
-			mapping => {One => '0'},
+			mapping => {One => 'base'},
 			output  => 'UnitTest',
 			work_in => 't/DataFiles/FileListingDepth',
 		} )->process;
@@ -100,7 +100,7 @@ subtest 'Recursive search' => sub {
 
 	my $etl = ETL::Pipeline->new( {
 		input   => ['+Input', iname => '*.jpg'],
-		mapping => {One => '0'},
+		mapping => {One => 'base'},
 		output  => 'UnitTest',
 		work_in => 't/DataFiles/FileListingDepth',
 	} )->process;

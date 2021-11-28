@@ -8,8 +8,8 @@ sub run {
 
 	while (my $path = $self->next_path( $etl )) {
 		my $record = {
-			0 => $path->basename,
-			1 => $path->relative( $etl->data_in ),
+			base => $path->basename,
+			path => $path->relative( $etl->data_in ),
 		};
 		$etl->record( $record );
 	}

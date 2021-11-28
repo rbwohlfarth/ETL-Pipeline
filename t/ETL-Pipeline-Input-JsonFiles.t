@@ -11,8 +11,8 @@ subtest 'Process files' => sub {
 	is( $etl->count, 3, 'All records processed' );
 
 	my $output = $etl->output->get_record( 0 );
-	is(      $output->{One}  , '1234' , 'Individual value' );
-	is( ref( $output->{Two} ), 'ARRAY', 'Repeating node'   );
+	is( $output->{One}, '1234', 'Individual value' );
+	is( $output->{Two}, undef , 'Repeating node'   );
 };
 subtest 'Records at' => sub {
 	my $etl = ETL::Pipeline->new( {
@@ -24,8 +24,8 @@ subtest 'Records at' => sub {
 	is( $etl->count, 3, 'All records processed' );
 
 	my $output = $etl->output->get_record( 0 );
-	is(      $output->{One}  , '1234' , 'Individual value' );
-	is( ref( $output->{Two} ), 'ARRAY', 'Repeating node'   );
+	is( $output->{One}, '1234', 'Individual value' );
+	is( $output->{Two}, undef , 'Repeating node'   );
 };
 subtest 'File search' => sub {
 	my $etl = ETL::Pipeline->new( {
