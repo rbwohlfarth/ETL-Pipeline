@@ -36,7 +36,7 @@ use warnings;
 use Carp;
 use Data::DPath qw/dpath/;
 use Data::Traverse qw/traverse/;
-use List::AllUtils qw/any/;
+use List::AllUtils qw/first/;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
@@ -455,6 +455,11 @@ you pass in a list of key value pairs, B<mapping> adds them to the current hash.
   $etl->mapping( {Name => 'C'} );
 
 Want to save a literal value? Use L</constants> instead.
+
+=head4 Complex data structures
+
+B<mapping> only sets scalar values. If the matching fields contain sub-records,
+L</record> throws an error message and sets the output field to C<undef>.
 
 =head3 has_mapping
 
@@ -1081,8 +1086,18 @@ sub record {
 		if (ref( $values ) eq '') {
 			$save->{$to} = $values;
 		} elsif (ref( $values ) eq 'ARRAY') {
-			my @usable = grep { defined( $_ ) && ref( $_ ) eq '' } @$values;
-			$save->{$to} = scalar( @usable ) ? join( $seperator, @usable ) : undef;
+			my @usable = grep { defined $_ } @$values;
+
+			my $invalid = first { ref( $_ ) ne '' } @usable;
+			if (defined $invalid) {
+				my $type = ref( $invalid );
+				$self->status( 'ERROR', "Data structure of type $type found by mapping '$from' to '$to'" );
+				$save->{$to} = undef;
+			} elsif(scalar @usable) {
+				$save->{$to} = join( $seperator, @usable );
+			} else {
+				$save->{$to} = undef;
+			}
 		} else {
 			$save->{$to} = undef;
 		}
