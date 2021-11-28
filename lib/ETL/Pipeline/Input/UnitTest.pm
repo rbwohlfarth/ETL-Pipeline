@@ -55,35 +55,36 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $etl) = @_;
 
-	$etl->add_alias( 'Header1'    , 1 );
-	$etl->add_alias( 'Header2'    , 2 );
-	$etl->add_alias( 'Header3'    , 3 );
-	$etl->add_alias( '  Header4  ', 4 );
-	$etl->add_alias( 'Header6'    , 6 );
-	$etl->add_alias( 'Header6'    , 7 );
-
-	$etl->record( {
-		1 => 'Field1',
-		2 => 'Field2',
-		3 => 'Field3',
-		4 => 'Field4',
-		5 => 'Field5',
-		6 => 'Field6',
-		7 => 'Field7',
-		8 => 'Field8',
-		9 => 'Field9',
-	} );
-	$etl->record( {
-		1 => 'Field11',
-		2 => 'Field12',
-		3 => 'Field13',
-		4 => 'Field14',
-		5 => 'Field15',
-		6 => 'Field16',
-		7 => 'Field17',
-		8 => 'Field18',
-		9 => 'Field19',
-	} );
+	$etl->aliases(
+		{Header1       => 0},
+		{Header2       => 1},
+		{Header3       => 2},
+		{'  Header4  ' => 3},
+		{Header6       => 5},
+		{Header6       => 6},
+	);
+	$etl->record( [qw/
+		Field1
+		Field2
+		Field3
+		Field4
+		Field5
+		Field6
+		Field7
+		Field8
+		Field9
+	/] );
+	$etl->record( [qw/
+		Field11
+		Field12
+		Field13
+		Field14
+		Field15
+		Field16
+		Field17
+		Field18
+		Field19
+	/] );
 }
 
 

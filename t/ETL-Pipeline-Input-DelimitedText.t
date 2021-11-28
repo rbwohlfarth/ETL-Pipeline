@@ -45,7 +45,6 @@ subtest 'no_column_names' => sub {
 			Two   => '1',
 			Three => '2',
 			Four  => '3',
-			#Five  => '4',
 			Six   => 'Header1',
 			Seven => 'Header2',
 			Eight => 'Header3',
@@ -54,7 +53,7 @@ subtest 'no_column_names' => sub {
 		output    => 'UnitTest',
 		work_in   => 't/DataFiles',
 	} )->process;
-	is( $etl->has_aliases, 0, 'No aliases' );
+	is( scalar( $etl->aliases ), 0, 'No aliases' );
 
 	my $record = $etl->output->get_record( 0 );
 	subtest 'Field number' => sub {

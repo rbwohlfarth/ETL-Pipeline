@@ -136,8 +136,9 @@ sub run {
 	}
 
 	# Convert the column numbers into their letter designations.
-	$etl->add_alias( int2col( $_ ), $_ )
-		foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
+	my %names;
+	$names{int2col( $_ )} = $_ foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
+	$etl->aliases( \%names );
 
 	#----------------------------------------------------------------------
 	# Read the records.
@@ -170,8 +171,11 @@ sub run {
 
 	# Load field names.
 	unless ($self->no_column_names) {
-		$etl->add_alias( $cells->[$start][$_]->value, $_ )
+		my @names;
+		push( @names, {$cells->[$start][$_]->value => $_} )
 			foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
+		$etl->aliases( @names );
+
 		$start++;
 	}
 
@@ -180,8 +184,8 @@ sub run {
 	foreach my $row ($start .. $worksheet->{MaxRow}) {
 		$self->source( sprintf( '%s at row %d', $source, $row + 1 ) );
 
-		my $record = {};
-		$record->{$_} = $cells->[$row][$_]->value
+		my $record = [];
+		push( @$record, $cells->[$row][$_]->value )
 			foreach ($worksheet->{MinCol} .. $worksheet->{MaxCol});
 		$etl->record( $record );
 	}

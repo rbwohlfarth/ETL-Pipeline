@@ -112,6 +112,8 @@ for details about acceptable values.
 
 =over
 
+=item aliases
+
 =item constants
 
 =item data_in
@@ -175,6 +177,77 @@ sub BUILD {
 		my $values = $arguments->{output};
 		$self->output( ref( $values ) eq '' ? $values : @$values );
 	}
+
+	# Save any alias definition for use in "record".
+	if (defined $arguments->{aliases}) {
+		if (ref( $arguments->{aliases} ) eq 'ARRAY') {
+			$self->aliases( @{$arguments->{aliases}} );
+		} else {
+			$self->aliases( $arguments->{aliases} );
+		}
+	}
+}
+
+
+=head3 aliases
+
+B<aliases> defines alternate names for input fields. This is how column headers
+work, for example. You can define your own shortcuts using this method or
+declaring B<aliases> in L</new>. Aliases can make complex field names more
+readable.
+
+B<aliases> accepts a list of hash references. Each hash reference has one or
+more alias-to-field definitions. The hash key is the alias name. The value is
+any field name recognized by L</get>.
+
+Aliases are resolved in the order they are added. That way, your pipelines know
+where each value came from, if that's important. Aliases set by the input source
+always sort before aliases set by the script. Within a hash, all definitions are
+considered equal and may sort in any order.
+
+  # Array definitions to force sorting.
+  my $etl = ETL::Pipeline->new( {aliases => [{A => '0'}, {B => '1'}], ...} );
+  $etl->aliases( {C => '2'}, {D => '3'} );
+
+  # Hash where it can sort either way.
+  my $etl = ETL::Pipeline->new( {aliases => {A => '0', B => '1'}, ...} );
+  $etl->aliases( {C => '2', D => '3'} );
+
+B<aliases> returns a sorted list of all aliases for fields in this input source.
+
+I recommend using the hash, unless order matters. In that case, use the array
+form instead.
+
+B<Special Note:> Custom input sources call B<aliases> to add their own
+shortcuts, such as column headers. These aliases are always evaluated I<before>
+those set by L</new> or calls to this method by the script.
+
+=cut
+
+sub aliases {
+	my $self = shift;
+
+	# Add any new aliases first.
+	my $list = $self->_alias->{$self->_alias_type};
+	push( @$list, $_ ) foreach (@_);
+
+	# Update the cache, if it already exists. This should be VERY, VERY rare.
+	# But I wanted to plan for it so that things behave as expected.
+	if ($self->_alias_cache_built) {
+		my $cache = $self->_alias_cache;
+		foreach my $item (@_) {
+			while (my ($alias, $location) = each %$item) {
+				$cache->{$alias} = [] unless exists $cache->{alias};
+				push @{$cache->{alias}}, $self->_as_dpath( $location );
+			}
+		}
+	}
+
+	# Return a flattened list of aliases. Input source defined aliases first.
+	# Then user defined aliases.
+	my @all;
+	push( @all, @{$self->_alias->{$_}} ) foreach (qw/input pipeline/);
+	return @all;
 }
 
 
@@ -518,6 +591,9 @@ sub process {
 	my ($success, $error) = $self->is_valid;
 	croak $error unless $success;
 
+	# Sort aliases from the input source before any that were set in the object.
+	$self->_alias_type( 'input' );
+
 	# Kick off the process. The input source loops over the records. It calls
 	# the "record" method, described below.
 	$self->_output->open( $self );
@@ -765,29 +841,42 @@ found at the matching node.
 
 =head4 Field names
 
-The field name can be a string, regular expression reference, or code reference.
+The field name can be...
 
-A string matches both field names and aliases. The string is used as a
-L<Data::DPath>. L<Data::DPath> allows for some complex selections from data
-structures of any depth - like those from XML or JSON. For simplicity, B<get>
-automatically adds the leading B</> if needed. That way, you can use simple
-field names for flat data structures.
+=over
 
-A string can match more than just a hard coded field name. It can be any
-expression accepted by L<Data::DPath> - even those with regular expressions
-embedded in the path string. While B<get> makes the most common cases very easy,
-you can always use the full range of L<Data::DPath> on complex structures.
+=item A string containing a hash key
 
-When the field name is a regular expression, it matches fields and aliases at
-the top level. You can do the same thing with the L<Data::DPath> syntax. B<get>
-provides this shortcut because it's easier to read.
+=item An array index (all digits)
 
-When the field name is a code reference, B<get> executes the subroutine. The
-return value becomes the field value. A code reference is called in a scalar
-context. If you need to return multiple values, then return an ARRAY or HASH
-reference.
+=item A string containing a L<Data::DPath> path (starts with B</>)
 
-The code reference receives two parameters - the B<ETL::Pipeline> object and the
+=item A regular expression reference
+
+=item A code reference
+
+=back
+
+Hash keys and regular expressions match both field names and aliases. These are
+the only types that match aliases. Hash keys cannot be all digits and cannot
+begin with the B</> character. Otherwise B<get> mis-identifies them.
+
+B<get> interprets strings of all digits as array indexes (numbers). Excel files,
+for example, return an array instead of a hash. And this is an easy way to
+reference columns in order.
+
+B<get> treats a string beginning with a B</> (slash) as a L<Data::DPath> path.
+This lets you very specifically traverse a complex data sturcture, such as those
+from XML or JSON.
+
+For a regular expression, B<get> matches hash keys at the top level of the data
+structure plus aliases.
+
+And with a a code reference, B<get> executes the subroutine. The return value
+becomes the field value. The code reference is called in a scalar context. If
+you need to return multiple values, then return an ARRAY or HASH reference.
+
+A code reference receives two parameters - the B<ETL::Pipeline> object and the
 current record.
 
 =head4 Current record
@@ -796,6 +885,9 @@ The current record is optional. B<get> will use L</this> if you do not pass in a
 record. By accepting a record, you can use B<get> on sub-records. So by default,
 B<get> returns a value from the top record. Use the second parameter to retrieve
 values from a sub-record.
+
+B<get> only applies aliases when using L</this>. Aliases do not apply to
+sub-records.
 
 =head4 Return value
 
@@ -810,32 +902,91 @@ code must account for the possibility of finding an array or hash or string.
 
 sub get {
 	my ($self, $field, $record) = @_;
-	my @found = ();
+
+	# Because the reference may be stored, I want to force a new copy every
+	# time. Otherwise scripts may get invalid values from previous records.
+	my $found = [];
 
 	# Use the current record from the attribute unless the programmer explicilty
 	# sent in a record. By sending in a record, "get" works on sub-records. But
 	# the default behaviour is what you would expect.
-	$record = $self->this unless defined $record;
+	my $full = 0;
+	unless (defined $record) {
+		$record = $self->this;
+		$full = 1;
+	}
 
-	# Execute code reference.
+	# Execute code reference. This is all there is to do. We send back whatever
+	# the code returns.
 	if (ref( $field ) eq 'CODE') {
-		@found = $field->( $self, $record );
+		@$found = $field->( $self, $record );
 	}
 
-	# Match field names to regular expression.
-	elsif (ref( $field ) eq 'Regexp') {
-		@found = dpath( "//*[key =~ /$field/]" )->match( $record );
-	}
-
-	# Strings are field names.
+	# Anything else we match - either a field name or an alias. The sequence is
+	# the same for both.
 	else {
-		my $path = $field =~ m|^/| ? $field : "/$field";
-		@found = dpath( $path )->match( $record );
+		# Match field names first.
+		my $check_alias = 0;
+		$field = $self->_as_dpath( $field, \$check_alias );
+		@$found = dpath( $field )->match( $record );
+
+		if ($check_alias && $full) {
+			# Build the cache first time through. Re-use it later to save time.
+			unless ($self->_alias_cache_built) {
+				my $cache = $self->_alias_cache;
+				foreach my $item ($self->aliases) {
+					while (my ($alias, $location) = each %$item) {
+						$cache->{$alias} = [] unless exists $cache->{$alias};
+						push @{$cache->{$alias}}, $self->_as_dpath( $location );
+					}
+				}
+			}
+
+			# Search the actual data in all of the fields from matching aliases.
+			my @search = dpath( $field )->match( $self->_alias_cache );
+			foreach my $list (@search) {
+				foreach my $location (@$list) {
+					my @values = dpath( $location )->match( $record );
+					push @$found, @values;
+				}
+			}
+		}
 	}
 
 	# Send back the final value.
-	return (scalar( @found ) <= 1 ? $found[0] : \@found);
+	return (scalar( @$found ) <= 1 ? $found->[0] : $found);
 }
+
+
+# Format the match string for Data::DPath. I allow scripts to use shortcut
+# formatting so they are easier to read. This method translates those into a
+# correct Data::DPath path.
+sub _as_dpath {
+	my ($self, $field, $alias) = @_;
+
+	if (ref( $field ) eq 'Regexp') {
+		$$alias = 1 if ref( $alias ) eq 'SCALAR';
+		return "/*[key =~ /$field/]";
+	} elsif ($field =~ m/^\d+$/) {
+		$$alias = 0 if ref( $alias ) eq 'SCALAR';
+		return "/*[$field]";
+	} elsif ($field !~ m|^/|) {
+		$$alias = 1 if ref( $alias ) eq 'SCALAR';
+		return "/$field";
+	} else {
+		$$alias = 0 if ref( $alias ) eq 'SCALAR';
+		return $field;
+	}
+}
+
+
+# Alternate designs...
+#
+# I considered building a temporary hash keyed by the alias names. Then I could
+# apply a full Data::DPath to retrieve aliased fields. But a path like "/*[0]"
+# would always match both the main record and the aliases. I would always be
+# returning multiple values when the user clearly expected one. It makes aliases
+# pretty much useless.
 
 
 =head3 this
@@ -844,71 +995,26 @@ The current record. The L</record> method sets B<this> before it does anything
 else. L</get> will use B<this> if you don't pass in a record. It makes a
 convenient shortcut so you don't have to pass the record into every call.
 
-B<this> is a hash reference.
+B<this> can be any valid Perl data. Usually a hash reference or array reference.
+The input source controls the type.
 
 =cut
 
 has 'this' => (
 	default => sub { {} },
 	is      => 'ro',
-	isa     => 'Maybe[HashRef[Any]]',
+	isa     => 'Maybe[Any]',
 	writer  => '_set_this',
 );
 
 
 =head2 Used by input sources
 
-=head3 add_alias
+=head3 aliases (see above)
 
-This method defines an alternate name for fields. The L</get> method can look up
-fields by this alternate name instead. Most often used by input sources from
-flat files such as Excel or CSV. Formats that may have column headers. An input
-source would read the column headers then call this method to save the alias
-for L</get>.
-
-I store the aliases as a list. It is possible for files to use the same column
-header more than once. By using a list, I ensure that data is not lost.
-
-The field name can be any valid L</Data::Dpath>. L</get> will add the leading
-slash - B</> - if needed.
-
-=cut
-
-has '_alias' => (
-	default => sub { [] },
-	handles => {
-		_add_alias  => 'push',
-		aliases     => 'elements',
-		has_aliases => 'count',
-	},
-	init_arg => undef,
-	is       => 'ro',
-	isa      => 'ArrayRef[HashRef[Str]]',
-	traits   => [qw/Array/],
-);
-
-
-sub add_alias {
-	my ($self, $alias, $field) = @_;
-
-	# Save the mapping.
-	$self->_add_alias( {$alias => $field} );
-
-	# Count instances so I can put values for repeated names in an ARRAY.
-	my $count = $self->_alias_name;
-	$count->{$alias}++;
-}
-
-
-has '_alias_name' => (
-	default => sub { {} },
-	handles => {_alias_name_count => 'get'},
-	init_arg => undef,
-	is       => 'ro',
-	isa      => 'HashRef[Int]',
-	traits   => [qw/Hash/],
-);
-
+Your input source can use the L</aliases> method documented above to set
+column headers as field names. Excel files, for example, would call L</aliases>
+to assign letters to column numbers, like a real spreadsheet.
 
 =head3 record
 
@@ -921,29 +1027,14 @@ B<record> takes one parameter - he current record. The record can be any Perl
 data structure - hash, array, or scalar. B<record> uses L<Data::DPath> to
 traverse the structure.
 
+B<record> calls L</get> on each field in L</mapping>. B</get> traverses the
+data structure retrieving the correct values. B<record> concatenates multiple
+matches into a single, scalar value for the output.
+
 =cut
 
 sub record {
 	my ($self, $record) = @_;
-
-	# Set aliases for fields. This way Data::Path can do all of the work
-	# retrieving values. That lets us use complex queries, such as regular
-	# expression matches that return more than one column.
-	#
-	# What if two fields have the same header (aka alias)? I count the unique
-	# alias names as they're added. If more than one matches, I assign an ARRAY
-	# reference to the alias and put the multiple values in the ARRAY.
-	foreach my $item ($self->aliases) {
-		while (my ($alias, $field) = each %$item) {
-			if ($self->_alias_name_count( $alias ) > 1) {
-				$record->{$alias} = [] unless exists $record->{$alias};
-				my $list = $record->{$alias};
-				push @$list, $record->{$field};
-			} else {
-				$record->{$alias} = $record->{$field};
-			}
-		}
-	}
 
 	# Save the current record so that other methods and helper functions can
 	# access it without the programmer passing it around.
@@ -987,11 +1078,11 @@ sub record {
 			$from = $from->[0];	# Do this LAST!
 		}
 
-		my @values = $self->get( $from, $record );
-		if (scalar( @values ) <= 1) {
-			$save->{$to} = $values[0];
-		} elsif (any { defined } @values) {
-			$save->{$to} = join $seperator, grep { defined } @values;
+		my $values = $self->get( $from );
+		if (ref( $values ) eq '') {
+			$save->{$to} = $values;
+		} elsif (ref( $values ) eq 'ARRAY') {
+			$save->{$to} = join $seperator, grep { defined $_ } @$values;
 		} else {
 			$save->{$to} = undef;
 		}
@@ -1046,12 +1137,7 @@ Progress update. This is sent every after every input record.
 
 =back
 
-=head4 Custom logging
-
-The default displays status updates on STDOUT. If you want to add log files or
-integrate with a GUI, then subclass B<ETL::Pipeline> and override this method.
-
-
+See L</Custom logging> for information about adding your own log method.
 
 =cut
 
@@ -1094,7 +1180,7 @@ error message is C<undef>.
 
 sub is_valid {
 	my $self = shift;
-	my $error = '';
+	my $error = undef;
 
 	if (!defined $self->_work_in) {
 		$error = 'The working folder was not set';
@@ -1107,15 +1193,41 @@ sub is_valid {
 	}
 
 	if (wantarray) {
-		return (($error eq '' ? 1 : 0), $error);
+		return ((defined( $error ) ? 0 : 1), $error);
 	} else {
-		return ($error eq '' ? 1 : 0);
+		return (defined( $error ) ? 0 : 1);
 	}
 }
 
 
 #----------------------------------------------------------------------
 # Internal methods and attributes.
+
+# These attributes define field aliases. This is how column names work for Excel
+# and CSV. The script may also define aliases to shortcut long names.
+
+has '_alias' => (
+	default  => sub { {input => [], pipeline => []} },
+	init_arg => undef,
+	is       => 'ro',
+	isa      => 'HashRef[ArrayRef[HashRef[Str]]]',
+);
+
+has '_alias_cache' => (
+	default => sub { {} },
+	handles => {_alias_cache_built => 'count'},
+	is      => 'ro',
+	isa     => 'HashRef[ArrayRef[Str]]',
+	traits  => [qw/Hash/],
+);
+
+has '_alias_type' => (
+	default  => 'pipeline',
+	init_arg => undef,
+	is       => 'rw',
+	isa      => 'Str',
+);
+
 
 # This private method creates the ETL::Pipeline::Input and ETL::Pipeline::Output
 # objects. It allows me to centralize the error handling. The program dies if
@@ -1228,6 +1340,13 @@ You're writing data into a centralized place.
 For these reasons, it makes sense to keep the input sources and output
 destinations separate. You can easily add more inputs without affecting the
 outputs.
+
+=head2 Custom logging
+
+The default L<status> method send updates to STDOUT. If you want to add log
+files or integrate with a GUI, then subclass B<ETL::Pipeline> and
+L<override|Moose::Manual::MethodModifiers/OVERRIDE-AND-SUPER> the L</status>
+method.
 
 =head1 SEE ALSO
 

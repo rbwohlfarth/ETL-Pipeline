@@ -139,7 +139,7 @@ subtest 'no_column_names' => sub {
 		output  => 'UnitTest',
 		work_in => 't/DataFiles',
 	} )->process;
-	is( $etl->has_aliases, 5, 'No headers' );
+	is( scalar( $etl->aliases ), 1, 'No headers' );
 
 	my $output = $etl->output->get_record( 0 );
 	subtest 'Field number' => sub {

@@ -126,9 +126,11 @@ sub run {
 		}
 
 		if (defined $fields) {
+			my @names;
 			while (my ($index, $value) = each @$fields) {
-				$etl->add_alias( $value, $index )
+				push @names, {$value => $index};
 			}
+			$etl->aliases( @names );
 		}
 	}
 
@@ -143,11 +145,7 @@ sub run {
 		}
 
 		if (defined $fields) {
-			my %record;
-			while (my ($index, $value) = each @$fields) {
-				$record{$index} = $value;
-			}
-			$etl->record( \%record );
+			$etl->record( $fields );
 		} elsif (!$csv->eof) {
 			my $at = $csv->record_number;
 			my ($code, $message, $position) = $csv->error_diag;

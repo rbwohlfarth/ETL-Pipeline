@@ -8,7 +8,7 @@ subtest 'Simple pipeline' => sub {
 		work_in   => 't',
 		input     => 'UnitTest',
 		constants => {constant => 'String literal'},
-		mapping   => {un => 1, deux => 2, trois => 3},
+		mapping   => {un => 0, deux => 1, trois => 2},
 		output    => 'UnitTest',
 	} );
 	$etl->process;
@@ -164,7 +164,7 @@ subtest 'is_valid' => sub {
 
 		my @error = $etl->is_valid;
 		ok( $error[0], 'Return code' );
-		is( $error[1], '' );
+		is( $error[1], undef );
 	};
 	subtest 'Constants, no mapping' => sub {
 		my $etl = ETL::Pipeline->new( {
@@ -177,80 +177,69 @@ subtest 'is_valid' => sub {
 
 		my @error = $etl->is_valid;
 		ok( $error[0], 'Return code' );
-		is( $error[1], '' );
+		is( $error[1], undef );
 	};
 };
 
 subtest 'mapping' => sub {
-	subtest 'Match field names' => sub {
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		mapping => {un => '/*[0]'},
+		output  => 'UnitTest',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{un}, 'Field1', 'Data path' );
+
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		mapping => {un => qr/1/},
+		output  => 'UnitTest',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{un}, 'Field1', 'Regular expression' );
+
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		mapping => {un => 0},
+		output  => 'UnitTest',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{un}, 'Field1', 'Bare field number' );
+
+	my $etl = ETL::Pipeline->new( {
+		work_in => 't',
+		input   => 'UnitTest',
+		mapping => {un => 'Header1'},
+		output  => 'UnitTest',
+	} )->process;
+	my $output = $etl->output->get_record( 0 );
+	is( $output->{un}, 'Field1', 'Bare field name' );
+
+	subtest 'Multiple fields' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
 			input   => 'UnitTest',
-			mapping => {un => '/1'},
+			mapping => {un => 'Header6'},
 			output  => 'UnitTest',
 		} )->process;
 		my $output = $etl->output->get_record( 0 );
-		is( $output->{un}, 'Field1', 'Data path' );
+		is( $output->{un}, 'Field6; Field7', 'Bare field name' );
 
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
 			input   => 'UnitTest',
-			mapping => {un => qr/^1/},
+			mapping => {un => qr/der6/},
 			output  => 'UnitTest',
 		} )->process;
 		my $output = $etl->output->get_record( 0 );
-		is( $output->{un}, 'Field1', 'Regular expression' );
+		is( $output->{un}, 'Field6; Field7', 'Regular expression' );
 	};
-	subtest 'Match alias' => sub {
-		my $etl = ETL::Pipeline->new( {
-			work_in => 't',
-			input   => 'UnitTest',
-			mapping => {un => 'Header1'},
-			output  => 'UnitTest',
-		} )->process;
-		my $output = $etl->output->get_record( 0 );
-		is( $output->{un}, 'Field1', 'Bare field name' );
 
-		subtest 'Multiple fields, same alias' => sub {
-			my $etl = ETL::Pipeline->new( {
-				work_in => 't',
-				input   => 'UnitTest',
-				mapping => {un => 'Header6'},
-				output  => 'UnitTest',
-			} )->process;
-
-			my $output = $etl->output->get_record( 0 );
-			is( ref( $output->{un} )      , 'ARRAY' , 'List'           );
-			is( scalar( @{$output->{un}} ), 2       , 'Correct number' );
-			is( $output->{un}->[0]        , 'Field6', 'First in file'  );
-			is( $output->{un}->[1]        , 'Field7', 'Second in file' );
-		};
-
-		my $etl = ETL::Pipeline->new( {
-			work_in => 't',
-			input   => 'UnitTest',
-			mapping => {un => qr/der1$/},
-			output  => 'UnitTest',
-		} )->process;
-		my $output = $etl->output->get_record( 0 );
-		is( $output->{un}, 'Field1', 'Regular expression, one match' );
-
-		subtest 'Regular expression, multiple matches' => sub {
-			my $etl = ETL::Pipeline->new( {
-				work_in => 't',
-				input   => 'UnitTest',
-				mapping => {un => qr/der6/},
-				output  => 'UnitTest',
-			} )->process;
-
-			my $output = $etl->output->get_record( 0 );
-			is( ref( $output->{un} )      , 'ARRAY' , 'List'           );
-			is( scalar( @{$output->{un}} ), 2       , 'Correct number' );
-			is( $output->{un}->[0]        , 'Field6', 'First in file'  );
-			is( $output->{un}->[1]        , 'Field7', 'Second in file' );
-		};
-	};
 	subtest 'Code reference' => sub {
+		my ($pipeline, $record);
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
 			input   => 'UnitTest',
@@ -259,10 +248,10 @@ subtest 'mapping' => sub {
 		} )->process;
 
 		is( ref( $pipeline ), 'ETL::Pipeline', 'Pipeline in parameters' );
-		is( ref( $record   ), 'HASH'         , 'Record in parameters'   );
+		is( ref( $record   ), 'ARRAY'        , 'Record in parameters'   );
 
 		my $output = $etl->output->get_record( 0 );
-		is( $output->{un}, 'abc', 'Return value saved' );
+		is( $output->{un}, 'abc', 'Return value' );
 	};
 
 	my $etl = ETL::Pipeline->new( {
@@ -280,7 +269,7 @@ subtest 'on_record' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in   => 't',
 			input     => 'UnitTest',
-			mapping   => {un => 1, deux => 2, trois => 3},
+			mapping   => {un => 0},
 			on_record => sub { return (shift->count == 1 ? 1 : 0); },
 			output    => 'UnitTest',
 		} )->process;
@@ -295,8 +284,8 @@ subtest 'on_record' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in   => 't',
 			input     => 'UnitTest',
-			mapping   => {un => 1, deux => 2, trois => 3},
-			on_record => sub { my ($p, $r) = @_; $r->{1} = uc( $r->{1} ); },
+			mapping   => {un => 0},
+			on_record => sub { my ($p, $r) = @_; $r->[0] = uc( $r->[0] ); },
 			output    => 'UnitTest',
 		} )->process;
 
