@@ -36,7 +36,7 @@ use warnings;
 use Carp;
 use Data::DPath qw/dpath/;
 use Data::Traverse qw/traverse/;
-use List::AllUtils qw/first/;
+use List::AllUtils qw/any first/;
 use Moose;
 use MooseX::Types::Path::Class qw/Dir File/;
 use Path::Class::Rule;
@@ -1083,24 +1083,19 @@ sub record {
 		}
 
 		my $values = $self->get( $from );
-		if (ref( $values ) eq '') {
-			$save->{$to} = $values;
-		} elsif (ref( $values ) eq 'ARRAY') {
-			my @usable = grep { defined $_ } @$values;
-
-			my $invalid = first { ref( $_ ) ne '' } @usable;
+		if    (ref( $values ) eq ''     ) { $save->{$to} = $values; }
+		elsif (ref( $values ) eq 'ARRAY') {
+			my $invalid = first { defined( $_ ) && ref( $_ ) ne '' } @$values;
 			if (defined $invalid) {
 				my $type = ref( $invalid );
 				$self->status( 'ERROR', "Data structure of type $type found by mapping '$from' to '$to'" );
 				$save->{$to} = undef;
-			} elsif(scalar @usable) {
-				$save->{$to} = join( $seperator, @usable );
 			} else {
-				$save->{$to} = undef;
+				my @usable = grep { hascontent( $_ ) } @$values;
+				if(scalar @usable) { $save->{$to} = join( $seperator, @usable ); }
+				else               { $save->{$to} = undef;                       }
 			}
-		} else {
-			$save->{$to} = undef;
-		}
+		} else { $save->{$to} = undef; }
 	}
 
 	# We're done with this record. Finish up.
@@ -1179,6 +1174,275 @@ sub status {
 			say "$type [record #$count] $message";
 		}
 	}
+}
+
+
+=head2 Utility Functions
+
+These methods can be used inside L</mapping> code references. Unless otherwise
+noted, these all work on L<the current record|/this>.
+
+  my $etl = ETL::Pipeline->new( {
+    ...
+    mapping => {A => sub { shift->function( ... ) }},
+    ...
+  } );
+
+=head3 build
+
+Builds a string from a list of fields, discarding blank fields. That's the main
+purpose of the function - don't use entirely blank strings. This prevents things
+like orphanded commas from showing up in your data.
+
+B<build> can both concateneate (C<join>) fields or format them (C<sprintf>).
+A SCALAR reference signifies a format. A regular string indicates concatenation.
+
+  # Concatenate fields (aka join)
+  $etl->build( "\n\n", 'D', 'E', 'F' );
+
+  # Format fields (aka sprintf)
+  $etl->build( \'%s, %s (%s)', 'D', 'E', 'F' );
+
+You can nest constructs with an ARRAY reference. The seperator or format string
+is the first element. The remaining elements are more fields (or other nested
+ARRAY references). Basically, B<build> recursively calls itself passing the
+array as parameters.
+
+  # Blank lines between. Third line is two fields seperated by a space.
+  $etl->build( "\n\n", 'D', 'E', [' ', 'F', 'G'] );
+
+  # Blank lines between. Third line is formatted.
+  $etl->build( "\n\n", 'D', 'E', [\'-- from %s %s', 'F', 'G'] );
+
+I<Blank> means C<undef>, empty string, or all whitespace. B<build> returns an
+empty string if all of fields are blank.
+
+=head4 Build I<until>
+
+B<build> optionally accepts a CODE reference to stop processing early. B<build>
+passes each value into the code reference. If the code returns B<true>, then
+B<build> stops processing fields and returns. The code reference comes before
+the seperator/format.
+
+  # Concantenate fields until one of them is the word "END".
+  $etl->build( sub { $_ eq 'END' }, "\n\n", '/*[idx > 8]' );
+
+B<build> sets C<$_> to the field value. It also passes the value as the first
+and only parameter. Your code can use either C<$_> or C<shift> to access the
+value.
+
+You can include code references inside an ARRAY reference too. The code only
+stops processing inside that substring. It continues processing the outer set of
+fields after the ARRAY.
+
+  # The last line concatenates fields until one of them is the word "END".
+  $etl->build( "\n\n", 'A', 'B', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'] );
+
+  # Do the conditional concatenate in the middle. Results in 3 lines.
+  $etl->build( "\n\n", 'A', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'], 'B' );
+
+What happens if you have a CODE reference and an ARRAY reference, like this?
+
+  $etl->build( sub { $_ eq 'END' }, "\n\n", 'A', [' ', 'B', 'C'], 'D' );
+
+B<build> retrieves the ARRAY reference as a single string. It then sends that
+entire string through the CODE reference. If the code returns B<true>,
+processing stops. In other words, B<build> treats the results of an ARRAY
+reference just like any other field.
+
+=cut
+
+sub build {
+	my $self        = shift;
+	my $conditional = shift;
+	my $seperator;
+
+	# Process the fixed parameters.
+	if (ref( $conditional ) eq 'CODE') {
+		$seperator = shift;
+	} else {
+		$seperator   = $conditional;
+		$conditional = undef       ;
+	}
+
+	# Retrieve the fields.
+	my @results;
+	my $stop = 0;
+
+	foreach my $name (@_) {
+		# Retrieve the value for this field.
+		my $values;
+		if (ref( $name ) eq 'ARRAY') {
+			$values = $self->build( @$name );
+		} else {
+			$values = $self->get( $field );
+		}
+
+		# Check the results.
+		$values = [$values] unless ref( $values ) eq 'ARRAY';
+		if (defined $conditional) {
+			foreach $item (@$values) {
+				local $_ = $item;
+				if ($filter->( $_ )) {
+					$stop = 1;
+					last;
+				} else { push @results, $item; }
+			}
+		} else { push @results, @$values; }
+
+		# Terminate the loop early.
+		last if $stop;
+	}
+
+	# Return the formatted results.
+	if (ref( $seperator ) eq 'SCALAR') {
+		if (any { hascontent( $_ ) } @results) {
+			return sprintf( $$seperator, @results );
+		} else { return ''; }
+	} else { return join( $seperator, grep { hascontent( $_ ) } @results ); }
+}
+
+
+=head3 coalesce
+
+Emulates the SQL Server C<COALESCE> command. It takes a list of field names for
+L</get> and returns the value of the first non-blank field.
+
+  # First non-blank field
+  $etl->coalesce( 'Patient', 'Complainant', 'From' );
+
+  # Actual value if no non-blank fields
+  $etl->coalesce( 'Date', \$today );
+
+In the first example, B<coalesce> looks at the B<Patient> field first. If it's
+blank, then B<coalesce> looks at the B<Complainant> field. Same thing - if it's
+blank, B<coalesce> returns the B<From> field.
+
+I<Blank> means C<undef>, empty string, or all whitespace. This is different
+than the SQL version.
+
+The second examples shows an actual value passed as a scalar reference. Because
+it's a reference, B<coalesce> recognizes that it is not a field name for
+L</get>. B<coalesce> uses the value in C<$today> if the B<Date> field is blank.
+
+B<coalesce> returns an empty string if all of the fields are blank.
+
+=cut
+
+sub coalesce {
+	my $self = shift;
+
+	my $result = '';
+	foreach my $field (@_) {
+		my $value = (ref( $field ) eq 'SCALAR') ? $$field : $self->get( $field );
+		if (hascontent( $value )) {
+			$result = $value;
+			last;
+		}
+	}
+	return $result;
+}
+
+
+=head3 from
+
+Return data from a hash, like the one from L<ETL::Pipeline::Output::Memory>. The
+first parameter is the hash reference. The remaining parameters are field names
+whose values become the hash keys. It's a convenient shorthand for accessing
+a hash, with all of the error checking built in.
+
+  $etl->from( $etl->output->hash, qr/myID/i, qr/Site/i );
+
+To pass a string literal, use a scalar reference.
+
+  $etl->from( \%hash, qr/myID/i, \'Date' );
+
+This is equivalent to...
+
+  $hash{$etl->get( qr/myID/i )}->{'Date'}
+
+B<from> returns C<undef> is any one key does not exist.
+
+B<from> automatically dereferences arrays. So if you store multiple values, the
+function returns them as a list instead of the list reference. Scalar values and
+hash references are returned as-is.
+
+=cut
+
+sub from {
+	my $self  = shift;
+	my $value = shift;
+
+	foreach my $field (@_) {
+		if    (ref( $value ) ne 'HASH'   ) { return undef              ; }
+		elsif (!defined( $field )        ) { return undef              ; }
+		elsif (ref( $field ) eq 'SCALAR' ) { $value = $value->{$$field}; }
+		else {
+			my $key = $self->get( $field );
+			if (hascontent( $key )) { $value = $value->{$key}; }
+			else                    { return undef           ; }
+		}
+	}
+	return (ref( $value ) eq 'ARRAY' ? @$value : $value);
+}
+
+
+=head3 name
+
+Format fields as a person's name. Names are common data elements. This function
+provides a common format. Yet is flexible enough to handle customization.
+
+  # Simple name formatted as "last, first".
+  $etl->name( 'Last', 'First' );
+
+  # Simple name formatted "first last". The format is the first element.
+  $etl->name( \'%s %s', 'First', 'Last' );
+
+  # Add a role or description in parenthesis, if it's there.
+  $etl->name( 'Last', 'First', ['Role'] );
+
+  # Add two fields with a custom format if at least one exists.
+  $etl->name( 'Last', 'First', [\'(%s; %s)', 'Role', 'Type'] );
+
+  # Same thing, but only adds the semi-colon if both values are there.
+  $etl->name( 'Last', 'First', [['; ', 'Role', 'Type']] );
+
+  # Long hand way of writing the above.
+  $etl->name( 'Last', 'First', [\'(%s)', ['; ', 'Role', 'Type']] );
+
+If B<name> doesn't do what you want, try L</build>. L</build> is more flexible.
+As a matter of fact, B<name> calls L</build> internally.
+
+=cut
+
+sub name {
+	my $self = shift;
+
+	# Initialize name format.
+	my $name_format = ref( $_[0] ) eq 'SCALAR' ? shift : '%s, %s';
+	my @name_fields;
+
+	my $role_format = '(%s)';
+	my @role_fields;
+
+	# Process name and role fields. Anything after that is just extra text
+	# appended to the result.
+	while (my $item = shift) {
+		if (ref( $item ) eq 'ARRAY') {
+			if (ref( $item->[0] ) eq 'SCALAR') {
+			$role_format = shift @$item;
+			@role_fields = @$item;
+			last;
+		} else { push @name_fields, $item; }
+	}
+
+	# Build the string using the "build" method. Elements are concatenated with
+	# a single space between them. This properly leaves out any blank elements.
+	return $self->build( ' ',
+		[\$name_format, @name_fields],
+		[\$role_format, @role_fields],
+		@_
+	);
 }
 
 
