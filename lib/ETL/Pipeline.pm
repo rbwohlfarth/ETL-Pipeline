@@ -1446,6 +1446,271 @@ sub name {
 }
 
 
+=head3 piece
+
+Split a string and extract one or more of the individual pieces. This can come
+in handy with file names, for example. A file split on the period has two pieces
+- the name and the extension, piece 1 and piece 2 respectively. Here are some
+examples...
+
+  # File name: Example.JPG
+  # Returns: Example
+  $etl->piece( 'Filename', qr|\.|, 1 );
+
+  # Returns: JPG
+  $etl->piece( 'Filename', qr|\.|, 2 );
+
+B<piece> takes a minimum of 3 parameters...
+
+=over
+
+=item 1. Any field name valid for L</get>
+
+=item 2. Regular expression for splitting the field
+
+=item 3. Piece number to extract (the first piece is B<1>, not B<0>)
+
+=back
+
+B<piece> accepts any field name valid with L</get>. Multiple values are
+concatenated with a single space. You can specify a different seperator using
+the same syntax as L</mapping> - an array reference. In that array, the first
+element is the field name and the second is the seperator string.
+
+The second parameter for B<piece> is a regular expression. B<piece> passes this
+to C<split> and breaks apart the field value.
+
+The third parameter returns one or more pieces from the split string. In the
+simplest form, this is a single number. And B<piece> returns that piece from the
+split string. Note that pieces start at number 1, not 0 like array indexes.
+
+A negative piece number starts from the end of the string. For example, B<-2>
+returns the second to last piece. You can also include a length - number of
+pieces to return starting at the given position. The default length is B<1>.
+
+  # Filename: abc_def_ghi_jkl_mno_pqr
+  # Returns: abc def
+  $etl->piece( 'Filename', qr/_/, '1,2' );
+
+  # Returns: ghi jkl mno
+  $etl->piece( 'Filename', qr/_/, '3,3' );
+
+  # Returns: mno pqr
+  $etl->piece( 'Filename', qr/_/, '-2,2' );
+
+Notice that the multiple pieces are re-joined using a space. You can specify the
+seperator string after the length. Do not put spaces after the commas. B<piece>
+will mistakenly use it as part of the seperator.
+
+  # Filename: abc_def_ghi_jkl_mno_pqr
+  # Returns: abc+def
+  $etl->piece( 'Filename', qr/_/, '1,2,+' );
+
+  # Returns: ghi,jkl,mno
+  $etl->piece( 'Filename', qr/_/, '3,3,,' );
+
+  # Returns: ghi -jkl -mno
+  $etl->piece( 'Filename', qr/_/, '3,3, -' );
+
+A blank length returns all pieces from the start position to the end, just like
+the Perl C<splice> function.
+
+  # Filename: abc_def_ghi_jkl_mno_pqr
+  # Returns: ghi jkl mno pqr
+  $etl->piece( 'Filename', qr/_/, '3,' );
+
+  # Returns: ghi+jkl+mno+pqr
+  $etl->piece( 'Filename', qr/_/, '3,,+' );
+
+=head4 Recursive pieces
+
+Imagine a name like I<Public, John Q., MD>. How would you parse out the middle
+initial by hand? First, you piece the string by comma. Next you split the
+second piece of that by a space. B<piece> lets you do the same thing.
+
+  # Name: Public, John Q., MD
+  # Returns: Q.
+  $etl->piece( 'Name', qr/,/, 2, qr/ /, 2 );
+
+  # Returns: John
+  $etl->piece( 'Name', qr/,/, 2, qr/ /, 1 );
+
+B<piece> will take the results from the first split and use it as the input to
+the second split. It will continue to do this for as many pairs of expressions
+and piece numbers as you send.
+
+=cut
+
+sub piece {
+	my $self  = shift;
+	my $field = shift;
+
+	# Retrieve the initial value from the field.
+	my $seperator = ' ';
+	if (ref( $field ) eq 'ARRAY') {
+		$seperator = $field->[1] // ' ';
+		$field     = $field->[0];
+	}
+	my $value = $self->get( $field );
+	$value = trim( join( $seperator, @$value ) ) if ref( $value ) eq 'ARRAY';
+
+	# Recursively split the string.
+	while (scalar @_) {
+		my $split    = shift;
+		my @location = split /,/, shift, 3;
+
+		my @pieces = split( $split, $value );
+		if (scalar( @location ) == 0) {
+			$value = $pieces[0];
+		} elsif (scalar( @location ) == 1) {
+			my $index = $location[0] > 0 ? $location[0] - 1 : $location[0];
+			$value = $pieces[$index];
+		} elsif (scalar( @location ) == 2) {
+			my @parts = splice @pieces, $location[0], $location[1];
+			$value = join( ' ', @parts );
+		} else {
+			my @parts = splice @pieces, $location[0], $location[1];
+			$value = join( $location[2], @parts );
+		}
+		$value = trim( $value );
+	}
+
+	# Return the value extracted from the last split.
+	return $value;
+}
+
+
+=head3 replace
+
+Substitute one string for another. This function uses the C<s///> operator and
+returns the modified string. B<replace> accepts a field name for L</get>. A
+little more convenient that calling L</get> and applying C<s///> yourself.
+
+B<replace> takes three parameters...
+
+=over
+
+=item The field to change
+
+=item The regular expression to match against
+
+=item The string to replace the match with
+
+=back
+
+All instances of the matching pattern are replaced. For the patterns, you can
+use strings or regular expression references.
+
+=cut
+
+sub replace {
+	my ($self, $field, $match, $change) = @_;
+
+	my $string = $self->get( $field );
+	$string =~ s/$match/$change/g;
+	return $string;
+}
+
+
+=head3 subrecord
+
+Executes a CODE reference against repeating sub-records. XML files, for example,
+have repeating nodes. B<subrecord> allows you to format multiple fields from
+the same record. It looks like this...
+
+  # Capture the resulting strings.
+  my @results = $etl->subrecord( '/File/People', sub { ... } );
+
+  # Combine the resulting strings.
+  join( '; ', $etl->subrecord( '/File/People', sub { ... } ) );
+
+B<subrecord> calls L</get> to retrieve a list of sub-records. It replaces
+L</this> with each sub-record in turn and executes the code reference. You can
+use any of the standard unitlity functions inside the code reference. They will
+operate only on the current sub-record.
+
+B<subrecord> returns a single string per sub-record. Blank strings are
+discarded. I<Blank> means C<undef>, empty strings, or all whitespace. You can
+filter sub-records by returning C<undef> from the code reference.
+
+For example, you might do something like this to format names from XML...
+
+  # Format names "last, first" and put a semi-colon between multiple names.
+  $etl->build( '; ', $etl->subrecord(
+    '/File/People',
+    sub { $etl->build( ', ', '/Last', '/First' ) }
+  ) );
+
+  # Same thing, but using parameters.
+  $etl->build( '; ', $etl->subrecord(
+    '/File/People',
+    sub {
+      my ($object, $record) = @_;
+      $object->build( ', ', '/Last', '/First' )
+    }
+  ) );
+
+B<subrecord> passed two parameters to the code reference...
+
+=over
+
+=item The current B<ETL::Pipeline> object.
+
+=item The current sub-record. This will be the same value as L</this>.
+
+=back
+
+The code reference should return a string. If it returns an ARRAY reference,
+B<subrecord> flattens it, discarding any blank elements. So if you have to
+return multiple values, B<subrecord> tries to do something intelligent.
+
+B<subrecord> sets L</this> before executing the CODE reference. The code can
+call any of the other utility functions with field names relative to the
+sub-record.
+I<Please note, the code cannot access fields outside of the sub-record>.
+Instead, cache these in a local variable before called B<subrecord>.
+
+  my $x = $etl->get( '/File/MainPerson' );
+  join( '; ', $etl->subrecord( '/File/People', sub {
+    my $y = $etl->build( ', ', '/Last', '/First' );
+    "$y is with $x";
+  } );
+
+B<subrecord> returns a list. The list may be empty or have one element. But it
+is always a list. You can use Perl functions such as C<join> to convert the list
+into a single value.
+
+=cut
+
+sub subrecord {
+	my ($self, $path, $code) = @_;
+
+	# Cache the current record. I need to restore this later so other function
+	# calls work normally.
+	my $this = $self->this;
+
+	# Retrieve the repeating sub-records.
+	my $all = $self->get( $path );
+	$all = [$all] unless ref( $all ) eq 'ARRAY';
+
+	# Execute the code reference against each sub-record.
+	my @results;
+	foreach my $record (@$all) {
+		$self->_set_this( $record );
+		local $_ = $record;
+		my @values = $code->( $self, $_ );
+
+		if (scalar( @values ) == 1 && ref( $values[0] ) eq 'ARRAY') {
+			push @results, @{$values[0]};
+		} else { push @results, @values; }
+	}
+
+	# Restore the current record and return all of the results.
+	$self->_set_this( $this );
+	return grep { ref( $_ ) eq '' && hascontent( $_ ) } @results;
+}
+
+
 =head2 Other
 
 =head3 is_valid
