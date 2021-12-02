@@ -10,6 +10,7 @@ sub run {
 		my $record = {
 			base => $path->basename,
 			path => $path->relative( $etl->data_in ),
+			sub  => {a => 1, b => 2, c => 3, d => 4},
 		};
 		$etl->record( $record );
 	}

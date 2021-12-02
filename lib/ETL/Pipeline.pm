@@ -38,7 +38,7 @@ use Data::DPath qw/dpath/;
 use Data::Traverse qw/traverse/;
 use List::AllUtils qw/any first/;
 use Moose;
-use MooseX::Types::Path::Class qw/Dir File/;
+use MooseX::Types::Path::Class qw/Dir/;
 use Path::Class::Rule;
 use Scalar::Util qw/blessed/;
 use String::Util qw/hascontent trim/;
@@ -1275,15 +1275,15 @@ sub build {
 		if (ref( $name ) eq 'ARRAY') {
 			$values = $self->build( @$name );
 		} else {
-			$values = $self->get( $field );
+			$values = $self->get( $name );
 		}
 
 		# Check the results.
 		$values = [$values] unless ref( $values ) eq 'ARRAY';
 		if (defined $conditional) {
-			foreach $item (@$values) {
+			foreach my $item (@$values) {
 				local $_ = $item;
-				if ($filter->( $_ )) {
+				if ($conditional->( $_ )) {
 					$stop = 1;
 					last;
 				} else { push @results, $item; }
@@ -1297,6 +1297,7 @@ sub build {
 	# Return the formatted results.
 	if (ref( $seperator ) eq 'SCALAR') {
 		if (any { hascontent( $_ ) } @results) {
+			no warnings 'redundant';
 			return sprintf( $$seperator, @results );
 		} else { return ''; }
 	} else { return join( $seperator, grep { hascontent( $_ ) } @results ); }
@@ -1417,9 +1418,12 @@ As a matter of fact, B<name> calls L</build> internally.
 
 sub name {
 	my $self = shift;
-
 	# Initialize name format.
-	my $name_format = ref( $_[0] ) eq 'SCALAR' ? shift : '%s, %s';
+	my $name_format = '%s, %s';
+	if (ref( $_[0] ) eq 'SCALAR') {
+		my $argument = shift;
+		$name_format = $$argument;
+	}
 	my @name_fields;
 
 	my $role_format = '(%s)';
@@ -1427,10 +1431,12 @@ sub name {
 
 	# Process name and role fields. Anything after that is just extra text
 	# appended to the result.
-	while (my $item = shift) {
+	for (my $item = shift; defined $item; $item = shift) {
 		if (ref( $item ) eq 'ARRAY') {
 			if (ref( $item->[0] ) eq 'SCALAR') {
-			$role_format = shift @$item;
+				my $argument = shift( @$item );
+				$role_format = $$argument;
+			}
 			@role_fields = @$item;
 			last;
 		} else { push @name_fields, $item; }
@@ -1566,17 +1572,27 @@ sub piece {
 			my $index = $location[0] > 0 ? $location[0] - 1 : $location[0];
 			$value = $pieces[$index];
 		} elsif (scalar( @location ) == 2) {
-			my @parts = splice @pieces, $location[0], $location[1];
+			my @parts;
+			if (hascontent( $location[1] )) {
+				@parts = splice @pieces, $location[0] - 1, $location[1];
+			} else {
+				@parts = splice @pieces, $location[0] - 1;
+			}
 			$value = join( ' ', @parts );
 		} else {
-			my @parts = splice @pieces, $location[0], $location[1];
+			my @parts;
+			if (hascontent( $location[1] )) {
+				@parts = splice @pieces, $location[0] - 1, $location[1];
+			} else {
+				@parts = splice @pieces, $location[0] - 1;
+			}
 			$value = join( $location[2], @parts );
 		}
 		$value = trim( $value );
 	}
 
 	# Return the value extracted from the last split.
-	return $value;
+	return $value // '';
 }
 
 
