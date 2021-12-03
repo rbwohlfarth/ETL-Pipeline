@@ -1188,122 +1188,6 @@ noted, these all work on L<the current record|/this>.
     ...
   } );
 
-=head3 build
-
-Builds a string from a list of fields, discarding blank fields. That's the main
-purpose of the function - don't use entirely blank strings. This prevents things
-like orphanded commas from showing up in your data.
-
-B<build> can both concateneate (C<join>) fields or format them (C<sprintf>).
-A SCALAR reference signifies a format. A regular string indicates concatenation.
-
-  # Concatenate fields (aka join)
-  $etl->build( "\n\n", 'D', 'E', 'F' );
-
-  # Format fields (aka sprintf)
-  $etl->build( \'%s, %s (%s)', 'D', 'E', 'F' );
-
-You can nest constructs with an ARRAY reference. The seperator or format string
-is the first element. The remaining elements are more fields (or other nested
-ARRAY references). Basically, B<build> recursively calls itself passing the
-array as parameters.
-
-  # Blank lines between. Third line is two fields seperated by a space.
-  $etl->build( "\n\n", 'D', 'E', [' ', 'F', 'G'] );
-
-  # Blank lines between. Third line is formatted.
-  $etl->build( "\n\n", 'D', 'E', [\'-- from %s %s', 'F', 'G'] );
-
-I<Blank> means C<undef>, empty string, or all whitespace. B<build> returns an
-empty string if all of fields are blank.
-
-=head4 Build I<until>
-
-B<build> optionally accepts a CODE reference to stop processing early. B<build>
-passes each value into the code reference. If the code returns B<true>, then
-B<build> stops processing fields and returns. The code reference comes before
-the seperator/format.
-
-  # Concantenate fields until one of them is the word "END".
-  $etl->build( sub { $_ eq 'END' }, "\n\n", '/*[idx > 8]' );
-
-B<build> sets C<$_> to the field value. It also passes the value as the first
-and only parameter. Your code can use either C<$_> or C<shift> to access the
-value.
-
-You can include code references inside an ARRAY reference too. The code only
-stops processing inside that substring. It continues processing the outer set of
-fields after the ARRAY.
-
-  # The last line concatenates fields until one of them is the word "END".
-  $etl->build( "\n\n", 'A', 'B', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'] );
-
-  # Do the conditional concatenate in the middle. Results in 3 lines.
-  $etl->build( "\n\n", 'A', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'], 'B' );
-
-What happens if you have a CODE reference and an ARRAY reference, like this?
-
-  $etl->build( sub { $_ eq 'END' }, "\n\n", 'A', [' ', 'B', 'C'], 'D' );
-
-B<build> retrieves the ARRAY reference as a single string. It then sends that
-entire string through the CODE reference. If the code returns B<true>,
-processing stops. In other words, B<build> treats the results of an ARRAY
-reference just like any other field.
-
-=cut
-
-sub build {
-	my $self        = shift;
-	my $conditional = shift;
-	my $seperator;
-
-	# Process the fixed parameters.
-	if (ref( $conditional ) eq 'CODE') {
-		$seperator = shift;
-	} else {
-		$seperator   = $conditional;
-		$conditional = undef       ;
-	}
-
-	# Retrieve the fields.
-	my @results;
-	my $stop = 0;
-
-	foreach my $name (@_) {
-		# Retrieve the value for this field.
-		my $values;
-		if (ref( $name ) eq 'ARRAY') {
-			$values = $self->build( @$name );
-		} else {
-			$values = $self->get( $name );
-		}
-
-		# Check the results.
-		$values = [$values] unless ref( $values ) eq 'ARRAY';
-		if (defined $conditional) {
-			foreach my $item (@$values) {
-				local $_ = $item;
-				if ($conditional->( $_ )) {
-					$stop = 1;
-					last;
-				} else { push @results, $item; }
-			}
-		} else { push @results, @$values; }
-
-		# Terminate the loop early.
-		last if $stop;
-	}
-
-	# Return the formatted results.
-	if (ref( $seperator ) eq 'SCALAR') {
-		if (any { hascontent( $_ ) } @results) {
-			no warnings 'redundant';
-			return sprintf( $$seperator, @results );
-		} else { return ''; }
-	} else { return join( $seperator, grep { hascontent( $_ ) } @results ); }
-}
-
-
 =head3 coalesce
 
 Emulates the SQL Server C<COALESCE> command. It takes a list of field names for
@@ -1342,6 +1226,220 @@ sub coalesce {
 		}
 	}
 	return $result;
+}
+
+
+=head3 foreach
+
+Executes a CODE reference against repeating sub-records. XML files, for example,
+have repeating nodes. B<foreach> allows you to format multiple fields from the
+same record. It looks like this...
+
+  # Capture the resulting strings.
+  my @results = $etl->foreach( '/File/People', sub { ... } );
+
+  # Combine the resulting strings.
+  join( '; ', $etl->foreach( '/File/People', sub { ... } ) );
+
+B<foreach> calls L</get> to retrieve a list of sub-records. It replaces L</this>
+with each sub-record in turn and executes the code reference. You can use any of
+the standard unitlity functions inside the code reference. They will operate
+only on the current sub-record.
+
+B<foreach> returns a single string per sub-record. Blank strings are discarded.
+I<Blank> means C<undef>, empty strings, or all whitespace. You can filter
+sub-records by returning C<undef> from the code reference.
+
+For example, you might do something like this to format names from XML...
+
+  # Format names "last, first" and put a semi-colon between multiple names.
+  $etl->format( '; ', $etl->foreach(
+    '/File/People',
+    sub { $etl->format( ', ', '/Last', '/First' ) }
+  ) );
+
+  # Same thing, but using parameters.
+  $etl->format( '; ', $etl->foreach(
+    '/File/People',
+    sub {
+      my ($object, $record) = @_;
+      $object->format( ', ', '/Last', '/First' )
+    }
+  ) );
+
+B<foreach> passed two parameters to the code reference...
+
+=over
+
+=item The current B<ETL::Pipeline> object.
+
+=item The current sub-record. This will be the same value as L</this>.
+
+=back
+
+The code reference should return a string. If it returns an ARRAY reference,
+B<foreach> flattens it, discarding any blank elements. So if you have to return
+multiple values, B<foreach> tries to do something intelligent.
+
+B<foreach> sets L</this> before executing the CODE reference. The code can call
+any of the other utility functions with field names relative to the sub-record.
+I<Please note, the code cannot access fields outside of the sub-record>.
+Instead, cache these in a local variable before called B<foreach>.
+
+  my $x = $etl->get( '/File/MainPerson' );
+  join( '; ', $etl->foreach( '/File/People', sub {
+    my $y = $etl->format( ', ', '/Last', '/First' );
+    "$y is with $x";
+  } );
+
+B<foreach> returns a list. The list may be empty or have one element. But it is
+always a list. You can use Perl functions such as C<join> to convert the list
+into a single value.
+
+=cut
+
+sub foreach {
+	my ($self, $path, $code) = @_;
+
+	# Cache the current record. I need to restore this later so other function
+	# calls work normally.
+	my $this = $self->this;
+
+	# Retrieve the repeating sub-records.
+	my $all = $self->get( $path );
+	$all = [$all] unless ref( $all ) eq 'ARRAY';
+
+	# Execute the code reference against each sub-record.
+	my @results;
+	foreach my $record (@$all) {
+		$self->_set_this( $record );
+		local $_ = $record;
+		my @values = $code->( $self, $_ );
+
+		if (scalar( @values ) == 1 && ref( $values[0] ) eq 'ARRAY') {
+			push @results, @{$values[0]};
+		} else { push @results, @values; }
+	}
+
+	# Restore the current record and return all of the results.
+	$self->_set_this( $this );
+	return grep { ref( $_ ) eq '' && hascontent( $_ ) } @results;
+}
+
+
+=head3 format
+
+Builds a string from a list of fields, discarding blank fields. That's the main
+purpose of the function - don't use entirely blank strings. This prevents things
+like orphanded commas from showing up in your data.
+
+B<format> can both concateneate (C<join>) fields or format them (C<sprintf>).
+A SCALAR reference signifies a format. A regular string indicates concatenation.
+
+  # Concatenate fields (aka join)
+  $etl->format( "\n\n", 'D', 'E', 'F' );
+
+  # Format fields (aka sprintf)
+  $etl->format( \'%s, %s (%s)', 'D', 'E', 'F' );
+
+You can nest constructs with an ARRAY reference. The seperator or format string
+is the first element. The remaining elements are more fields (or other nested
+ARRAY references). Basically, B<format> recursively calls itself passing the
+array as parameters.
+
+  # Blank lines between. Third line is two fields seperated by a space.
+  $etl->format( "\n\n", 'D', 'E', [' ', 'F', 'G'] );
+
+  # Blank lines between. Third line is formatted.
+  $etl->format( "\n\n", 'D', 'E', [\'-- from %s %s', 'F', 'G'] );
+
+I<Blank> means C<undef>, empty string, or all whitespace. B<format> returns an
+empty string if all of fields are blank.
+
+=head4 Format until
+
+B<format> optionally accepts a CODE reference to stop processing early.
+B<format> passes each value into the code reference. If the code returns
+B<true>, then B<format> stops processing fields and returns. The code reference
+comes before the seperator/format.
+
+  # Concantenate fields until one of them is the word "END".
+  $etl->format( sub { $_ eq 'END' }, "\n\n", '/*[idx > 8]' );
+
+B<format> sets C<$_> to the field value. It also passes the value as the first
+and only parameter. Your code can use either C<$_> or C<shift> to access the
+value.
+
+You can include code references inside an ARRAY reference too. The code only
+stops processing inside that substring. It continues processing the outer set of
+fields after the ARRAY.
+
+  # The last line concatenates fields until one of them is the word "END".
+  $etl->format( "\n\n", 'A', 'B', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'] );
+
+  # Do the conditional concatenate in the middle. Results in 3 lines.
+  $etl->format( "\n\n", 'A', [sub { $_ eq 'END' }, ' ', '/*[idx > 8]'], 'B' );
+
+What happens if you have a CODE reference and an ARRAY reference, like this?
+
+  $etl->format( sub { $_ eq 'END' }, "\n\n", 'A', [' ', 'B', 'C'], 'D' );
+
+B<format> retrieves the ARRAY reference as a single string. It then sends that
+entire string through the CODE reference. If the code returns B<true>,
+processing stops. In other words, B<format> treats the results of an ARRAY
+reference just like any other field.
+
+=cut
+
+sub format {
+	my $self        = shift;
+	my $conditional = shift;
+	my $seperator;
+
+	# Process the fixed parameters.
+	if (ref( $conditional ) eq 'CODE') {
+		$seperator = shift;
+	} else {
+		$seperator   = $conditional;
+		$conditional = undef       ;
+	}
+
+	# Retrieve the fields.
+	my @results;
+	my $stop = 0;
+
+	foreach my $name (@_) {
+		# Retrieve the value for this field.
+		my $values;
+		if (ref( $name ) eq 'ARRAY') {
+			$values = $self->format( @$name );
+		} else {
+			$values = $self->get( $name );
+		}
+
+		# Check the results.
+		$values = [$values] unless ref( $values ) eq 'ARRAY';
+		if (defined $conditional) {
+			foreach my $item (@$values) {
+				local $_ = $item;
+				if ($conditional->( $_ )) {
+					$stop = 1;
+					last;
+				} else { push @results, $item; }
+			}
+		} else { push @results, @$values; }
+
+		# Terminate the loop early.
+		last if $stop;
+	}
+
+	# Return the formatted results.
+	if (ref( $seperator ) eq 'SCALAR') {
+		if (any { hascontent( $_ ) } @results) {
+			no warnings 'redundant';
+			return sprintf( $$seperator, @results );
+		} else { return ''; }
+	} else { return join( $seperator, grep { hascontent( $_ ) } @results ); }
 }
 
 
@@ -1419,34 +1517,28 @@ As a matter of fact, B<name> calls L</build> internally.
 sub name {
 	my $self = shift;
 	# Initialize name format.
-	my $name_format = '%s, %s';
-	if (ref( $_[0] ) eq 'SCALAR') {
-		my $argument = shift;
-		$name_format = $$argument;
-	}
+	my $name_format = ref( $_[0] ) eq 'SCALAR' ? shift : ', ';
 	my @name_fields;
 
-	my $role_format = '(%s)';
+	my $role_format = \'(%s)';
 	my @role_fields;
 
 	# Process name and role fields. Anything after that is just extra text
 	# appended to the result.
 	for (my $item = shift; defined $item; $item = shift) {
 		if (ref( $item ) eq 'ARRAY') {
-			if (ref( $item->[0] ) eq 'SCALAR') {
-				my $argument = shift( @$item );
-				$role_format = $$argument;
-			}
+			$role_format = shift( @$item ) if ref( $item->[0] ) eq 'SCALAR';
 			@role_fields = @$item;
 			last;
 		} else { push @name_fields, $item; }
 	}
+	my $last_name = shift @name_fields;
 
 	# Build the string using the "build" method. Elements are concatenated with
 	# a single space between them. This properly leaves out any blank elements.
-	return $self->build( ' ',
-		[\$name_format, @name_fields],
-		[\$role_format, @role_fields],
+	return $self->format( ' ',
+		[$name_format, $last_name, [' ', @name_fields]],
+		[$role_format, @role_fields],
 		@_
 	);
 }
@@ -1625,105 +1717,6 @@ sub replace {
 	my $string = $self->get( $field );
 	$string =~ s/$match/$change/g;
 	return $string;
-}
-
-
-=head3 subrecord
-
-Executes a CODE reference against repeating sub-records. XML files, for example,
-have repeating nodes. B<subrecord> allows you to format multiple fields from
-the same record. It looks like this...
-
-  # Capture the resulting strings.
-  my @results = $etl->subrecord( '/File/People', sub { ... } );
-
-  # Combine the resulting strings.
-  join( '; ', $etl->subrecord( '/File/People', sub { ... } ) );
-
-B<subrecord> calls L</get> to retrieve a list of sub-records. It replaces
-L</this> with each sub-record in turn and executes the code reference. You can
-use any of the standard unitlity functions inside the code reference. They will
-operate only on the current sub-record.
-
-B<subrecord> returns a single string per sub-record. Blank strings are
-discarded. I<Blank> means C<undef>, empty strings, or all whitespace. You can
-filter sub-records by returning C<undef> from the code reference.
-
-For example, you might do something like this to format names from XML...
-
-  # Format names "last, first" and put a semi-colon between multiple names.
-  $etl->build( '; ', $etl->subrecord(
-    '/File/People',
-    sub { $etl->build( ', ', '/Last', '/First' ) }
-  ) );
-
-  # Same thing, but using parameters.
-  $etl->build( '; ', $etl->subrecord(
-    '/File/People',
-    sub {
-      my ($object, $record) = @_;
-      $object->build( ', ', '/Last', '/First' )
-    }
-  ) );
-
-B<subrecord> passed two parameters to the code reference...
-
-=over
-
-=item The current B<ETL::Pipeline> object.
-
-=item The current sub-record. This will be the same value as L</this>.
-
-=back
-
-The code reference should return a string. If it returns an ARRAY reference,
-B<subrecord> flattens it, discarding any blank elements. So if you have to
-return multiple values, B<subrecord> tries to do something intelligent.
-
-B<subrecord> sets L</this> before executing the CODE reference. The code can
-call any of the other utility functions with field names relative to the
-sub-record.
-I<Please note, the code cannot access fields outside of the sub-record>.
-Instead, cache these in a local variable before called B<subrecord>.
-
-  my $x = $etl->get( '/File/MainPerson' );
-  join( '; ', $etl->subrecord( '/File/People', sub {
-    my $y = $etl->build( ', ', '/Last', '/First' );
-    "$y is with $x";
-  } );
-
-B<subrecord> returns a list. The list may be empty or have one element. But it
-is always a list. You can use Perl functions such as C<join> to convert the list
-into a single value.
-
-=cut
-
-sub subrecord {
-	my ($self, $path, $code) = @_;
-
-	# Cache the current record. I need to restore this later so other function
-	# calls work normally.
-	my $this = $self->this;
-
-	# Retrieve the repeating sub-records.
-	my $all = $self->get( $path );
-	$all = [$all] unless ref( $all ) eq 'ARRAY';
-
-	# Execute the code reference against each sub-record.
-	my @results;
-	foreach my $record (@$all) {
-		$self->_set_this( $record );
-		local $_ = $record;
-		my @values = $code->( $self, $_ );
-
-		if (scalar( @values ) == 1 && ref( $values[0] ) eq 'ARRAY') {
-			push @results, @{$values[0]};
-		} else { push @results, @values; }
-	}
-
-	# Restore the current record and return all of the results.
-	$self->_set_this( $this );
-	return grep { ref( $_ ) eq '' && hascontent( $_ ) } @results;
 }
 
 

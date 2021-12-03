@@ -361,31 +361,6 @@ subtest 'work_in' => sub {
 };
 
 subtest 'Utility functions' => sub {
-	subtest 'build' => sub {
-		my $etl = ETL::Pipeline->new( {
-			work_in => 't',
-			input   => 'UnitTest',
-			mapping => {
-				One   => sub { shift->build( '-'     , 0, 1                   ) },
-				Two   => sub { shift->build( '-'     , 0, 22, 1               ) },
-				Three => sub { shift->build( \'%s+%s', 0, 1                   ) },
-				Four  => sub { shift->build( '-'     , 0, ['+'     , 1, 2], 3 ) },
-				Five  => sub { shift->build( '-'     , 0, [\'%s+%s', 1, 2], 3 ) },
-				Six   => sub { shift->build( sub { $_ eq 'Field3' }, '-', 0, 1, 2, 3 ) },
-				Seven => sub { shift->build( '-', 0, [sub { $_ eq 'Field3' }, '+', 1, 2, 3], 4 ) },
-			},
-			output  => 'UnitTest',
-		} )->process;
-		my $output = $etl->output->get_record( 0 );
-
-		is $output->{One  }, 'Field1-Field2'              , 'Combine'             ;
-		is $output->{Two  }, 'Field1-Field2'              , 'Leave out blanks'    ;
-		is $output->{Three}, 'Field1+Field2'              , 'Format'              ;
-		is $output->{Four }, 'Field1-Field2+Field3-Field4', 'Sub-combine'         ;
-		is $output->{Five }, 'Field1-Field2+Field3-Field4', 'Sub-format'          ;
-		is $output->{Six  }, 'Field1-Field2'              , 'Conditional stop'    ;
-		is $output->{Seven}, 'Field1-Field2-Field5'       , 'Sub-conditional stop';
-	};
 	subtest 'coalesce' => sub {
 		my $etl = ETL::Pipeline->new( {
 			work_in => 't',
@@ -404,6 +379,31 @@ subtest 'Utility functions' => sub {
 		is $output->{Two  }, 'Field2'  , 'First non-NULL field' ;
 		is $output->{Three}, 'constant', 'String constant'      ;
 		is $output->{Four }, 'constant', 'First non-space field';
+	};
+	subtest 'format' => sub {
+		my $etl = ETL::Pipeline->new( {
+			work_in => 't',
+			input   => 'UnitTest',
+			mapping => {
+				One   => sub { shift->format( '-'     , 0, 1                   ) },
+				Two   => sub { shift->format( '-'     , 0, 22, 1               ) },
+				Three => sub { shift->format( \'%s+%s', 0, 1                   ) },
+				Four  => sub { shift->format( '-'     , 0, ['+'     , 1, 2], 3 ) },
+				Five  => sub { shift->format( '-'     , 0, [\'%s+%s', 1, 2], 3 ) },
+				Six   => sub { shift->format( sub { $_ eq 'Field3' }, '-', 0, 1, 2, 3 ) },
+				Seven => sub { shift->format( '-', 0, [sub { $_ eq 'Field3' }, '+', 1, 2, 3], 4 ) },
+			},
+			output  => 'UnitTest',
+		} )->process;
+		my $output = $etl->output->get_record( 0 );
+
+		is $output->{One  }, 'Field1-Field2'              , 'Combine'             ;
+		is $output->{Two  }, 'Field1-Field2'              , 'Leave out blanks'    ;
+		is $output->{Three}, 'Field1+Field2'              , 'Format'              ;
+		is $output->{Four }, 'Field1-Field2+Field3-Field4', 'Sub-combine'         ;
+		is $output->{Five }, 'Field1-Field2+Field3-Field4', 'Sub-format'          ;
+		is $output->{Six  }, 'Field1-Field2'              , 'Conditional stop'    ;
+		is $output->{Seven}, 'Field1-Field2-Field5'       , 'Sub-conditional stop';
 	};
 	subtest 'from' => sub {
 		my %test = (Field2 => [8, 9], Field3 => 1, Field4 => {A => 2});
@@ -436,6 +436,7 @@ subtest 'Utility functions' => sub {
 				Five  => sub { shift->name( 0, 1, [2, 3]             ) },
 				Six   => sub { shift->name( 0, 1, [\'(%s/%s)', 2, 3] ) },
 				Seven => sub { shift->name( 0, 1, [['+', 2, 3]]      ) },
+				Eight => sub { shift->name( 0                        ) },
 			},
 			output  => 'UnitTest',
 		} )->process;
@@ -448,6 +449,7 @@ subtest 'Utility functions' => sub {
 		is $output->{Five }, 'Field1, Field2 (Field3)'       , 'Multiple roles'         ;
 		is $output->{Six  }, 'Field1, Field2 (Field3/Field4)', 'Formatted role'         ;
 		is $output->{Seven}, 'Field1, Field2 (Field3+Field4)', 'Pass through to "build"';
+		is $output->{Eight}, 'Field1'                        , 'No dangling comma'      ;
 	};
 	subtest 'piece' => sub {
 		my $etl = ETL::Pipeline->new( {
@@ -495,11 +497,11 @@ subtest 'Utility functions' => sub {
 	my $etl = ETL::Pipeline->new( {
 		work_in => 't',
 		input   => '+Input',
-		mapping => {One => sub { shift->subrecord( '/sub', sub { shift->get( '/b' ) } ) }},
+		mapping => {One => sub { shift->foreach( '/sub', sub { shift->get( '/b' ) } ) }},
 		output  => 'UnitTest',
 	} )->process;
 	my $output = $etl->output->get_record( 0 );
-	is $output->{One}, '2', 'subrecord';
+	is $output->{One}, '2', 'foreach';
 };
 
 
