@@ -25,6 +25,7 @@ requires:
   Carp: 0
   Data::DPath: 0
   Data::Traverse: 0
+  JSON: 0
   List::AllUtils: 0
   Moose: 0
   Moose::Role: 0

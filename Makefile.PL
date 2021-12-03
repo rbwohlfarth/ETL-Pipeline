@@ -2,9 +2,7 @@
 
 use inc::Module::Install;
 
-#TODO: Add code to check for old version of ETL::Pipeline. Put up warning about
-#      rewriting custom input sources.
-
+# Generate the "Makefile"...
 name 'ETL-Pipeline';
 license 'perl';
 all_from 'lib/ETL/Pipeline.pm';
@@ -13,6 +11,7 @@ repository 'https://github.com/rbwohlfarth/ETL-Pipeline';
 requires 'Carp';
 requires 'Data::DPath';
 requires 'Data::Traverse';
+requires 'JSON';
 requires 'List::AllUtils';
 requires 'Moose';
 requires 'Moose::Role';
@@ -35,3 +34,16 @@ auto_manifest;
 auto_install;
 
 WriteAll;
+
+# Warning when upgrading older versions.
+my $installed = `perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' ETL::Pipeline`;
+if ($installed ne '' && $installed < 3) {
+	warn <<WARN;
+You have an older version of this module. You will need to rewrite any custom
+input sources. Version 3.00 introduced an updated input source API that is not
+compatible with older versions. If you only used the standard input sources that
+came with ETL::Pipeline, you'll be fine. If you wrote your own input sources,
+then you need to rewrite them to be compatible. See
+"perldoc ETL::Pipeline::Input".
+WARN
+}
