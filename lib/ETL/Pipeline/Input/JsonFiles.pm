@@ -2,33 +2,33 @@
 
 =head1 NAME
 
-ETL::Pipeline::Input::XmlFiles - Process XML content from individual files
+ETL::Pipeline::Input::JsonFiles - Process JSON content from individual files
 
 =head1 SYNOPSIS
 
   use ETL::Pipeline;
   ETL::Pipeline->new( {
-    input   => ['XmlFiles', iname => qr/\.xlsx$/i, records_at => '/Xml'],
+    input   => ['JsonFiles', iname => qr/\.json$/i, records_at => '/json'],
     mapping => {First => '/File/A', Second => '/File/Patient'},
     output  => ['UnitTest']
   } )->process;
 
 =head1 DESCRIPTION
 
-B<ETL::Pipeline::Input::XmlFiles> defines an input source that reads one or more
-records from one or more XML files. Most of the time, there should be one record
-per file. But the class handles multiple records per file too.
+B<ETL::Pipeline::Input::JsonFiles> defines an input source that reads one or
+more records from one or more JSON files. Most of the time, there should be one
+record per file. But the class handles multiple records per file too.
 
 =cut
 
-package ETL::Pipeline::Input::XmlFiles;
+package ETL::Pipeline::Input::JsonFiles;
 
 use 5.014000;
 use warnings;
 
 use Carp;
 use Data::DPath qw/dpath/;
-use XML::Bare;
+use JSON;
 use Moose;
 
 
@@ -41,7 +41,7 @@ our $VERSION = '2.00';
 
 =head3 records_at
 
-Optional. The path to the record nodes, such as C</XMLDATA/Root/Record>. The
+Optional. The path to the record nodes, such as C</json/Record>. The
 last item in the list is the name of the root for each individual record. The
 default is B</> - one record in the file.
 
@@ -55,8 +55,7 @@ You might use this attribute in two cases...
 
 =back
 
-This can be any value accepted by L<Data::DPath>. Fortunately, L<Data::Dpath>
-takes paths that look like XPath for XML.
+This can be any value accepted by L<Data::DPath>.
 
 =cut
 
@@ -69,7 +68,7 @@ has 'records_at' => (
 
 =head3 skipping
 
-Not used. This attribute is ignored. XML files must follow specific formatting
+Not used. This attribute is ignored. JSON files must follow specific formatting
 rules. Extra rows are parsed as data. There's nothing to skip.
 
 =head2 Methods
@@ -86,27 +85,24 @@ L<ETL::Pipeline> automatically calls this method.
 sub run {
 	my ($self, $etl) = @_;
 
+	my $parser = JSON->new->utf8;
 	while (my $path = $self->next_path( $etl )) {
-		# Load the XML file and turn it into a Perl hash.
-		my $parser = XML::Bare->new( file => "$path" );
-		my $xml = $parser->parse;
+		my $text = $path->slurp;	# Force scalar context, otherwise slurp breaks it into lines.
+		my $json = $parser->decode( $text );
+		croak "JSON file '$path', unable to parse" unless defined $json;
 
-		# Find the node that is an array of records. dpath should return a list
-		# with one array reference. And that array has the actual records. But I
-		# check, just in case your XML is structured a little differently.
+		# Find the node that is an array of records. This comes from the
+		# "records_at" attribute.
 		#
-		# XML should generate hashes - field/value pairs. In theory, there might
-		# be an XML file that sends back a single record as an array reference.
-		# Not likely when transfering data.
-		my @matches = dpath( $self->records_at )->match( $xml );
+		# I assume that records are field/value pairs - a Perl hash. So if the
+		# DPath matches an array, it is an array of record. I need to
+		# de-reference that list to get to the actual records.
+		my @matches = dpath( $self->records_at )->match( $json );
 		my $list = (scalar( @matches ) == 1 && ref( $matches[0] ) eq 'ARRAY') ? $matches[0] : \@matches;
 
-		# Process each record. And that's it.
-		my $source = $self->source;
-		foreach my $record (@$list) {
-			$self->source( sprintf( '%s character %d', $source, $record->{_pos} ) );
-			$etl->record( $record );
-		}
+		# Process each record. And that's it. The record is a Perl data
+		# structure corresponding with the JSON structure.
+		$etl->record( $_ ) foreach (@$list);
 	}
 }
 
@@ -114,7 +110,7 @@ sub run {
 =head1 SEE ALSO
 
 L<ETL::Pipeline>, L<ETL::Pipeline::Input>, L<ETL::Pipeline::Input::File::List>,
-L<XML::Bare>
+L<JSON>
 
 =cut
 
