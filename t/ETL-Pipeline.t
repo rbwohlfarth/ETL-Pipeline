@@ -497,7 +497,7 @@ subtest 'Utility functions' => sub {
 	my $etl = ETL::Pipeline->new( {
 		work_in => 't',
 		input   => '+Input',
-		mapping => {One => sub { shift->foreach( '/sub', sub { shift->get( '/b' ) } ) }},
+		mapping => {One => sub { shift->foreach( sub { shift->get( '/b' ) }, '/sub' ) }},
 		output  => 'UnitTest',
 	} )->process;
 	my $output = $etl->output->get_record( 0 );

@@ -100,6 +100,14 @@ and load. Or more accurately - input, mapping, output. Raw data enters one end
 of the pipe (input) and useful information comes out the other (output). An
 B<ETL::Pipeline> object represents a complete pipeline.
 
+=head2 Upgrade Warning
+
+B<WARNING:> The API for input sources has changed in version 3.00. Custom input
+sources written for an earlier version will not work with version 3.00 and
+later. You will need to re-write your custom input sources.
+
+See L<ETL::Pipeline::Input> for more details.
+
 =head1 METHODS & ATTRIBUTES
 
 =head2 Managing the pipeline
@@ -1236,10 +1244,10 @@ have repeating nodes. B<foreach> allows you to format multiple fields from the
 same record. It looks like this...
 
   # Capture the resulting strings.
-  my @results = $etl->foreach( '/File/People', sub { ... } );
+  my @results = $etl->foreach( sub { ... }, '/File/People' );
 
   # Combine the resulting strings.
-  join( '; ', $etl->foreach( '/File/People', sub { ... } ) );
+  join( '; ', $etl->foreach( sub { ... }, '/File/People' ) );
 
 B<foreach> calls L</get> to retrieve a list of sub-records. It replaces L</this>
 with each sub-record in turn and executes the code reference. You can use any of
@@ -1254,17 +1262,17 @@ For example, you might do something like this to format names from XML...
 
   # Format names "last, first" and put a semi-colon between multiple names.
   $etl->format( '; ', $etl->foreach(
-    '/File/People',
-    sub { $etl->format( ', ', '/Last', '/First' ) }
+    sub { $etl->format( ', ', '/Last', '/First' ) },
+    '/File/People'
   ) );
 
   # Same thing, but using parameters.
   $etl->format( '; ', $etl->foreach(
-    '/File/People',
     sub {
       my ($object, $record) = @_;
       $object->format( ', ', '/Last', '/First' )
-    }
+    },
+    '/File/People'
   ) );
 
 B<foreach> passed two parameters to the code reference...
@@ -1287,10 +1295,16 @@ I<Please note, the code cannot access fields outside of the sub-record>.
 Instead, cache these in a local variable before called B<foreach>.
 
   my $x = $etl->get( '/File/MainPerson' );
-  join( '; ', $etl->foreach( '/File/People', sub {
+  join( '; ', $etl->foreach( sub {
     my $y = $etl->format( ', ', '/Last', '/First' );
     "$y is with $x";
-  } );
+  }, '/File/People' );
+
+=head4 Calling foreach
+
+B<foreach> accepts the code reference as the first parameter. All remaining
+parameters are field names. B<foreach> passes them through L</get> one at a
+time. Each field should resolve to a repeating node.
 
 B<foreach> returns a list. The list may be empty or have one element. But it is
 always a list. You can use Perl functions such as C<join> to convert the list
@@ -1299,15 +1313,20 @@ into a single value.
 =cut
 
 sub foreach {
-	my ($self, $path, $code) = @_;
+	my $self = shift;
+	my $code = shift;
 
 	# Cache the current record. I need to restore this later so other function
 	# calls work normally.
 	my $this = $self->this;
 
 	# Retrieve the repeating sub-records.
-	my $all = $self->get( $path );
-	$all = [$all] unless ref( $all ) eq 'ARRAY';
+	my $all = [];
+	foreach my $item (@_) {
+		my $current = $self->get( $item );
+		if (ref( $current ) eq 'ARRAY') { push @$all, @$current; }
+		else                            { push @$all,  $current; }
+	}
 
 	# Execute the code reference against each sub-record.
 	my @results;
