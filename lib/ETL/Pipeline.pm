@@ -30,7 +30,7 @@ ETL::Pipeline - Extract-Transform-Load pattern for data file conversions
 
 package ETL::Pipeline;
 
-use 5.014000;
+use 5.021000;
 use warnings;
 
 use Carp;
@@ -44,7 +44,7 @@ use Scalar::Util qw/blessed/;
 use String::Util qw/hascontent trim/;
 
 
-our $VERSION = '3.00';
+our $VERSION = '3.01';
 
 
 =head1 DESCRIPTION
