@@ -36,7 +36,7 @@ auto_install;
 WriteAll;
 
 # Warning when upgrading older versions.
-my $installed = `perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' ETL::Pipeline`;
+my $installed = `perl -le "eval 'require ETL::Pipeline' and print ETL::Pipline->VERSION"`;
 if ($installed ne '' && $installed < 3) {
 	warn <<WARN;
 You have an older version of this module. You will need to rewrite any custom
