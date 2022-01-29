@@ -72,4 +72,7 @@
 ^MANIFEST\.SKIP
 
 # Avoid archives of this distribution
-\bPARS-[\d\.\_]+
+\bETL-Pipeline-[\d\.\_]+
+
+# Avoid Eclipse files
+\.project$
