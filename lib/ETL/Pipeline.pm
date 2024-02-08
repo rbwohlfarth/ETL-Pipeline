@@ -494,7 +494,7 @@ there is an error.
 C<undef> saves an empty record. To print an error message, have your code call 
 L</status> with a type of B<ERROR>.
 
-  # Return an enpty record.
+  # Return an empty record.
   $etl->mapping( sub { undef; } );
   
   # Print an error message.
@@ -1084,10 +1084,9 @@ to assign letters to column numbers, like a real spreadsheet.
 
 The input source calls this method for each data record. This is where
 L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
-L<ETL::Pipeline> applies the mapping, constants, and sends the results on to the
 output destination.
 
-B<record> takes one parameter - he current record. The record can be any Perl
+B<record> takes one parameter - the current record. The record can be any Perl
 data structure - hash, array, or scalar. B<record> uses L<Data::DPath> to
 traverse the structure.
 
