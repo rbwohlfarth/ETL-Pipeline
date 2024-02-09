@@ -83,9 +83,9 @@ L<ETL::Pipeline> comes with a couple of generic output destinations...
 
 =over
 
-=item L<ETL::Pipeline::Output::Hash>
+=item L<ETL::Pipeline::Output::Memory>
 
-Stores records in a Perl hash. Useful for loading support files and tying
+Stores records in a Perl hash or list. Useful for loading support files and tying
 them together later.
 
 =item L<ETL::Pipeline::Output::Perl>
